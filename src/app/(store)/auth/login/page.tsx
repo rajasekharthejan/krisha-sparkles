@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
+import OAuthButtons from "@/components/store/OAuthButtons";
 
 // In-memory rate limiter: 5 attempts per 15 min per session
 const attempts: { count: number; resetAt: number } = { count: 0, resetAt: 0 };
@@ -21,10 +22,11 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/account";
+  const oauthError = searchParams.get("error") === "oauth";
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(oauthError ? "Sign-in with social provider failed. Please try again or use email." : "");
 
   useEffect(() => {
     // If already logged in, redirect
@@ -92,53 +94,59 @@ function LoginContent() {
           <p style={{ color: "var(--muted)" }}>Sign in to your Krisha Sparkles account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="glass" style={{ padding: "2rem", borderRadius: "16px", display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div>
-            <label style={{ display: "block", color: "var(--muted)", fontSize: "0.8rem", marginBottom: "0.4rem" }}>Email Address</label>
-            <input
-              className="input-dark"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="priya@example.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              style={{ width: "100%" }}
-            />
-          </div>
+        <div className="glass" style={{ padding: "2rem", borderRadius: "16px", display: "flex", flexDirection: "column", gap: "1rem" }}>
+          {/* OAuth buttons */}
+          <OAuthButtons redirectTo={redirectTo} />
 
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-              <label style={{ color: "var(--muted)", fontSize: "0.8rem" }}>Password</label>
-              <Link href="/auth/forgot-password" style={{ color: "var(--gold)", fontSize: "0.8rem" }}>Forgot password?</Link>
-            </div>
-            <div style={{ position: "relative" }}>
+          {/* Email/password form */}
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div>
+              <label style={{ display: "block", color: "var(--muted)", fontSize: "0.8rem", marginBottom: "0.4rem" }}>Email Address</label>
               <input
                 className="input-dark"
-                type={showPass ? "text" : "password"}
+                type="email"
                 required
-                autoComplete="current-password"
-                placeholder="Your password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                style={{ width: "100%", paddingRight: "2.5rem" }}
+                autoComplete="email"
+                placeholder="priya@example.com"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                style={{ width: "100%" }}
               />
-              <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>
-                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
             </div>
-          </div>
 
-          {error && (
-            <p style={{ color: "#ef4444", fontSize: "0.875rem", background: "rgba(239,68,68,0.1)", padding: "0.75rem", borderRadius: "8px", margin: 0 }}>
-              {error}
-            </p>
-          )}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                <label style={{ color: "var(--muted)", fontSize: "0.8rem" }}>Password</label>
+                <Link href="/auth/forgot-password" style={{ color: "var(--gold)", fontSize: "0.8rem" }}>Forgot password?</Link>
+              </div>
+              <div style={{ position: "relative" }}>
+                <input
+                  className="input-dark"
+                  type={showPass ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  placeholder="Your password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  style={{ width: "100%", paddingRight: "2.5rem" }}
+                />
+                <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
 
-          <button type="submit" disabled={loading} className="btn-gold" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
-            {loading ? <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> : null}
-            Sign In
-          </button>
+            {error && (
+              <p style={{ color: "#ef4444", fontSize: "0.875rem", background: "rgba(239,68,68,0.1)", padding: "0.75rem", borderRadius: "8px", margin: 0 }}>
+                {error}
+              </p>
+            )}
+
+            <button type="submit" disabled={loading} className="btn-gold" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+              {loading ? <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> : null}
+              Sign In
+            </button>
+          </form>
 
           {/* Security badge */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", color: "var(--muted)", fontSize: "0.75rem" }}>
@@ -156,7 +164,7 @@ function LoginContent() {
               Continue as Guest →
             </Link>
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );
