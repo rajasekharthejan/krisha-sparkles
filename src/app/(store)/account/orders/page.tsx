@@ -18,11 +18,15 @@ export default async function OrdersPage() {
   const user = await requireAuth();
   const supabase = await createAdminClient();
 
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("id, created_at, total, status, order_items(id, product_name, quantity, price)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  let orders: { id: string; created_at: string; total: number; status: string; order_items?: { id: string; product_name: string; quantity: number; price: number }[] }[] = [];
+  try {
+    const { data } = await supabase
+      .from("orders")
+      .select("id, created_at, total, status, order_items(id, product_name, quantity, price)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    orders = data || [];
+  } catch { /* migration not run yet */ }
 
   return (
     <div style={{ paddingTop: "80px", minHeight: "100vh", background: "var(--bg)" }}>
@@ -33,7 +37,7 @@ export default async function OrdersPage() {
 
         <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.75rem", fontWeight: 700, marginBottom: "2rem" }}>Order History</h1>
 
-        {!orders || orders.length === 0 ? (
+        {orders.length === 0 ? (
           <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "4rem", textAlign: "center" }}>
             <Package size={56} style={{ color: "var(--muted)", opacity: 0.4, margin: "0 auto 1.5rem", display: "block" }} strokeWidth={1} />
             <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>No orders yet</h3>
@@ -46,14 +50,12 @@ export default async function OrdersPage() {
               <Link
                 key={order.id}
                 href={`/account/orders/${order.id}`}
+                className="gold-hover-card"
                 style={{
                   display: "block", padding: "1.5rem",
                   background: "var(--surface)", border: "1px solid var(--gold-border)",
                   borderRadius: "12px", textDecoration: "none",
-                  transition: "border-color 0.2s",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--gold)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--gold-border)"; }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
                   <div>

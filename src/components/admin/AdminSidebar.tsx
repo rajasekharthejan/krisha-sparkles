@@ -12,14 +12,18 @@ import {
   LogOut,
   ExternalLink,
   Upload,
+  TrendingUp,
+  Tag,
 } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
   { href: "/admin/products", label: "Products", icon: <Package size={18} /> },
   { href: "/admin/products/bulk-upload", label: "Bulk Upload", icon: <Upload size={18} /> },
+  { href: "/admin/products/bulk-price", label: "Bulk Pricing", icon: <TrendingUp size={18} /> },
   { href: "/admin/orders", label: "Orders", icon: <ShoppingCart size={18} /> },
   { href: "/admin/inventory", label: "Inventory", icon: <Warehouse size={18} /> },
+  { href: "/admin/promotions", label: "Promotions", icon: <Tag size={18} /> },
 ];
 
 export default function AdminSidebar() {

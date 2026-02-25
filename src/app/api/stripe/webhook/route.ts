@@ -114,6 +114,26 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Increment coupon usage count if a coupon was applied
+      const couponId = metadata?.coupon_id;
+      if (couponId) {
+        try {
+          const { data: coupon } = await supabaseAdmin
+            .from("coupons")
+            .select("uses_count")
+            .eq("id", couponId)
+            .single();
+          if (coupon) {
+            await supabaseAdmin
+              .from("coupons")
+              .update({ uses_count: coupon.uses_count + 1 })
+              .eq("id", couponId);
+          }
+        } catch {
+          console.error("Failed to increment coupon usage");
+        }
+      }
+
       console.log(`Order ${order.id} created for ${session.customer_details?.email}`);
     } catch (err) {
       console.error("Error processing webhook:", err);

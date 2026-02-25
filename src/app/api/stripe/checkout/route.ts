@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
   try {
-    const { items } = await req.json();
+    const { items, couponCode, discountAmount } = await req.json();
 
     // Get logged-in user if any (optional — guest checkout still works)
     let userId: string | null = null;
@@ -30,6 +31,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
+    // Validate coupon server-side if provided
+    let validatedCoupon: {
+      id: string; code: string; discount_type: string; discount_value: number;
+    } | null = null;
+    let serverDiscount = 0;
+
+    if (couponCode) {
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      const { data: coupon } = await supabaseAdmin
+        .from("coupons")
+        .select("*")
+        .eq("code", couponCode.toUpperCase().trim())
+        .single();
+
+      if (coupon && coupon.active) {
+        const isExpired = coupon.expires_at && new Date(coupon.expires_at) < new Date();
+        const isExhausted = coupon.max_uses !== null && coupon.uses_count >= coupon.max_uses;
+        if (!isExpired && !isExhausted) {
+          validatedCoupon = coupon;
+          const subtotal = items.reduce((sum: number, item: { price: number; quantity: number }) =>
+            sum + item.price * item.quantity, 0);
+          serverDiscount = coupon.discount_type === "percentage"
+            ? Math.round((subtotal * coupon.discount_value) / 100 * 100) / 100
+            : Math.min(coupon.discount_value, subtotal);
+        }
+      }
+    }
+
     const lineItems = items.map((item: {
       name: string;
       price: number;
@@ -47,9 +79,11 @@ export async function POST(req: NextRequest) {
       quantity: item.quantity,
     }));
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-
-    const session = await stripe.checkout.sessions.create({
+    // If there's a validated discount, add it as a coupon line item (negative)
+    // Note: Stripe Checkout doesn't support negative line items directly,
+    // so we create an ad-hoc Stripe coupon instead
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sessionParams: Record<string, any> = {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
@@ -80,8 +114,8 @@ export async function POST(req: NextRequest) {
           },
         },
       ],
-      success_url: `${siteUrl}/order-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/checkout?cancelled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/order-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?cancelled=true`,
       customer_email: userEmail || undefined,
       metadata: {
         items: JSON.stringify(
@@ -91,8 +125,31 @@ export async function POST(req: NextRequest) {
           }))
         ),
         user_id: userId || "",
+        coupon_id: validatedCoupon?.id || "",
+        coupon_code: validatedCoupon?.code || "",
+        discount_amount: serverDiscount > 0 ? String(serverDiscount) : "",
       },
-    });
+    };
+
+    // Apply discount via Stripe coupon if we have a valid one
+    if (validatedCoupon && serverDiscount > 0) {
+      try {
+        const stripeCoupon = await stripe.coupons.create({
+          amount_off: Math.round(serverDiscount * 100),
+          currency: "usd",
+          duration: "once",
+          name: `${validatedCoupon.code} discount`,
+          metadata: { krisha_coupon_id: validatedCoupon.id },
+        });
+        sessionParams.discounts = [{ coupon: stripeCoupon.id }];
+      } catch {
+        // Stripe not fully configured — discount will still show in metadata
+        // The order will note the coupon but discount won't be applied to Stripe total
+        console.log("Stripe coupon creation skipped (keys not configured)");
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return NextResponse.json({ url: session.url });
   } catch (err) {

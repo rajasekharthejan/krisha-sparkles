@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
-import { ShoppingBag, ArrowLeft, Lock } from "lucide-react";
+import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
@@ -13,10 +13,54 @@ function CheckoutContent() {
   const { items, totalPrice } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    discount_type: "percentage" | "fixed";
+    discount_value: number;
+    description: string | null;
+  } | null>(null);
+  const [discount, setDiscount] = useState(0);
   const searchParams = useSearchParams();
   const cancelled = searchParams.get("cancelled");
 
-  const total = totalPrice();
+  const subtotal = totalPrice();
+  const finalTotal = Math.max(0, subtotal - discount);
+
+  async function applyCoupon() {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const res = await fetch("/api/validate-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponCode.trim(), orderTotal: subtotal }),
+      });
+      const data = await res.json();
+      if (!data.valid) {
+        setCouponError(data.error || "Invalid coupon");
+        setAppliedCoupon(null);
+        setDiscount(0);
+      } else {
+        setAppliedCoupon(data.coupon);
+        setDiscount(data.discount);
+        setCouponCode("");
+      }
+    } catch {
+      setCouponError("Could not validate coupon. Try again.");
+    }
+    setCouponLoading(false);
+  }
+
+  function removeCoupon() {
+    setAppliedCoupon(null);
+    setDiscount(0);
+    setCouponError("");
+  }
 
   async function handleCheckout() {
     if (items.length === 0) return;
@@ -34,6 +78,8 @@ function CheckoutContent() {
             quantity: item.quantity,
             image: item.image,
           })),
+          couponCode: appliedCoupon?.code || null,
+          discountAmount: discount,
         }),
       });
 
@@ -45,13 +91,6 @@ function CheckoutContent() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    // Auto-start checkout if cart has items and no cancellation
-    if (items.length > 0 && !cancelled) {
-      handleCheckout();
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (items.length === 0) {
     return (
@@ -139,6 +178,80 @@ function CheckoutContent() {
           ))}
         </div>
 
+        {/* Coupon Code */}
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--gold-border)",
+            borderRadius: "12px",
+            padding: "1.25rem",
+            marginBottom: "1.5rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.85rem" }}>
+            <Tag size={15} style={{ color: "var(--gold)" }} />
+            <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>Coupon Code</span>
+          </div>
+
+          {appliedCoupon ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: "8px" }}>
+              <Check size={16} style={{ color: "#10b981", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "#10b981", margin: 0, fontFamily: "monospace" }}>{appliedCoupon.code}</p>
+                <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: 0 }}>
+                  {appliedCoupon.description || (
+                    appliedCoupon.discount_type === "percentage"
+                      ? `${appliedCoupon.discount_value}% off`
+                      : `$${appliedCoupon.discount_value.toFixed(2)} off`
+                  )} — saves {formatPrice(discount)}
+                </p>
+              </div>
+              <button onClick={removeCoupon} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: "4px" }}>
+                <X size={16} />
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <input
+                  value={couponCode}
+                  onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }}
+                  onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                  placeholder="Enter coupon code"
+                  className="input-dark"
+                  style={{ flex: 1, fontFamily: "monospace", letterSpacing: "0.08em" }}
+                  disabled={couponLoading}
+                />
+                <button
+                  onClick={applyCoupon}
+                  disabled={couponLoading || !couponCode.trim()}
+                  style={{
+                    padding: "0 1.25rem",
+                    background: "var(--gold-muted)",
+                    border: "1px solid var(--gold-border)",
+                    borderRadius: "8px",
+                    color: "var(--gold)",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    fontSize: "0.875rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    whiteSpace: "nowrap",
+                    opacity: !couponCode.trim() ? 0.5 : 1,
+                  }}
+                >
+                  {couponLoading ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : null}
+                  Apply
+                </button>
+              </div>
+              {couponError && (
+                <p style={{ color: "#ef4444", fontSize: "0.8rem", marginTop: "0.5rem" }}>{couponError}</p>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Totals */}
         <div
           style={{
@@ -151,19 +264,36 @@ function CheckoutContent() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
             <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>Subtotal</span>
-            <span style={{ fontSize: "0.875rem" }}>{formatPrice(total)}</span>
+            <span style={{ fontSize: "0.875rem" }}>{formatPrice(subtotal)}</span>
           </div>
+          {appliedCoupon && discount > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <span style={{ color: "#10b981", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <Tag size={13} /> Coupon ({appliedCoupon.code})
+              </span>
+              <span style={{ fontSize: "0.875rem", color: "#10b981", fontWeight: 600 }}>
+                −{formatPrice(discount)}
+              </span>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
             <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>Shipping</span>
             <span style={{ fontSize: "0.875rem", color: "#10b981" }}>
-              {total >= 75 ? "Free" : "Calculated at checkout"}
+              {finalTotal >= 75 ? "Free" : "Calculated at checkout"}
             </span>
           </div>
           <div style={{ borderTop: "1px solid var(--gold-border)", paddingTop: "0.75rem", marginTop: "0.75rem", display: "flex", justifyContent: "space-between" }}>
             <span style={{ fontWeight: 700 }}>Total</span>
-            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.25rem", fontWeight: 700, color: "var(--gold)" }}>
-              {formatPrice(total)}
-            </span>
+            <div style={{ textAlign: "right" }}>
+              {discount > 0 && (
+                <span style={{ display: "block", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "line-through" }}>
+                  {formatPrice(subtotal)}
+                </span>
+              )}
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.25rem", fontWeight: 700, color: "var(--gold)" }}>
+                {formatPrice(finalTotal)}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -188,13 +318,13 @@ function CheckoutContent() {
         >
           {loading ? (
             <>
-              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
               Redirecting to Stripe...
             </>
           ) : (
             <>
               <Lock size={16} />
-              Secure Checkout
+              {appliedCoupon ? `Pay ${formatPrice(finalTotal)} — Secure Checkout` : "Secure Checkout"}
             </>
           )}
         </button>

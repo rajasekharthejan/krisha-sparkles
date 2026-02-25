@@ -610,3 +610,11 @@ button:focus-visible, a:focus-visible {
   /* Still show the overlay on touch */
   .product-card .add-to-cart-overlay { transform: translateY(0); }
 }
+
+/* ─── Account / Order card hover (Server Component safe) ─── */
+.gold-hover-card {
+  transition: border-color 0.2s ease;
+}
+.gold-hover-card:hover {
+  border-color: var(--gold) !important;
+}

@@ -8,20 +8,28 @@ export default async function AccountPage() {
   const user = await requireAuth();
   const supabase = await createAdminClient();
 
-  // Fetch last 3 orders for this user
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("id, created_at, total, status, order_items(id)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(3);
+  // Fetch last 3 orders for this user (graceful if user_id column doesn't exist yet)
+  let orders: { id: string; created_at: string; total: number; status: string; order_items?: { id: string }[] }[] = [];
+  let profile: { first_name?: string; last_name?: string } | null = null;
 
-  // Fetch profile
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("first_name, last_name")
-    .eq("id", user.id)
-    .single();
+  try {
+    const { data: ordersData } = await supabase
+      .from("orders")
+      .select("id, created_at, total, status, order_items(id)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(3);
+    orders = ordersData || [];
+  } catch { /* migration not run yet */ }
+
+  try {
+    const { data: profileData } = await supabase
+      .from("user_profiles")
+      .select("first_name, last_name")
+      .eq("id", user.id)
+      .single();
+    profile = profileData;
+  } catch { /* migration not run yet */ }
 
   const displayName = profile?.first_name
     ? `${profile.first_name}${profile.last_name ? " " + profile.last_name : ""}`
@@ -59,15 +67,13 @@ export default async function AccountPage() {
             <Link
               key={card.href}
               href={card.href}
+              className="gold-hover-card"
               style={{
                 display: "flex", alignItems: "center", gap: "1rem",
                 padding: "1.25rem 1.5rem",
                 background: "var(--surface)", border: "1px solid var(--gold-border)",
                 borderRadius: "12px", textDecoration: "none",
-                transition: "border-color 0.2s, background 0.2s",
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--gold)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--gold-border)"; }}
             >
               {card.icon}
               <div style={{ flex: 1 }}>
@@ -100,15 +106,13 @@ export default async function AccountPage() {
                 <Link
                   key={order.id}
                   href={`/account/orders/${order.id}`}
+                  className="gold-hover-card"
                   style={{
                     display: "flex", alignItems: "center", gap: "1rem",
                     padding: "1.25rem 1.5rem",
                     background: "var(--surface)", border: "1px solid var(--gold-border)",
                     borderRadius: "12px", textDecoration: "none",
-                    transition: "border-color 0.2s",
                   }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--gold)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--gold-border)"; }}
                 >
                   <ShoppingBag size={20} style={{ color: "var(--gold)", flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
