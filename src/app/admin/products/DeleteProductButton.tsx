@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 export default function DeleteProductButton({
@@ -18,8 +17,13 @@ export default function DeleteProductButton({
 
   async function handleDelete() {
     setLoading(true);
-    const supabase = createClient();
-    await supabase.from("products").delete().eq("id", productId);
+    try {
+      await fetch("/api/admin/products/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: productId }),
+      });
+    } catch { /* ignore */ }
     router.refresh();
   }
 

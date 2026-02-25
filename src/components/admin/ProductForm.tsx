@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { CATEGORIES, slugify } from "@/lib/utils";
+import { CATEGORIES } from "@/lib/utils";
 import { Upload, X, Plus, Loader2 } from "lucide-react";
 import type { Product } from "@/types";
 
@@ -74,46 +74,36 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
     setLoading(true);
     setError("");
 
-    const supabase = createClient();
+    try {
+      const res = await fetch("/api/admin/products/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: mode === "edit" ? product!.id : undefined,
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          price: form.price,
+          compare_price: form.compare_price || null,
+          category_slug: form.category,
+          images,
+          stock_quantity: form.stock_quantity,
+          featured: form.featured,
+          active: form.active,
+        }),
+      });
 
-    // Resolve category_id from slug
-    let category_id = null;
-    if (form.category) {
-      const { data: cat } = await supabase
-        .from("categories")
-        .select("id")
-        .eq("slug", form.category)
-        .single();
-      category_id = cat?.id || null;
-    }
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to save product");
+        setLoading(false);
+        return;
+      }
 
-    const payload = {
-      name: form.name.trim(),
-      slug: slugify(form.name),
-      description: form.description.trim() || null,
-      price: parseFloat(form.price),
-      compare_price: form.compare_price ? parseFloat(form.compare_price) : null,
-      category_id,
-      images,
-      stock_quantity: parseInt(form.stock_quantity),
-      featured: form.featured,
-      active: form.active,
-      updated_at: new Date().toISOString(),
-    };
-
-    let err;
-    if (mode === "create") {
-      ({ error: err } = await supabase.from("products").insert(payload));
-    } else {
-      ({ error: err } = await supabase.from("products").update(payload).eq("id", product!.id));
-    }
-
-    if (err) {
-      setError(err.message);
-      setLoading(false);
-    } else {
       router.push("/admin/products");
       router.refresh();
+    } catch {
+      setError("Network error. Please try again.");
+      setLoading(false);
     }
   }
 
