@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Krisha Sparkles</string>
+    <string name="title_activity_main">Krisha Sparkles</string>
+    <string name="package_name">com.krishasparkles.app</string>
+    <string name="custom_url_scheme">com.krishasparkles.app</string>
+</resources>
