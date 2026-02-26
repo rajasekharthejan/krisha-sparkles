@@ -14,6 +14,7 @@ import type { Product, Review } from "@/types";
 import ProductCard from "@/components/store/ProductCard";
 import ViewingNow from "@/components/store/ViewingNow";
 import ReviewImageLightbox from "@/components/store/ReviewImageLightbox";
+import BackInStockButton from "@/components/store/BackInStockButton";
 import { pushDataLayer } from "@/hooks/useDataLayer";
 
 export default function ProductDetailClient({ slug: initialSlug }: { slug?: string }) {
@@ -505,15 +506,22 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
 
             {/* CTA Buttons */}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <button
-                onClick={handleAddToCart}
-                disabled={product.stock_quantity === 0}
-                className="btn-gold"
-                style={{ flex: 1, justifyContent: "center", minWidth: "140px" }}
-              >
-                <ShoppingBag size={16} />
-                {added ? "Added to Cart!" : "Add to Cart"}
-              </button>
+              {product.stock_quantity === 0 ? (
+                <BackInStockButton
+                  productId={product.id}
+                  productName={product.name}
+                  variant="button"
+                />
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  className="btn-gold"
+                  style={{ flex: 1, justifyContent: "center", minWidth: "140px" }}
+                >
+                  <ShoppingBag size={16} />
+                  {added ? "Added to Cart!" : "Add to Cart"}
+                </button>
+              )}
               <button
                 onClick={handleWish}
                 disabled={wishLoading}

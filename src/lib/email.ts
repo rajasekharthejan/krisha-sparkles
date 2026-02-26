@@ -12,6 +12,40 @@ function formatPrice(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
 
+// ── Back-in-Stock Notification ─────────────────────────────────────────────
+// Template variables: productName, productUrl, productImage
+// Sent by: /api/cron/back-in-stock when stock_quantity > 0 AND notified = false
+export async function sendBackInStockEmail(
+  to: string,
+  productName: string,
+  productUrl: string,
+  productImage: string
+) {
+  const resend = getResend();
+  if (!resend) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `✨ ${productName} is back in stock — Krisha Sparkles`,
+    html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <p style="font-size:28px;font-weight:700;color:#c9a84c;margin:0;">✦ Krisha Sparkles</p>
+      <p style="color:#888;margin:8px 0 0;font-size:13px;">Exquisite Imitation Jewelry</p>
+    </div>
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:32px;margin-bottom:24px;text-align:center;">
+      ${productImage ? `<img src="${productImage}" alt="${productName}" style="width:180px;height:180px;object-fit:cover;border-radius:10px;margin-bottom:20px;border:1px solid rgba(201,168,76,0.2);" />` : ""}
+      <p style="font-size:24px;font-weight:700;color:#c9a84c;margin:0 0 8px;font-family:Georgia,serif;">${productName}</p>
+      <p style="color:#aaa;font-size:15px;margin:0 0 24px;">Great news! The item you were waiting for is back in stock. Grab it before it sells out again!</p>
+      <a href="${productUrl}" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:16px;">Shop Now →</a>
+    </div>
+    <p style="color:#555;font-size:12px;text-align:center;">You requested to be notified when this item restocked. This is a one-time notification.</p>
+  </div>
+</body></html>`,
+  });
+}
+
 // ── Order Confirmation ─────────────────────────────────────────────────────
 
 export async function sendOrderConfirmation(order: Order) {

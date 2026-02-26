@@ -189,3 +189,21 @@ BEGIN
   WHERE id = user_id;
 END;
 $$;
+
+
+-- ============================================================
+-- PHASE 7 MIGRATION — Back-in-Stock Alerts (Feature 2)
+-- Table already created via Management API — kept here for reference
+-- Vercel cron: /api/cron/back-in-stock runs hourly (0 * * * *)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS back_in_stock_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  email text NOT NULL,
+  user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  notified boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(product_id, email)
+);
+ALTER TABLE back_in_stock_requests ENABLE ROW LEVEL SECURITY;

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
-import { Warehouse, Save, AlertTriangle } from "lucide-react";
+import { Warehouse, Save, AlertTriangle, Bell } from "lucide-react";
 import type { Product } from "@/types";
 
 export default function AdminInventoryPage() {
@@ -11,6 +11,7 @@ export default function AdminInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [updates, setUpdates] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [waitlistCounts, setWaitlistCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     async function fetchProducts() {
@@ -24,6 +25,18 @@ export default function AdminInventoryPage() {
       setLoading(false);
     }
     fetchProducts();
+
+    // Fetch waitlist counts per product via admin API
+    async function fetchWaitlistCounts() {
+      try {
+        const res = await fetch("/api/admin/back-in-stock/counts");
+        if (res.ok) {
+          const data = await res.json();
+          setWaitlistCounts(data.counts || {});
+        }
+      } catch { /* non-critical */ }
+    }
+    fetchWaitlistCounts();
   }, []);
 
   function handleQtyChange(productId: string, value: string) {
@@ -111,6 +124,7 @@ export default function AdminInventoryPage() {
                   <th>Category</th>
                   <th>Current Stock</th>
                   <th>Status</th>
+                  <th>Waitlist</th>
                   <th>Update Qty</th>
                   <th>Save</th>
                 </tr>
@@ -162,6 +176,16 @@ export default function AdminInventoryPage() {
                           </span>
                         ) : (
                           <span style={{ fontSize: "0.75rem", color: "#10b981" }}>✓ In Stock</span>
+                        )}
+                      </td>
+                      <td>
+                        {waitlistCounts[product.id] > 0 ? (
+                          <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.78rem", color: "var(--gold)", fontWeight: 600 }}>
+                            <Bell size={12} />
+                            {waitlistCounts[product.id]}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--subtle)", fontSize: "0.78rem" }}>—</span>
                         )}
                       </td>
                       <td>

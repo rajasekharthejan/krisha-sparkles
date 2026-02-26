@@ -10,6 +10,7 @@ import { formatPrice } from "@/lib/utils";
 import { toggleGuestWishlist, isInGuestWishlist } from "@/lib/wishlistUtils";
 import { createClient } from "@/lib/supabase/client";
 import type { Product } from "@/types";
+import BackInStockButton from "@/components/store/BackInStockButton";
 
 interface ProductCardProps {
   product: Product;
@@ -298,6 +299,13 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             >
               🔥 Only {product.stock_quantity} left!
             </p>
+          )}
+          {product.stock_quantity === 0 && (
+            <BackInStockButton
+              productId={product.id}
+              productName={product.name}
+              variant="link"
+            />
           )}
         </div>
       </Link>
