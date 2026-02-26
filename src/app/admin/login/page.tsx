@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, ShieldAlert } from "lucide-react";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -12,23 +11,42 @@ export default function AdminLoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lockedOut, setLockedOut] = useState(false);
   const router = useRouter();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (lockedOut) return;
     setLoading(true);
     setError("");
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (authError) {
-      setError("Invalid credentials. Please try again.");
-      setLoading(false);
-    } else {
+
+    try {
+      const res = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "same-origin",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          setLockedOut(true);
+          setError(data.error ?? "Too many attempts. Please wait before retrying.");
+        } else {
+          setError(data.error ?? "Invalid credentials. Please try again.");
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Success — session cookies are set server-side; just navigate
       router.push("/admin");
       router.refresh();
+    } catch {
+      setError("Network error. Please try again.");
+      setLoading(false);
     }
   }
 
@@ -45,7 +63,7 @@ export default function AdminLoginPage() {
         overflow: "hidden",
       }}
     >
-      {/* Background */}
+      {/* Background glow */}
       <div
         style={{
           position: "absolute",
@@ -104,25 +122,56 @@ export default function AdminLoginPage() {
           >
             Krisha Sparkles
           </h1>
-          <p style={{ color: "var(--muted)", fontSize: "0.8rem", marginTop: "0.25rem", letterSpacing: "0.1em" }}>
+          <p
+            style={{
+              color: "var(--muted)",
+              fontSize: "0.8rem",
+              marginTop: "0.25rem",
+              letterSpacing: "0.1em",
+            }}
+          >
             ADMIN PORTAL
           </p>
         </div>
 
-        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <form
+          onSubmit={handleLogin}
+          style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
+        >
           {/* Email */}
-          <div style={{ position: "relative" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+          <div>
+            <label
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--muted)",
+                display: "block",
+                marginBottom: "0.5rem",
+              }}
+            >
               Email
             </label>
             <div style={{ position: "relative" }}>
-              <Mail size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
+              <Mail
+                size={15}
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "var(--muted)",
+                  pointerEvents: "none",
+                }}
+              />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@krishasparkles.com"
                 required
+                disabled={lockedOut}
                 className="input-dark"
                 style={{ paddingLeft: "2.5rem" }}
               />
@@ -131,17 +180,38 @@ export default function AdminLoginPage() {
 
           {/* Password */}
           <div>
-            <label style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+            <label
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--muted)",
+                display: "block",
+                marginBottom: "0.5rem",
+              }}
+            >
               Password
             </label>
             <div style={{ position: "relative" }}>
-              <Lock size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
+              <Lock
+                size={15}
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "var(--muted)",
+                  pointerEvents: "none",
+                }}
+              />
               <input
                 type={showPw ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                disabled={lockedOut}
                 className="input-dark"
                 style={{ paddingLeft: "2.5rem", paddingRight: "2.5rem" }}
               />
@@ -149,9 +219,16 @@ export default function AdminLoginPage() {
                 type="button"
                 onClick={() => setShowPw(!showPw)}
                 style={{
-                  position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
-                  background: "none", border: "none", cursor: "pointer", color: "var(--muted)",
-                  display: "flex", transition: "color 0.2s",
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--muted)",
+                  display: "flex",
+                  transition: "color 0.2s",
                 }}
               >
                 {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -159,35 +236,56 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
+          {/* Error / lockout message */}
           {error && (
             <div
               style={{
                 padding: "0.75rem 1rem",
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.3)",
+                background: lockedOut
+                  ? "rgba(245,158,11,0.1)"
+                  : "rgba(239,68,68,0.1)",
+                border: `1px solid ${lockedOut ? "rgba(245,158,11,0.3)" : "rgba(239,68,68,0.3)"}`,
                 borderRadius: "6px",
-                color: "#ef4444",
+                color: lockedOut ? "#f59e0b" : "#ef4444",
                 fontSize: "0.8rem",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "0.5rem",
               }}
             >
+              {lockedOut && <ShieldAlert size={15} style={{ flexShrink: 0, marginTop: "1px" }} />}
               {error}
             </div>
           )}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || lockedOut}
             className="btn-gold"
-            style={{ width: "100%", justifyContent: "center", marginTop: "0.5rem" }}
+            style={{
+              width: "100%",
+              justifyContent: "center",
+              marginTop: "0.5rem",
+              opacity: lockedOut ? 0.5 : 1,
+            }}
           >
             {loading ? (
-              <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <span
+                className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+              />
             ) : null}
-            {loading ? "Signing In..." : "Sign In to Admin"}
+            {loading ? "Signing In..." : lockedOut ? "Account Locked" : "Sign In to Admin"}
           </button>
         </form>
 
-        <p style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--subtle)", marginTop: "2rem" }}>
+        <p
+          style={{
+            textAlign: "center",
+            fontSize: "0.75rem",
+            color: "var(--subtle)",
+            marginTop: "2rem",
+          }}
+        >
           Admin access only. Unauthorized access is prohibited.
         </p>
       </div>

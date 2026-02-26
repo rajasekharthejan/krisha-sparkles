@@ -148,3 +148,20 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+
+-- ──────────────────────────────────────────────────────────────
+-- Admin security: login audit log (added 2026-02-26)
+-- ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.admin_login_attempts (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  ip_address  TEXT NOT NULL,
+  email_attempted TEXT NOT NULL DEFAULT '',
+  success     BOOLEAN NOT NULL DEFAULT false,
+  note        TEXT NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Only service role can access this table (no anon/user access)
+ALTER TABLE public.admin_login_attempts ENABLE ROW LEVEL SECURITY;
+-- No RLS policies = only service role (bypasses RLS) can insert/select
