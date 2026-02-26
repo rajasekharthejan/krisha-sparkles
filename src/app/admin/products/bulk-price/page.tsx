@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import AdminSidebar from "@/components/admin/AdminSidebar";
 import { createBrowserClient } from "@supabase/ssr";
 import { TrendingUp, TrendingDown, Check, ChevronDown, Search } from "lucide-react";
 
@@ -129,9 +128,7 @@ export default function BulkPricePage() {
   const val = parseFloat(changeValue) || 0;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
-      <AdminSidebar />
-      <main style={{ flex: 1, padding: "2rem", overflowY: "auto" }}>
+    <div style={{ padding: "2rem" }}>
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
           <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>
@@ -392,7 +389,6 @@ export default function BulkPricePage() {
         <p style={{ color: "var(--muted)", fontSize: "0.75rem", marginTop: "0.75rem" }}>
           {selectedIds.size} of {filtered.length} products selected
         </p>
-      </main>
     </div>
   );
 }

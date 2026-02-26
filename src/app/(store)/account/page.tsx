@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth-server";
 import { createAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { User, ShoppingBag, Package, ChevronRight } from "lucide-react";
+import { User, ShoppingBag, Package, ChevronRight, Star } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
 export default async function AccountPage() {
@@ -10,7 +10,7 @@ export default async function AccountPage() {
 
   // Fetch last 3 orders for this user (graceful if user_id column doesn't exist yet)
   let orders: { id: string; created_at: string; total: number; status: string; order_items?: { id: string }[] }[] = [];
-  let profile: { first_name?: string; last_name?: string } | null = null;
+  let profile: { first_name?: string; last_name?: string; points_balance?: number } | null = null;
 
   try {
     const { data: ordersData } = await supabase
@@ -25,7 +25,7 @@ export default async function AccountPage() {
   try {
     const { data: profileData } = await supabase
       .from("user_profiles")
-      .select("first_name, last_name")
+      .select("first_name, last_name, points_balance")
       .eq("id", user.id)
       .single();
     profile = profileData;
@@ -63,6 +63,7 @@ export default async function AccountPage() {
           {[
             { href: "/account/orders", icon: <ShoppingBag size={22} style={{ color: "var(--gold)" }} />, title: "My Orders", desc: "Track and view your orders" },
             { href: "/account/profile", icon: <User size={22} style={{ color: "var(--gold)" }} />, title: "Edit Profile", desc: "Name, phone, address" },
+            { href: "/account/points", icon: <Star size={22} style={{ color: "var(--gold)" }} />, title: "My Points", desc: `${(profile?.points_balance ?? 0).toLocaleString()} pts · Earn 1 pt per $1` },
           ].map((card) => (
             <Link
               key={card.href}

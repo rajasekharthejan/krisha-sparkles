@@ -14,6 +14,10 @@ import {
   Upload,
   TrendingUp,
   Tag,
+  Star,
+  RotateCcw,
+  Mail,
+  MessageCircle,
 } from "lucide-react";
 
 const NAV = [
@@ -24,6 +28,10 @@ const NAV = [
   { href: "/admin/orders", label: "Orders", icon: <ShoppingCart size={18} /> },
   { href: "/admin/inventory", label: "Inventory", icon: <Warehouse size={18} /> },
   { href: "/admin/promotions", label: "Promotions", icon: <Tag size={18} /> },
+  { href: "/admin/reviews", label: "Reviews", icon: <Star size={18} /> },
+  { href: "/admin/refunds", label: "Refunds", icon: <RotateCcw size={18} /> },
+  { href: "/admin/newsletter", label: "Newsletter", icon: <Mail size={18} /> },
+  { href: "/admin/messages", label: "Messages", icon: <MessageCircle size={18} /> },
 ];
 
 export default function AdminSidebar() {

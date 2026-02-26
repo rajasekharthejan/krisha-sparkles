@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { CATEGORIES } from "@/lib/utils";
-import { Upload, X, Plus, Loader2 } from "lucide-react";
-import type { Product } from "@/types";
+import { Upload, X, Plus, Loader2, Trash2 } from "lucide-react";
+import type { Product, ProductVariant } from "@/types";
 
 interface ProductFormProps {
   product?: Product;
@@ -20,6 +20,8 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [images, setImages] = useState<string[]>(product?.images || []);
+  const [variants, setVariants] = useState<ProductVariant[]>(product?.variants || []);
+  const [newOptionInputs, setNewOptionInputs] = useState<Record<number, string>>({});
 
   const [form, setForm] = useState({
     name: product?.name || "",
@@ -89,6 +91,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
           stock_quantity: form.stock_quantity,
           featured: form.featured,
           active: form.active,
+          variants: variants.filter((v) => v.name.trim() && v.options.length > 0),
         }),
       });
 
@@ -260,6 +263,99 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                     >
                       <X size={11} />
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Variants */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", fontWeight: 700, color: "var(--gold)", margin: 0 }}>
+                Variants <span style={{ fontFamily: "var(--font-inter)", fontSize: "0.72rem", fontWeight: 400, color: "var(--muted)" }}>(Color, Size, etc.)</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setVariants((prev) => [...prev, { name: "", options: [] }])}
+                style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: "var(--gold-muted)", border: "1px solid var(--gold-border)", borderRadius: "6px", padding: "0.4rem 0.75rem", color: "var(--gold)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 600 }}
+              >
+                <Plus size={13} /> Add Variant Group
+              </button>
+            </div>
+
+            {variants.length === 0 ? (
+              <p style={{ color: "var(--subtle)", fontSize: "0.8rem", textAlign: "center", padding: "1rem 0" }}>
+                No variants. Add one if this product comes in different colors, sizes, etc.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {variants.map((variant, vi) => (
+                  <div key={vi} style={{ background: "var(--elevated)", border: "1px solid rgba(201,168,76,0.12)", borderRadius: "8px", padding: "1rem" }}>
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", alignItems: "center" }}>
+                      <input
+                        value={variant.name}
+                        onChange={(e) => setVariants((prev) => prev.map((v, i) => i === vi ? { ...v, name: e.target.value } : v))}
+                        placeholder="Variant name (e.g. Color)"
+                        style={{ ...inputStyle, flex: 1 }}
+                        className="input-dark"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setVariants((prev) => prev.filter((_, i) => i !== vi))}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: "4px", display: "flex" }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                    {/* Options */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.5rem" }}>
+                      {variant.options.map((opt, oi) => (
+                        <span key={oi} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", padding: "0.2rem 0.6rem", background: "var(--gold-muted)", border: "1px solid var(--gold-border)", borderRadius: "9999px", fontSize: "0.75rem", color: "var(--text)" }}>
+                          {opt}
+                          <button
+                            type="button"
+                            onClick={() => setVariants((prev) => prev.map((v, i) => i === vi ? { ...v, options: v.options.filter((_, j) => j !== oi) } : v))}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0, display: "flex", lineHeight: 1 }}
+                          >
+                            <X size={11} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    {/* Add option input */}
+                    <div style={{ display: "flex", gap: "0.4rem" }}>
+                      <input
+                        value={newOptionInputs[vi] || ""}
+                        onChange={(e) => setNewOptionInputs((prev) => ({ ...prev, [vi]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const val = (newOptionInputs[vi] || "").trim();
+                            if (val) {
+                              setVariants((prev) => prev.map((v, i) => i === vi ? { ...v, options: [...v.options, val] } : v));
+                              setNewOptionInputs((prev) => ({ ...prev, [vi]: "" }));
+                            }
+                          }
+                        }}
+                        placeholder={`Add option (press Enter)`}
+                        style={{ ...inputStyle, flex: 1, fontSize: "0.8rem", padding: "0.5rem 0.75rem" }}
+                        className="input-dark"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = (newOptionInputs[vi] || "").trim();
+                          if (val) {
+                            setVariants((prev) => prev.map((v, i) => i === vi ? { ...v, options: [...v.options, val] } : v));
+                            setNewOptionInputs((prev) => ({ ...prev, [vi]: "" }));
+                          }
+                        }}
+                        style={{ padding: "0 0.75rem", background: "var(--gold-muted)", border: "1px solid var(--gold-border)", borderRadius: "6px", color: "var(--gold)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 600 }}
+                      >
+                        Add
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

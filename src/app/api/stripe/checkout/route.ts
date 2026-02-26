@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import Stripe from "stripe";
 import { createServerClient } from "@supabase/ssr";
+
+// Use fetch-based HTTP client (avoids Node.js TLS issues on Vercel edge network)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2026-01-28.clover",
+  httpClient: Stripe.createFetchHttpClient(),
+  maxNetworkRetries: 0,
+});
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
@@ -114,8 +121,8 @@ export async function POST(req: NextRequest) {
           },
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/order-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?cancelled=true`,
+      success_url: `https://krisha-sparkles.vercel.app/order-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://krisha-sparkles.vercel.app/checkout?cancelled=true`,
       customer_email: userEmail || undefined,
       metadata: {
         items: JSON.stringify(
@@ -153,7 +160,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error("Stripe checkout error:", err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("Stripe checkout error:", errMsg);
     return NextResponse.json(
       { error: "Failed to create checkout session" },
       { status: 500 }

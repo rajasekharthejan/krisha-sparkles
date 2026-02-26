@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import type Stripe from "stripe";
+import { sendOrderConfirmation } from "@/lib/email";
+
+// Use fetch-based HTTP client — same fix as checkout route (avoids Node.js TLS issues on Vercel)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2026-01-28.clover",
+  httpClient: Stripe.createFetchHttpClient(),
+  maxNetworkRetries: 0,
+});
 
 function getSupabaseAdmin() {
   return createClient(
@@ -135,6 +142,23 @@ export async function POST(req: NextRequest) {
       }
 
       console.log(`Order ${order.id} created for ${session.customer_details?.email}`);
+
+      // Award loyalty points: 1 point per $1 spent (integer floor, logged-in users only)
+      if (userId) {
+        try {
+          const pts = Math.floor(total);
+          if (pts > 0) {
+            await supabaseAdmin.rpc("increment_points", { user_id: userId, pts });
+          }
+        } catch {
+          console.error("Failed to award loyalty points");
+        }
+      }
+
+      // Send order confirmation email (non-blocking)
+      sendOrderConfirmation({ ...order, order_items: orderItems.map((oi) => ({ ...oi, id: oi.order_id + oi.product_id })) }).catch(() => {
+        console.error("Failed to send order confirmation email");
+      });
     } catch (err) {
       console.error("Error processing webhook:", err);
       return NextResponse.json({ error: "Processing failed" }, { status: 500 });

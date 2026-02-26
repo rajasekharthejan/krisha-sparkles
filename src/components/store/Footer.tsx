@@ -130,11 +130,12 @@ export default function Footer() {
               Info
             </h4>
             {[
+              { label: "FAQ", href: "/faq" },
+              { label: "Contact Us", href: "/contact" },
               { label: "Support", href: "/support" },
               { label: "Shipping Policy", href: "/support#shipping" },
               { label: "Return Policy", href: "/support#returns" },
               { label: "Privacy Policy", href: "/privacy-policy" },
-              { label: "Terms of Service", href: "/privacy-policy" },
             ].map((link) => (
               <Link
                 key={link.href}

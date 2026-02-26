@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatPrice, formatDate } from "@/lib/utils";
-import { ShoppingCart, ChevronDown } from "lucide-react";
+import { ShoppingCart, ChevronDown, Truck, X, Loader2 } from "lucide-react";
 import type { Order } from "@/types";
 
 const STATUSES = ["pending", "paid", "shipped", "delivered", "cancelled"];
@@ -24,6 +24,10 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [trackingUrl, setTrackingUrl] = useState("");
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -56,6 +60,31 @@ export default function AdminOrdersPage() {
       )
     );
     setUpdatingId(null);
+  }
+
+  async function saveTracking() {
+    if (!trackingOrderId || !trackingNumber.trim()) return;
+    setTrackingLoading(true);
+    await fetch("/api/admin/orders/tracking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        order_id: trackingOrderId,
+        tracking_number: trackingNumber.trim(),
+        tracking_url: trackingUrl.trim() || null,
+      }),
+    });
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === trackingOrderId
+          ? { ...o, tracking_number: trackingNumber.trim(), tracking_url: trackingUrl.trim() || undefined, status: "shipped" }
+          : o
+      )
+    );
+    setTrackingOrderId(null);
+    setTrackingNumber("");
+    setTrackingUrl("");
+    setTrackingLoading(false);
   }
 
   return (
@@ -110,6 +139,7 @@ export default function AdminOrdersPage() {
                   <th>Total</th>
                   <th>Status</th>
                   <th>Date</th>
+                  <th>Tracking</th>
                   <th>Update Status</th>
                 </tr>
               </thead>
@@ -139,6 +169,26 @@ export default function AdminOrdersPage() {
                         </span>
                       </td>
                       <td style={{ color: "var(--muted)", fontSize: "0.8rem" }}>{formatDate(order.created_at)}</td>
+                      <td>
+                        {order.tracking_number ? (
+                          <span style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#3b82f6" }}>{order.tracking_number}</span>
+                        ) : (
+                          <button
+                            onClick={() => { setTrackingOrderId(order.id); setTrackingNumber(""); setTrackingUrl(""); }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "0.3rem",
+                              padding: "0.35rem 0.65rem", borderRadius: "6px",
+                              background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.25)",
+                              color: "#3b82f6", cursor: "pointer", fontSize: "0.7rem", fontWeight: 600,
+                              transition: "all 0.2s",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(59,130,246,0.15)")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(59,130,246,0.08)")}
+                          >
+                            <Truck size={11} /> Add Tracking
+                          </button>
+                        )}
+                      </td>
                       <td>
                         <div style={{ position: "relative" }}>
                           <select
@@ -184,6 +234,60 @@ export default function AdminOrdersPage() {
           </div>
         )}
       </div>
+
+      {/* Tracking Modal */}
+      {trackingOrderId && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setTrackingOrderId(null); }}
+        >
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "16px", padding: "2rem", width: "100%", maxWidth: "440px", animation: "zoomIn 0.2s ease" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+              <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Truck size={18} style={{ color: "var(--gold)" }} /> Add Tracking
+              </h2>
+              <button onClick={() => setTrackingOrderId(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", display: "flex" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div>
+                <label style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                  Tracking Number *
+                </label>
+                <input
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  placeholder="e.g. 1Z999AA10123456784"
+                  className="input-dark"
+                  style={{ width: "100%", padding: "0.75rem 1rem", background: "var(--elevated)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: "6px", color: "var(--text)", fontSize: "0.875rem", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                  Tracking URL (optional)
+                </label>
+                <input
+                  value={trackingUrl}
+                  onChange={(e) => setTrackingUrl(e.target.value)}
+                  placeholder="https://www.ups.com/track?tracknum=..."
+                  className="input-dark"
+                  style={{ width: "100%", padding: "0.75rem 1rem", background: "var(--elevated)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: "6px", color: "var(--text)", fontSize: "0.875rem", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+              <p style={{ fontSize: "0.78rem", color: "var(--muted)", margin: 0 }}>
+                This will mark the order as <strong>shipped</strong> and the customer will see the tracking number in their order details.
+              </p>
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                <button onClick={() => setTrackingOrderId(null)} className="btn-gold-outline" style={{ flex: 1 }}>Cancel</button>
+                <button onClick={saveTracking} disabled={!trackingNumber.trim() || trackingLoading} className="btn-gold" style={{ flex: 1, justifyContent: "center" }}>
+                  {trackingLoading ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Saving...</> : <><Truck size={14} /> Save Tracking</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

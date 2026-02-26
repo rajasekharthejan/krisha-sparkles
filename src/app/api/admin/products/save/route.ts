@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     stock_quantity,
     featured,
     active,
+    variants,
   } = body;
 
   if (!name || !price) {
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
     stock_quantity: parseInt(stock_quantity) || 0,
     featured: featured || false,
     active: active ?? true,
+    variants: Array.isArray(variants) ? variants : [],
     updated_at: new Date().toISOString(),
   };
 

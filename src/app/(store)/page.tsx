@@ -1,12 +1,30 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Krisha Sparkles — Exquisite Imitation Jewelry",
+  description: "Shop handpicked imitation jewelry and ethnic wear at Krisha Sparkles. Necklaces, earrings, bangles, pendant sets, and Jadau jewelry. Free shipping over $75.",
+  openGraph: {
+    title: "Krisha Sparkles — Exquisite Imitation Jewelry",
+    description: "Shop handpicked imitation jewelry — necklaces, earrings, bangles, Jadau sets. USA. Free shipping over $75.",
+    images: [{ url: "https://krisha-sparkles.vercel.app/logo.png", width: 800, height: 800 }],
+  },
+};
 import ProductCard from "@/components/store/ProductCard";
 import CategoryGrid from "@/components/store/CategoryGrid";
 import NewsletterSection from "@/components/store/NewsletterSection";
 import FeaturedSlider from "@/components/store/FeaturedSlider";
 import MarqueeTicker from "@/components/store/MarqueeTicker";
 import type { Product } from "@/types";
-import { ArrowRight, Star, Shield, Truck, RefreshCw } from "lucide-react";
+import { ArrowRight, Star, Shield, Truck, RefreshCw, Heart } from "lucide-react";
+
+const INSTA_TILES = [
+  { emoji: "💎", label: "Jadau Collection",  likes: "124" },
+  { emoji: "✨", label: "Gold Necklaces",    likes: "89"  },
+  { emoji: "📿", label: "Pendant Sets",      likes: "201" },
+  { emoji: "👑", label: "Bridal Jewelry",    likes: "156" },
+];
 
 async function getFeaturedProducts(): Promise<Product[]> {
   try {
@@ -400,6 +418,11 @@ export default async function HomePage() {
                 <span style={{ color: "var(--gold)", fontWeight: 600 }}>@krisha.sparkles</span>{" "}
                 for daily inspiration, new arrivals &amp; exclusive deals.
               </p>
+              {/* Social proof counts */}
+              <div style={{ display: "flex", gap: "1.5rem", marginBottom: "1.5rem", fontSize: "0.85rem", color: "var(--muted)" }}>
+                <span><span style={{ color: "var(--gold)", fontWeight: 700 }}>2.4K+</span> Followers</span>
+                <span><span style={{ color: "var(--gold)", fontWeight: 700 }}>180+</span> Posts</span>
+              </div>
               <a
                 href="https://www.instagram.com/krisha.sparkles/"
                 target="_blank"
@@ -419,17 +442,26 @@ export default async function HomePage() {
                 gap: "0.75rem",
               }}
             >
-              {["💎", "✨", "📿", "👑"].map((emoji, i) => (
-                <div
+              {INSTA_TILES.map((tile, i) => (
+                <a
                   key={i}
-                  className="insta-tile"
-                  style={{
-                    animation: `scaleIn 0.5s ease both`,
-                    animationDelay: `${i * 0.1}s`,
-                  }}
+                  href="https://www.instagram.com/krisha.sparkles/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: "none", display: "block", animation: `scaleIn 0.5s ease both`, animationDelay: `${i * 0.1}s` }}
                 >
-                  {emoji}
-                </div>
+                  <div className="insta-tile-inner">
+                    <span style={{ fontSize: "2.5rem", lineHeight: 1 }}>{tile.emoji}</span>
+                    <span style={{ fontSize: "0.65rem", color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", textAlign: "center", padding: "0 0.25rem" }}>
+                      {tile.label}
+                    </span>
+                    <div className="insta-tile-overlay">
+                      <span style={{ color: "#fff", fontSize: "0.72rem", display: "flex", alignItems: "center", gap: "4px" }}>
+                        <Heart size={11} fill="#fff" /> {tile.likes}
+                      </span>
+                    </div>
+                  </div>
+                </a>
               ))}
             </div>
           </div>

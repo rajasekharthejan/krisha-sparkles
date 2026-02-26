@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -76,6 +79,9 @@ export default function RootLayout({
       </head>
       <body style={{ fontFamily: "var(--font-inter, sans-serif)" }}>
         {children}
+        <WhatsAppButton />
+        <Analytics />
+        <GoogleAnalytics />
       </body>
     </html>
   );

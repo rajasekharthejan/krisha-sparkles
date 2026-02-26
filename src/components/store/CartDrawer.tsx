@@ -177,6 +177,11 @@ export default function CartDrawer() {
                     >
                       {item.name}
                     </p>
+                    {item.selectedVariant && (
+                      <p style={{ fontSize: "0.72rem", color: "var(--subtle)", marginTop: "1px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {item.selectedVariant}
+                      </p>
+                    )}
                     <p
                       style={{
                         fontSize: "0.875rem",

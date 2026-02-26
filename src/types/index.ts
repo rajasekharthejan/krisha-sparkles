@@ -6,6 +6,12 @@ export interface Category {
   created_at: string;
 }
 
+// ── Phase 4 — Product Variants ─────────────────────────────────────────────
+export interface ProductVariant {
+  name: string;    // e.g. "Color", "Size"
+  options: string[]; // e.g. ["Gold", "Silver", "Rose Gold"]
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -19,18 +25,20 @@ export interface Product {
   stock_quantity: number;
   featured: boolean;
   active: boolean;
+  variants?: ProductVariant[];
   created_at: string;
   updated_at: string;
 }
 
 export interface CartItem {
-  id: string;
+  id: string;           // composite key: productId__selectedVariant
   productId: string;
   name: string;
   price: number;
   image: string;
   quantity: number;
   slug: string;
+  selectedVariant?: string; // e.g. "Color: Gold, Size: M"
 }
 
 export interface Order {
@@ -45,6 +53,11 @@ export interface Order {
   status: "pending" | "paid" | "shipped" | "delivered" | "cancelled";
   shipping_address?: ShippingAddress;
   notes?: string;
+  user_id?: string;
+  tracking_number?: string;
+  tracking_url?: string;
+  shipped_at?: string;
+  delivered_at?: string;
   created_at: string;
   order_items?: OrderItem[];
 }
@@ -66,4 +79,64 @@ export interface ShippingAddress {
   state: string;
   postal_code: string;
   country: string;
+}
+
+// ── Phase 3 Types ──────────────────────────────────────────
+
+export interface Review {
+  id: string;
+  product_id: string;
+  user_id: string;
+  rating: number;
+  title?: string;
+  body: string;
+  verified_purchase: boolean;
+  approved: boolean;
+  created_at: string;
+  user_profiles?: { first_name?: string; last_name?: string };
+}
+
+export type RefundStatus = "pending" | "approved" | "denied";
+export type RefundReason = "damaged" | "wrong_item" | "not_as_described" | "changed_mind" | "other";
+
+export interface RefundRequest {
+  id: string;
+  order_id: string;
+  user_id: string;
+  email: string;
+  reason: RefundReason;
+  details?: string;
+  status: RefundStatus;
+  admin_notes?: string;
+  created_at: string;
+  updated_at: string;
+  orders?: Pick<Order, "id" | "total" | "status" | "created_at">;
+}
+
+export interface WishlistItem {
+  id: string;
+  user_id: string;
+  product_id: string;
+  created_at: string;
+  products?: Product;
+}
+
+export interface NewsletterSubscriber {
+  id: string;
+  email: string;
+  name?: string;
+  active: boolean;
+  subscribed_at: string;
+}
+
+export type ContactSubject = "order_issue" | "return_request" | "product_question" | "general" | "other";
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: ContactSubject;
+  message: string;
+  read: boolean;
+  created_at: string;
 }

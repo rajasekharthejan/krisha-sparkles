@@ -3,8 +3,9 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Package, MapPin, CreditCard } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Truck, ExternalLink } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import RefundRequestButton from "@/components/store/RefundRequestButton";
 
 const STATUS_COLOR: Record<string, string> = {
   paid: "#10b981", shipped: "#3b82f6", delivered: "#22c55e",
@@ -139,6 +140,46 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             </p>
           </div>
         </div>
+
+        {/* Tracking Card */}
+        {order.tracking_number && (
+          <div style={{ background: "var(--surface)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "12px", padding: "1.25rem 1.5rem", marginTop: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+              <Truck size={16} style={{ color: "#3b82f6" }} />
+              <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", margin: 0, color: "#3b82f6" }}>Track Package</h3>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
+              <div>
+                <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "0 0 0.25rem" }}>Tracking Number</p>
+                <p style={{ fontWeight: 600, fontSize: "0.9rem", margin: 0, fontFamily: "monospace" }}>{order.tracking_number}</p>
+              </div>
+              {order.tracking_url && (
+                <a
+                  href={order.tracking_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-gold"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem" }}
+                >
+                  <ExternalLink size={14} />
+                  Track Package
+                </a>
+              )}
+            </div>
+            {order.shipped_at && (
+              <p style={{ color: "var(--muted)", fontSize: "0.78rem", marginTop: "0.5rem", margin: "0.5rem 0 0" }}>
+                Shipped on {new Date(order.shipped_at).toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" })}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Refund Button */}
+        {(order.status === "paid" || order.status === "shipped" || order.status === "delivered") && (
+          <div style={{ marginTop: "1rem" }}>
+            <RefundRequestButton orderId={order.id} userEmail={order.email} userId={user.id} />
+          </div>
+        )}
 
         <div style={{ marginTop: "2rem", textAlign: "center" }}>
           <Link href="/shop" className="btn-gold-outline" style={{ display: "inline-block", fontSize: "0.875rem" }}>

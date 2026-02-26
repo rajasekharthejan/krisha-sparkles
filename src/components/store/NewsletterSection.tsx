@@ -1,16 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Sparkles } from "lucide-react";
+import { Mail, Sparkles, Loader2 } from "lucide-react";
 
 export default function NewsletterSection() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email) return;
-    setSubmitted(true);
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const data = await res.json();
+        setError(data.error || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    }
+    setLoading(false);
   }
 
   return (
@@ -209,8 +228,14 @@ export default function NewsletterSection() {
                 </div>
               </div>
 
+              {error && (
+                <p style={{ color: "#ef4444", fontSize: "0.78rem", padding: "0.5rem 0.75rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "6px", margin: "0 0 0.25rem" }}>
+                  {error}
+                </p>
+              )}
               <button
                 type="submit"
+                disabled={loading}
                 className="btn-gold"
                 style={{
                   width: "100%",
@@ -220,7 +245,7 @@ export default function NewsletterSection() {
                   borderRadius: "8px",
                 }}
               >
-                Claim My 10% Off ✦
+                {loading ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Subscribing...</> : "Claim My 10% Off ✦"}
               </button>
 
               <p

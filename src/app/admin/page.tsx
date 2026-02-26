@@ -2,26 +2,54 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { DollarSign, Package, ShoppingCart, AlertTriangle, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import ChartsLoader from "@/components/admin/ChartsLoader";
+import type { RevenueDataPoint, StatusDataPoint } from "@/components/admin/DashboardCharts";
 
 async function getStats() {
   try {
     const supabase = await createAdminClient();
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const [
       { data: orders },
       { count: productCount },
       { data: lowStock },
       { data: recentOrders },
+      { data: recentOrdersForCharts },
     ] = await Promise.all([
       supabase.from("orders").select("total, status"),
       supabase.from("products").select("id", { count: "exact", head: true }).eq("active", true),
       supabase.from("products").select("id, name, stock_quantity").eq("active", true).lte("stock_quantity", 5).gt("stock_quantity", 0).order("stock_quantity"),
       supabase.from("orders").select("id, email, total, status, created_at").order("created_at", { ascending: false }).limit(8),
+      supabase.from("orders").select("total, status, created_at").gte("created_at", thirtyDaysAgo).order("created_at", { ascending: true }),
     ]);
 
     const totalRevenue = orders?.filter(o => o.status !== "cancelled").reduce((sum, o) => sum + o.total, 0) || 0;
     const totalOrders = orders?.length || 0;
     const paidOrders = orders?.filter(o => o.status === "paid" || o.status === "shipped" || o.status === "delivered").length || 0;
+
+    // ── Build 14-day revenue buckets ─────────────────────────
+    const revenueByDay: RevenueDataPoint[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const dateStr = d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const dayRevenue = (recentOrdersForCharts || [])
+        .filter(o => o.status !== "cancelled" && o.created_at?.slice(0, 10) === dateStr)
+        .reduce((sum, o) => sum + o.total, 0);
+      revenueByDay.push({ date: label, revenue: Math.round(dayRevenue * 100) / 100 });
+    }
+
+    // ── Build order status counts ────────────────────────────
+    const allOrders = orders || [];
+    const statusCounts: StatusDataPoint[] = [
+      { name: "Pending",   value: allOrders.filter(o => o.status === "pending").length,   color: "#f59e0b" },
+      { name: "Paid",      value: allOrders.filter(o => o.status === "paid").length,      color: "#10b981" },
+      { name: "Shipped",   value: allOrders.filter(o => o.status === "shipped").length,   color: "#3b82f6" },
+      { name: "Delivered", value: allOrders.filter(o => o.status === "delivered").length, color: "#8b5cf6" },
+      { name: "Cancelled", value: allOrders.filter(o => o.status === "cancelled").length, color: "#ef4444" },
+    ];
 
     return {
       totalRevenue,
@@ -30,6 +58,8 @@ async function getStats() {
       productCount: productCount || 0,
       lowStock: lowStock || [],
       recentOrders: recentOrders || [],
+      revenueByDay,
+      statusCounts,
     };
   } catch {
     return {
@@ -39,6 +69,8 @@ async function getStats() {
       productCount: 0,
       lowStock: [],
       recentOrders: [],
+      revenueByDay: [] as RevenueDataPoint[],
+      statusCounts: [] as StatusDataPoint[],
     };
   }
 }
@@ -77,19 +109,11 @@ export default async function AdminDashboard() {
     },
   ];
 
-  const statusColors: Record<string, string> = {
-    pending: "amber",
-    paid: "green",
-    shipped: "blue",
-    delivered: "purple",
-    cancelled: "red",
-  };
-
   const statusBadgeStyle = (status: string) => {
     const map: Record<string, { color: string; bg: string }> = {
-      pending: { color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-      paid: { color: "#10b981", bg: "rgba(16,185,129,0.1)" },
-      shipped: { color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
+      pending:   { color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+      paid:      { color: "#10b981", bg: "rgba(16,185,129,0.1)" },
+      shipped:   { color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
       delivered: { color: "#8b5cf6", bg: "rgba(139,92,246,0.1)" },
       cancelled: { color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
     };
@@ -121,7 +145,7 @@ export default async function AdminDashboard() {
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: "1.25rem",
-          marginBottom: "2.5rem",
+          marginBottom: "2rem",
         }}
       >
         {statCards.map((card, i) => (
@@ -173,7 +197,11 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", flexWrap: "wrap" }}>
+      {/* Analytics Charts */}
+      <ChartsLoader revenueData={stats.revenueByDay} statusData={stats.statusCounts} />
+
+      {/* Recent Orders + Low Stock */}
+      <div className="admin-main-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
         {/* Recent Orders */}
         <div
           style={{

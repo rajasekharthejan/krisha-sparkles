@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Instagram, Mail, MessageCircle, Clock, Package, RotateCcw } from "lucide-react";
+import { Instagram, Mail, MessageCircle, Clock, Package, RotateCcw, HelpCircle } from "lucide-react";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Support — Krisha Sparkles",
@@ -147,6 +148,18 @@ export default function SupportPage() {
               </details>
             ))}
           </div>
+        </div>
+
+        {/* Quick Links to new pages */}
+        <div style={{ marginTop: "2rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+          <Link href="/faq" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.75rem 1.25rem", background: "var(--gold-muted)", border: "1px solid var(--gold-border)", borderRadius: "8px", color: "var(--gold)", textDecoration: "none", fontSize: "0.875rem", fontWeight: 600 }}>
+            <HelpCircle size={15} />
+            View Full FAQ
+          </Link>
+          <Link href="/contact" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.75rem 1.25rem", background: "none", border: "1px solid var(--gold-border)", borderRadius: "8px", color: "var(--muted)", textDecoration: "none", fontSize: "0.875rem", fontWeight: 600 }}>
+            <MessageCircle size={15} />
+            Contact Us Directly
+          </Link>
         </div>
 
       </div>

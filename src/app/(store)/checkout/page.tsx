@@ -219,7 +219,7 @@ function CheckoutContent() {
                   onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
                   placeholder="Enter coupon code"
                   className="input-dark"
-                  style={{ flex: 1, fontFamily: "monospace", letterSpacing: "0.08em" }}
+                  style={{ flex: 1, minWidth: 0, fontFamily: "monospace", letterSpacing: "0.08em" }}
                   disabled={couponLoading}
                 />
                 <button
@@ -227,6 +227,8 @@ function CheckoutContent() {
                   disabled={couponLoading || !couponCode.trim()}
                   style={{
                     padding: "0 1.25rem",
+                    minWidth: "88px",
+                    flexShrink: 0,
                     background: "var(--gold-muted)",
                     border: "1px solid var(--gold-border)",
                     borderRadius: "8px",

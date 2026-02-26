@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, Menu, X, Search, Instagram, User, LogOut, Package, UserCircle } from "lucide-react";
+import { ShoppingBag, Menu, X, Search, Instagram, User, LogOut, Package, UserCircle, Heart, Star } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import CartDrawer from "./CartDrawer";
+import SearchOverlay from "./SearchOverlay";
 import { createBrowserClient } from "@supabase/ssr";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -24,8 +25,10 @@ export default function Navbar() {
   const [scrolled,    setScrolled]    = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen,  setSearchOpen]  = useState(false);
   const { totalItems, toggleCart }    = useCartStore();
   const { user, setUser, setLoading } = useAuthStore();
+  const [pointsBalance, setPointsBalance] = useState<number | null>(null);
   const itemCount = totalItems();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -47,6 +50,23 @@ export default function Navbar() {
 
     return () => subscription.unsubscribe();
   }, [setUser]);
+
+  // Fetch loyalty points balance when user logs in
+  useEffect(() => {
+    if (!user) { setPointsBalance(null); return; }
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    supabase
+      .from("user_profiles")
+      .select("points_balance")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setPointsBalance(data.points_balance ?? 0);
+      });
+  }, [user]);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 30);
@@ -185,14 +205,15 @@ export default function Navbar() {
               </a>
 
               {/* Search */}
-              <Link
-                href="/shop"
-                style={{ color: "var(--muted)", transition: "color 0.2s ease", display: "flex", alignItems: "center" }}
+              <button
+                onClick={() => setSearchOpen(true)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", transition: "color 0.2s ease", display: "flex", alignItems: "center", padding: "4px" }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = "var(--gold)")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted)")}
+                aria-label="Search"
               >
                 <Search size={18} />
-              </Link>
+              </button>
 
               {/* User Account */}
               <div ref={userMenuRef} style={{ position: "relative" }}>
@@ -249,10 +270,17 @@ export default function Navbar() {
                       <p style={{ fontSize: "0.7rem", color: "var(--muted)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {user.email}
                       </p>
+                      {pointsBalance !== null && (
+                        <p style={{ fontSize: "0.68rem", color: "var(--gold)", margin: "3px 0 0", fontWeight: 600, display: "flex", alignItems: "center", gap: "3px" }}>
+                          <Star size={10} fill="currentColor" /> {pointsBalance} pts
+                        </p>
+                      )}
                     </div>
                     {[
                       { href: "/account", icon: <UserCircle size={15} />, label: "My Account" },
                       { href: "/account/orders", icon: <Package size={15} />, label: "My Orders" },
+                      { href: "/account/wishlist", icon: <Heart size={15} />, label: "My Wishlist" },
+                      { href: "/account/points", icon: <Star size={15} />, label: `${pointsBalance ?? 0} Points` },
                       { href: "/account/profile", icon: <User size={15} />, label: "Edit Profile" },
                     ].map((item) => (
                       <Link
@@ -384,6 +412,9 @@ export default function Navbar() {
                   <Link href="/account/orders" onClick={() => setMobileOpen(false)} style={{ display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none", color: "var(--muted)", fontSize: "0.9rem", padding: "0.75rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                     <Package size={16} style={{ color: "var(--gold)" }} /> My Orders
                   </Link>
+                  <Link href="/account/wishlist" onClick={() => setMobileOpen(false)} style={{ display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none", color: "var(--muted)", fontSize: "0.9rem", padding: "0.75rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                    <Heart size={16} style={{ color: "var(--gold)" }} /> My Wishlist
+                  </Link>
                   <button onClick={() => { setMobileOpen(false); handleSignOut(); }} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontSize: "0.9rem", padding: "0.75rem 0", width: "100%" }}>
                     <LogOut size={16} /> Sign Out
                   </button>
@@ -416,6 +447,7 @@ export default function Navbar() {
       </nav>
 
       <CartDrawer />
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

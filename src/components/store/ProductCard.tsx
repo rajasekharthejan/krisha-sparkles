@@ -3,9 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingBag, Heart, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCartStore } from "@/store/cartStore";
+import { useAuthStore } from "@/store/authStore";
 import { formatPrice } from "@/lib/utils";
+import { toggleGuestWishlist, isInGuestWishlist } from "@/lib/wishlistUtils";
+import { createClient } from "@/lib/supabase/client";
 import type { Product } from "@/types";
 
 interface ProductCardProps {
@@ -15,8 +18,10 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const [wished, setWished] = useState(false);
+  const [wishLoading, setWishLoading] = useState(false);
   const [added, setAdded] = useState(false);
   const { addItem, openCart } = useCartStore();
+  const { user } = useAuthStore();
 
   const mainImage = product.images?.[0] || "";
   const hasDiscount = product.compare_price && product.compare_price > product.price;
@@ -24,11 +29,26 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     ? Math.round(((product.compare_price! - product.price) / product.compare_price!) * 100)
     : 0;
 
+  // Load initial wishlist state
+  useEffect(() => {
+    if (user) {
+      const supabase = createClient();
+      supabase
+        .from("wishlists")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("product_id", product.id)
+        .single()
+        .then(({ data }) => setWished(!!data));
+    } else {
+      setWished(isInGuestWishlist(product.id));
+    }
+  }, [user, product.id]);
+
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     addItem({
-      id: product.id,
       productId: product.id,
       name: product.name,
       price: product.price,
@@ -40,10 +60,32 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     setTimeout(() => setAdded(false), 2000);
   }
 
-  function handleWish(e: React.MouseEvent) {
+  async function handleWish(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setWished((w) => !w);
+    if (wishLoading) return;
+    setWishLoading(true);
+
+    if (user) {
+      const supabase = createClient();
+      if (wished) {
+        await supabase
+          .from("wishlists")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("product_id", product.id);
+        setWished(false);
+      } else {
+        await supabase
+          .from("wishlists")
+          .upsert({ user_id: user.id, product_id: product.id });
+        setWished(true);
+      }
+    } else {
+      const nowIn = toggleGuestWishlist(product.id);
+      setWished(nowIn);
+    }
+    setWishLoading(false);
   }
 
   return (
@@ -134,6 +176,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           {/* Wishlist */}
           <button
             onClick={handleWish}
+            disabled={wishLoading}
             style={{
               position: "absolute",
               top: "10px",
@@ -146,7 +189,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
                 : "rgba(10,10,10,0.65)",
               backdropFilter: "blur(8px)",
               border: `1px solid ${wished ? "rgba(239,68,68,0.5)" : "rgba(201,168,76,0.3)"}`,
-              cursor: "pointer",
+              cursor: wishLoading ? "default" : "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

@@ -7,7 +7,7 @@ import type { CartItem } from "@/types";
 interface CartStore {
   items: CartItem[];
   isOpen: boolean;
-  addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
+  addItem: (item: Omit<CartItem, "id" | "quantity"> & { quantity?: number; selectedVariant?: string }) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
@@ -25,19 +25,32 @@ export const useCartStore = create<CartStore>()(
       isOpen: false,
 
       addItem: (item) => {
+        // Generate composite key: productId__selectedVariant (or just productId for no-variant items)
+        const compositeId = item.selectedVariant
+          ? `${item.productId}__${item.selectedVariant}`
+          : item.productId;
+
         set((state) => {
-          const existing = state.items.find((i) => i.id === item.id);
+          const existing = state.items.find((i) => i.id === compositeId);
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.id === item.id
+                i.id === compositeId
                   ? { ...i, quantity: i.quantity + (item.quantity ?? 1) }
                   : i
               ),
             };
           }
           return {
-            items: [...state.items, { ...item, quantity: item.quantity ?? 1 }],
+            items: [
+              ...state.items,
+              {
+                ...item,
+                id: compositeId,
+                quantity: item.quantity ?? 1,
+                selectedVariant: item.selectedVariant,
+              },
+            ],
           };
         });
       },

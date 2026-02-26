@@ -593,6 +593,9 @@ button:focus-visible, a:focus-visible {
 
   /* Prevent horizontal overflow */
   section { overflow-x: hidden; }
+
+  /* Admin dashboard 2-col layout collapses on tablet/mobile */
+  .admin-main-grid { grid-template-columns: 1fr !important; }
 }
 
 /* Very small phones (320px) */
@@ -617,4 +620,87 @@ button:focus-visible, a:focus-visible {
 }
 .gold-hover-card:hover {
   border-color: var(--gold) !important;
+}
+
+/* ─── Star Rating ────────────────────────────────────────── */
+.star-rating { display: inline-flex; gap: 2px; }
+.star-filled { color: var(--gold); }
+.star-empty  { color: var(--subtle); }
+.star-btn {
+  background: none; border: none; cursor: pointer; padding: 2px;
+  color: var(--subtle); transition: color 0.15s ease, transform 0.15s ease;
+  font-size: 1.4rem; line-height: 1;
+}
+.star-btn:hover, .star-btn.active { color: var(--gold); transform: scale(1.15); }
+
+/* ─── Review Card ────────────────────────────────────────── */
+.review-card {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.1);
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: border-color 0.2s ease;
+}
+.review-card:hover { border-color: var(--gold-border); }
+
+/* ─── Search Overlay ─────────────────────────────────────── */
+.search-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex; flex-direction: column;
+  align-items: center; padding-top: 8vh;
+  animation: fadeIn 0.18s ease;
+}
+.search-result-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer;
+  transition: background 0.15s ease; text-decoration: none;
+  color: var(--text);
+}
+.search-result-item:hover { background: rgba(201,168,76,0.08); }
+
+/* ─── Admin Unread Badge ─────────────────────────────────── */
+.unread-dot {
+  display: inline-flex; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--gold); flex-shrink: 0;
+}
+
+/* ─── Instagram Mosaic Tiles ─────────────────────────────── */
+.insta-tile-inner {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, var(--elevated, #1a1a1a) 0%, var(--surface, #111) 100%);
+  border: 1px solid var(--gold-border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+.insta-tile-inner:hover {
+  border-color: var(--gold);
+  box-shadow: 0 8px 30px rgba(201,168,76,0.22);
+  transform: scale(1.06) translateY(-3px);
+}
+.insta-tile-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(10,10,10,0.75) 0%, transparent 55%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  display: flex;
+  align-items: flex-end;
+  padding: 0.75rem;
+}
+.insta-tile-inner:hover .insta-tile-overlay { opacity: 1; }
+
+/* ─── zoomIn animation ───────────────────────────────────── */
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
