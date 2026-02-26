@@ -22,6 +22,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://krisha-sparkles.vercel.app"),
   title: {
     default: "Krisha Sparkles — Exquisite Imitation Jewelry",
     template: "%s | Krisha Sparkles",

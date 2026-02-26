@@ -1,28 +1,48 @@
-import { createAdminClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+"use client";
 
-export default async function ReferralLandingPage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
-  const supabase = await createAdminClient();
-  
-  const { data: referral } = await supabase
-    .from("referrals")
-    .select("id, referrer_id, status")
-    .eq("coupon_code", code.toUpperCase())
-    .single();
+import { useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 
-  if (!referral) {
-    redirect("/shop");
-  }
+export default function ReferralLandingPage() {
+  const params = useParams<{ code: string }>();
+  const code = params?.code?.toUpperCase() ?? "";
+  const router = useRouter();
 
-  // Set referral cookie
-  const cookieStore = await cookies();
-  cookieStore.set("ks_referral_code", code.toUpperCase(), {
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-    path: "/",
-    httpOnly: false,
-  });
+  useEffect(() => {
+    if (!code) {
+      router.replace("/shop");
+      return;
+    }
 
-  redirect("/shop?ref=1");
+    // Validate code exists then set cookie client-side
+    fetch(`/api/referrals/validate?code=${encodeURIComponent(code)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.valid) {
+          // Set 7-day referral cookie (client-side, non-HttpOnly)
+          const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+          document.cookie = `ks_referral_code=${code}; path=/; expires=${expires}; SameSite=Lax`;
+        }
+        router.replace("/shop?ref=1");
+      })
+      .catch(() => router.replace("/shop"));
+  }, [code, router]);
+
+  return (
+    <div
+      style={{
+        paddingTop: "80px",
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "var(--bg)",
+        flexDirection: "column",
+        gap: "1rem",
+      }}
+    >
+      <p style={{ fontSize: "2rem" }}>✨</p>
+      <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>Loading your referral…</p>
+    </div>
+  );
 }
