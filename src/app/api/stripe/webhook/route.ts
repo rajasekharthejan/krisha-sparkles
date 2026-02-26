@@ -85,6 +85,11 @@ export async function POST(req: NextRequest) {
           status: "paid",
           shipping_address,
           user_id: userId || null,
+          coupon_code: metadata?.coupon_code || null,
+          utm_source: metadata?.utm_source || null,
+          utm_medium: metadata?.utm_medium || null,
+          utm_campaign: metadata?.utm_campaign || null,
+          utm_content: metadata?.utm_content || null,
         })
         .select()
         .single();

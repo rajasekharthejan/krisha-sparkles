@@ -34,6 +34,16 @@ export async function POST(req: NextRequest) {
       if (user) { userId = user.id; userEmail = user.email || null; }
     } catch { /* not logged in, that's fine */ }
 
+    // Read UTM attribution cookie
+    let utmData: { utm_source?: string; utm_medium?: string; utm_campaign?: string; utm_content?: string } | null = null;
+    try {
+      const utmCookieStore = await cookies();
+      const utmCookie = utmCookieStore.get("ks_utm");
+      if (utmCookie?.value) {
+        utmData = JSON.parse(decodeURIComponent(utmCookie.value));
+      }
+    } catch { /* ignore */ }
+
     if (!items || items.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
@@ -135,6 +145,10 @@ export async function POST(req: NextRequest) {
         coupon_id: validatedCoupon?.id || "",
         coupon_code: validatedCoupon?.code || "",
         discount_amount: serverDiscount > 0 ? String(serverDiscount) : "",
+        utm_source: utmData?.utm_source || "",
+        utm_medium: utmData?.utm_medium || "",
+        utm_campaign: utmData?.utm_campaign || "",
+        utm_content: utmData?.utm_content || "",
       },
     };
 

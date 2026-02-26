@@ -15,6 +15,9 @@ interface Coupon {
   active: boolean;
   expires_at: string | null;
   created_at: string;
+  source: string;
+  influencer_name: string | null;
+  campaign: string | null;
 }
 
 const supabase = createBrowserClient(
@@ -25,6 +28,9 @@ const supabase = createBrowserClient(
 const emptyForm = {
   code: "", description: "", discount_type: "percentage" as "percentage" | "fixed",
   discount_value: "", min_order_amount: "", max_uses: "", expires_at: "", active: true,
+  source: "manual" as "manual" | "influencer" | "partner" | "campaign",
+  influencer_name: "",
+  campaign: "",
 };
 
 export default function PromotionsPage() {
@@ -67,6 +73,9 @@ export default function PromotionsPage() {
       max_uses: coupon.max_uses !== null ? String(coupon.max_uses) : "",
       expires_at: expiresLocal,
       active: coupon.active,
+      source: (coupon.source as "manual" | "influencer" | "partner" | "campaign") || "manual",
+      influencer_name: coupon.influencer_name || "",
+      campaign: coupon.campaign || "",
     });
     setEditingId(coupon.id);
     setShowForm(true);
@@ -96,6 +105,9 @@ export default function PromotionsPage() {
       max_uses: form.max_uses ? Number(form.max_uses) : null,
       expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
       active: form.active,
+      source: form.source,
+      influencer_name: form.influencer_name.trim() || null,
+      campaign: form.campaign.trim() || null,
     };
 
     if (editingId) {
@@ -249,6 +261,36 @@ export default function PromotionsPage() {
                   {form.active ? "Active" : "Inactive"}
                 </button>
               </div>
+
+              {/* Source */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>Source</label>
+                <select value={form.source} onChange={(e) => setForm((f) => ({ ...f, source: e.target.value as typeof form.source }))}
+                  className="input-dark" style={{ width: "100%" }}>
+                  <option value="manual">Manual / General</option>
+                  <option value="influencer">Influencer</option>
+                  <option value="partner">Partner</option>
+                  <option value="campaign">Campaign</option>
+                </select>
+              </div>
+
+              {/* Influencer Name */}
+              {form.source !== "manual" && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>Influencer / Partner Name</label>
+                  <input value={form.influencer_name} onChange={(e) => setForm((f) => ({ ...f, influencer_name: e.target.value }))}
+                    placeholder="e.g. @fashionista_gal" className="input-dark" />
+                </div>
+              )}
+
+              {/* Campaign */}
+              {form.source !== "manual" && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>Campaign Name</label>
+                  <input value={form.campaign} onChange={(e) => setForm((f) => ({ ...f, campaign: e.target.value }))}
+                    placeholder="e.g. diwali_2026" className="input-dark" />
+                </div>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", justifyContent: "flex-end" }}>
