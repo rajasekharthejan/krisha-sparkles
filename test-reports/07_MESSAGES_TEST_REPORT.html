@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages — Test Report | Krisha Sparkles</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0a; color: #f5f5f5; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); border-bottom: 2px solid #c9a84c; padding: 2rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+  .logo { width: 60px; height: 60px; background: #d4622a; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 1rem; color: #fff; font-weight: bold; flex-shrink: 0; }
+  .header-text h1 { font-family: Georgia, serif; font-size: 1.8rem; color: #c9a84c; }
+  .header-text p { color: #888; font-size: 0.9rem; margin-top: 0.3rem; }
+  .badge-pass { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); padding: 0.3rem 0.9rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0; }
+  .stat-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1.25rem; text-align: center; }
+  .stat-card .num { font-family: Georgia, serif; font-size: 2rem; font-weight: 700; }
+  .stat-card .lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.25rem; }
+  .section { margin: 2.5rem 0; }
+  .section h2 { font-family: Georgia, serif; font-size: 1.2rem; color: #c9a84c; border-bottom: 1px solid #2a2a2a; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { background: #1a1a1a; color: #c9a84c; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #2a2a2a; }
+  td { padding: 0.875rem 1rem; border-bottom: 1px solid #1a1a1a; vertical-align: top; line-height: 1.5; }
+  tr:hover td { background: rgba(201,168,76,0.03); }
+  .screen { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1.25rem; margin: 0.75rem 0; font-size: 0.8rem; color: #aaa; position: relative; overflow: hidden; }
+  .screen::before { content: attr(data-title); position: absolute; top: 0; left: 0; right: 0; background: #1a1a1a; padding: 0.4rem 0.75rem; font-size: 0.65rem; color: #666; border-bottom: 1px solid #2a2a2a; letter-spacing: 0.1em; text-transform: uppercase; }
+  .screen-body { margin-top: 1.5rem; }
+  .msg-card { border-bottom: 1px solid #1a1a1a; padding: 0.85rem 0; font-size: 0.8rem; }
+  .msg-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap; }
+  .unread-dot { width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .cat-badge { background: rgba(201,168,76,0.1); color: #c9a84c; border-radius: 9999px; padding: 0.12rem 0.45rem; font-size: 0.67rem; font-weight: 600; }
+  .msg-actions { display: flex; gap: 0.35rem; align-items: center; }
+  .btn-eye { border: 1px solid #2a2a2a; background: none; color: #666; border-radius: 6px; padding: 0.3rem 0.4rem; font-size: 0.7rem; }
+  .btn-mark-read { border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.08); color: #10b981; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.7rem; font-weight: 600; }
+  .btn-mark-unread { border: 1px solid #2a2a2a; background: none; color: #888; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.7rem; font-weight: 600; }
+  .btn-reply { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2); color: #c9a84c; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.7rem; font-weight: 600; }
+  .msg-body { color: #777; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 500px; }
+  .info-box { background: rgba(201,168,76,0.07); border: 1px solid rgba(201,168,76,0.2); border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.85rem; color: #ccc; line-height: 1.7; }
+  .footer { border-top: 1px solid #1a1a1a; padding: 2rem; text-align: center; color: #555; font-size: 0.8rem; margin-top: 3rem; }
+  code { background: #1a1a1a; color: #c9a84c; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.82em; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Krisha</div>
+  <div class="header-text">
+    <h1>Messages / Contact — Test Report</h1>
+    <p>Feature: Admin › Messages &nbsp;|&nbsp; Date: Feb 26, 2026 &nbsp;|&nbsp; Tester: QA Automation</p>
+  </div>
+  <div style="margin-left:auto"><span class="badge-pass">ALL TESTS PASS</span></div>
+</div>
+
+<div class="container">
+
+  <div class="summary-grid">
+    <div class="stat-card"><div class="num" style="color:#10b981">4</div><div class="lbl">Tests Passed</div></div>
+    <div class="stat-card"><div class="num" style="color:#ef4444">0</div><div class="lbl">Tests Failed</div></div>
+    <div class="stat-card"><div class="num" style="color:#c9a84c">12</div><div class="lbl">Total Messages</div></div>
+    <div class="stat-card"><div class="num" style="color:#f59e0b">11</div><div class="lbl">Unread at Start</div></div>
+  </div>
+
+  <div class="info-box">
+    <strong style="color:#c9a84c">Feature Overview:</strong> The Messages page displays all customer contact form submissions. Each message shows: Sender name, email, subject category badge (Order Issue, Return Request, Product Question, General, Other), date/time, truncated message, and three action buttons: <strong>Expand/Collapse</strong> (eye icon), <strong>Mark Read / Mark Unread</strong> (toggles), and <strong>Reply</strong> (opens <code>mailto:</code> link in email client). Unread messages have a gold dot indicator and slightly highlighted background.
+  </div>
+
+  <div class="section">
+    <h2>Messages Overview</h2>
+    <table>
+      <thead><tr><th>Sender</th><th>Category</th><th>Message Preview</th><th>Read?</th></tr></thead>
+      <tbody>
+        <tr><td>Bhavana Rao (bhavana.rao@gmail.com)</td><td>Return Request</td><td>The pendant necklace color looks different from the website photos...</td><td>✓ Read (already)</td></tr>
+        <tr><td>Usha Pillai (usha.pillai@gmail.com)</td><td>Order Issue</td><td>I placed two separate orders but only received one package...</td><td>✓ Marked Read (tested)</td></tr>
+        <tr><td>Rekha Joshi (rekha.joshi@gmail.com)</td><td>General</td><td>When will you restock the Jadau Maang Tikka?...</td><td>Unread (expanded during test)</td></tr>
+        <tr><td>Divya Krishnan (divya.k@gmail.com)</td><td>Product Question</td><td>Are your dresses available in plus sizes?...</td><td>Unread</td></tr>
+        <tr><td>Lakshmi Iyer (lakshmi.iyer@outlook.com)</td><td>Return Request</td><td>The bangle set I received has a broken clasp...</td><td>Unread</td></tr>
+        <tr><td>Kavitha Menon (kavitha.menon@gmail.com)</td><td>Order Issue</td><td>My payment was deducted but I never received a confirmation email...</td><td>Unread</td></tr>
+        <tr><td>Meera Nair (meera.nair@hotmail.com)</td><td>Product Question</td><td>Does the Kundan Bridal Set come with a certificate of authenticity?...</td><td>Unread</td></tr>
+        <tr><td>Anjali Patel (anjali.patel@yahoo.com)</td><td>Return Request</td><td>...</td><td>Unread</td></tr>
+        <tr><td colspan="4" style="color:#888; text-align:center; font-size:0.8rem">... 4 more messages ...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Test Cases</h2>
+    <table>
+      <thead><tr><th>#</th><th>Test Case</th><th>Steps</th><th>Expected</th><th>Actual</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>TC-01</td>
+          <td><strong>View Messages List</strong></td>
+          <td>Navigate to Admin › Messages</td>
+          <td>All messages shown with sender, category badge, date, truncated body, unread dot for unread messages</td>
+          <td>12 messages loaded. 11 showed gold unread dot. 1 (Bhavana Rao) already read. Category badges rendered correctly (Return Request, Order Issue, General, Product Question).</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-02</td>
+          <td><strong>Mark Message as Read</strong></td>
+          <td>Click "Mark Read" on Usha Pillai's message (Order Issue)</td>
+          <td>Gold unread dot removed; button text changes to "Mark Unread"; message background returns to transparent; DB updated via POST <code>/api/admin/messages</code></td>
+          <td>Unread dot disappeared. Button changed to "Mark Unread". Background cleared. Instant UI update via React state (no page reload).</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-03</td>
+          <td><strong>Expand / Collapse Message</strong></td>
+          <td>Click the eye icon button on Rekha Joshi's message</td>
+          <td>Full message text renders below the truncated preview; eye icon changes to EyeOff; click again to collapse</td>
+          <td>Eye icon toggled to EyeOff state. Full message revealed. Click again collapsed it. Toggle works correctly.</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-04</td>
+          <td><strong>Reply Button</strong></td>
+          <td>Click "Reply" on Rekha Joshi's message</td>
+          <td>System email client opens with <code>To:</code> pre-filled to rekha.joshi@gmail.com and <code>Subject:</code> pre-filled to "Re: general"</td>
+          <td>Reply is an <code>&lt;a href="mailto:rekha.joshi@gmail.com?subject=Re: general"&gt;</code> tag — correctly constructs mailto link. Opens default email client on click.</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>UI Screenshots (Mockups)</h2>
+
+    <div class="screen" data-title="Messages Page — Unread Messages (gold dot indicators)">
+      <div class="screen-body">
+        <div style="color:#c9a84c; font-size:1rem; margin-bottom:0.25rem">💬 Messages</div>
+        <div style="color:#888; font-size:0.78rem; margin-bottom:1rem">12 total · <span style="color:#f59e0b">11 unread</span></div>
+
+        <!-- Already read message -->
+        <div class="msg-card">
+          <div class="msg-header">
+            <strong style="font-weight:400; font-size:0.85rem">Bhavana Rao</strong>
+            <span style="color:#888; font-size:0.75rem">bhavana.rao@gmail.com</span>
+            <span class="cat-badge">Return Request</span>
+            <span style="margin-left:auto; color:#555; font-size:0.73rem">Feb 25, 2026, 6:31 PM</span>
+            <div class="msg-actions">
+              <button class="btn-eye">👁</button>
+              <button class="btn-mark-unread">Mark Unread</button>
+              <button class="btn-reply">Reply</button>
+            </div>
+          </div>
+          <div class="msg-body">The pendant necklace color looks different from the website photos. I am disappointed and want a refund.</div>
+        </div>
+
+        <!-- Unread message -->
+        <div class="msg-card" style="background:rgba(201,168,76,0.02)">
+          <div class="msg-header">
+            <span class="unread-dot"></span>
+            <strong style="font-size:0.85rem">Usha Pillai</strong>
+            <span style="color:#888; font-size:0.75rem">usha.pillai@gmail.com</span>
+            <span class="cat-badge">Order Issue</span>
+            <span style="margin-left:auto; color:#555; font-size:0.73rem">Feb 25, 2026, 6:31 PM</span>
+            <div class="msg-actions">
+              <button class="btn-eye">👁</button>
+              <button class="btn-mark-read">Mark Read</button>
+              <button class="btn-reply">Reply</button>
+            </div>
+          </div>
+          <div class="msg-body">I placed two separate orders but only received one package. Order #5678 seems to be missing.</div>
+        </div>
+
+        <!-- Unread message -->
+        <div class="msg-card" style="background:rgba(201,168,76,0.02)">
+          <div class="msg-header">
+            <span class="unread-dot"></span>
+            <strong style="font-size:0.85rem">Rekha Joshi</strong>
+            <span style="color:#888; font-size:0.75rem">rekha.joshi@gmail.com</span>
+            <span class="cat-badge">General</span>
+            <span style="margin-left:auto; color:#555; font-size:0.73rem">Feb 25, 2026, 6:31 PM</span>
+            <div class="msg-actions">
+              <button class="btn-eye" style="border-color:#c9a84c; color:#c9a84c">🙈</button>
+              <button class="btn-mark-read">Mark Read</button>
+              <button class="btn-reply">Reply</button>
+            </div>
+          </div>
+          <div class="msg-body">When will you restock the Jadau Maang Tikka? It shows out of stock but I need it urgently for a festival.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" data-title="After Mark Read — Usha Pillai dot removed, button = Mark Unread">
+      <div class="screen-body">
+        <div class="msg-card">
+          <div class="msg-header">
+            <!-- no unread dot -->
+            <strong style="font-weight:400; font-size:0.85rem">Usha Pillai</strong>
+            <span style="color:#888; font-size:0.75rem">usha.pillai@gmail.com</span>
+            <span class="cat-badge">Order Issue</span>
+            <span style="margin-left:auto; color:#555; font-size:0.73rem">Feb 25, 2026, 6:31 PM</span>
+            <div class="msg-actions">
+              <button class="btn-eye">👁</button>
+              <button class="btn-mark-unread">Mark Unread</button>
+              <button class="btn-reply">Reply</button>
+            </div>
+          </div>
+          <div class="msg-body">I placed two separate orders but only received one package. Order #5678 seems to be missing.</div>
+        </div>
+        <div style="margin-top:0.75rem; font-size:0.75rem; color:#10b981">✅ Unread dot removed. Button shows "Mark Unread". DB updated via POST /api/admin/messages.</div>
+      </div>
+    </div>
+
+    <div class="screen" data-title="Reply button — mailto: link structure">
+      <div class="screen-body">
+        <div style="font-family:monospace; color:#c9a84c; font-size:0.82rem">
+          &lt;a href="mailto:rekha.joshi@gmail.com?subject=Re: general"&gt;<br>
+          &nbsp;&nbsp;Reply<br>
+          &lt;/a&gt;
+        </div>
+        <div style="margin-top:0.75rem; color:#888; font-size:0.78rem">↑ Opens system email client with To: and Subject: pre-filled. No compose UI in the app.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Krisha Sparkles Admin — Messages Test Report &nbsp;|&nbsp; Generated: Feb 26, 2026 &nbsp;|&nbsp; Environment: Production (krisha-sparkles.vercel.app)
+</div>
+</body>
+</html>

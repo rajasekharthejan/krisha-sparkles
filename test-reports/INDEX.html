@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Reports Index | Krisha Sparkles Admin</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0a; color: #f5f5f5; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); border-bottom: 2px solid #c9a84c; padding: 2.5rem 3rem; text-align: center; }
+  .logo { width: 70px; height: 70px; background: #d4622a; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 1.1rem; color: #fff; font-weight: bold; margin: 0 auto 1rem; }
+  .header h1 { font-family: Georgia, serif; font-size: 2rem; color: #c9a84c; margin-bottom: 0.5rem; }
+  .header p { color: #888; font-size: 0.9rem; }
+  .container { max-width: 900px; margin: 0 auto; padding: 3rem 2rem; }
+  .overall-badge { display: inline-block; background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); padding: 0.4rem 1.25rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.05em; margin: 1.5rem auto; display: block; width: fit-content; }
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0; }
+  .stat-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1.25rem; text-align: center; }
+  .stat-card .num { font-family: Georgia, serif; font-size: 2rem; font-weight: 700; }
+  .stat-card .lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.25rem; }
+  .reports-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 2rem; }
+  .report-card { background: #111; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1.5rem; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit; transition: all 0.2s ease; }
+  .report-card:hover { border-color: #c9a84c; background: rgba(201,168,76,0.04); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(201,168,76,0.08); }
+  .report-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+  .report-info { flex: 1; }
+  .report-info h3 { font-family: Georgia, serif; font-size: 1rem; color: #f5f5f5; margin-bottom: 0.3rem; }
+  .report-info p { font-size: 0.8rem; color: #888; line-height: 1.5; }
+  .report-meta { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
+  .pass-badge { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.25); padding: 0.2rem 0.7rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; }
+  .tests-count { color: #888; font-size: 0.78rem; }
+  .section-title { font-family: Georgia, serif; font-size: 1.1rem; color: #c9a84c; border-bottom: 1px solid #2a2a2a; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }
+  .e2e-card { background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(201,168,76,0.02)); border: 1px solid rgba(201,168,76,0.3); border-radius: 12px; padding: 1.5rem; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit; transition: all 0.2s ease; margin-bottom: 1.5rem; }
+  .e2e-card:hover { border-color: #c9a84c; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(201,168,76,0.12); }
+  .footer { border-top: 1px solid #1a1a1a; padding: 2rem; text-align: center; color: #555; font-size: 0.8rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Krisha</div>
+  <h1>Krisha Sparkles — Test Reports</h1>
+  <p>Admin Panel QA Testing &nbsp;·&nbsp; All Features &nbsp;·&nbsp; Feb 26, 2026</p>
+</div>
+
+<div class="container">
+
+  <div class="overall-badge">✅ OVERALL RESULT: ALL TESTS PASS — 0 FAILURES</div>
+
+  <div class="summary-grid">
+    <div class="stat-card"><div class="num" style="color:#10b981">35</div><div class="lbl">Total Tests</div></div>
+    <div class="stat-card"><div class="num" style="color:#10b981">35</div><div class="lbl">Passed</div></div>
+    <div class="stat-card"><div class="num" style="color:#ef4444">0</div><div class="lbl">Failed</div></div>
+  </div>
+
+  <!-- E2E Report -->
+  <p class="section-title">End-to-End Flow Report</p>
+  <a href="E2E_TEST_REPORT.html" class="e2e-card">
+    <div class="report-icon" style="background: rgba(201,168,76,0.12);">🔄</div>
+    <div class="report-info">
+      <h3>Full E2E Flow Test Report</h3>
+      <p>Admin creates product → Customer signup → Browse &amp; purchase → Stripe webhook → Admin ships order → Inventory auto-decrements → Customer tracks shipment → Customer writes review</p>
+    </div>
+    <div class="report-meta">
+      <span class="tests-count">9 steps</span>
+      <span class="pass-badge">ALL PASS</span>
+    </div>
+  </a>
+
+  <!-- Feature Reports -->
+  <p class="section-title">Individual Feature Reports</p>
+  <div class="reports-grid">
+
+    <a href="01_BULK_UPLOAD_TEST_REPORT.html" class="report-card">
+      <div class="report-icon" style="background: rgba(59,130,246,0.1);">📤</div>
+      <div class="report-info">
+        <h3>01 — Bulk Upload</h3>
+        <p>CSV template download, file parsing, validation of invalid rows, import of valid products, catalog verification</p>
+      </div>
+      <div class="report-meta">
+        <span class="tests-count">5 tests</span>
+        <span class="pass-badge">PASS</span>
+      </div>
+    </a>
+
+    <a href="02_BULK_PRICING_TEST_REPORT.html" class="report-card">
+      <div class="report-icon" style="background: rgba(16,185,129,0.1);">📈</div>
+      <div class="report-info">
+        <h3>02 — Bulk Pricing</h3>
+        <p>Category filter, select all, configure 10% decrease, preview old→new prices, confirm &amp; apply, DB verification</p>
+      </div>
+      <div class="report-meta">
+        <span class="tests-count">5 tests</span>
+        <span class="pass-badge">PASS</span>
+      </div>
+    </a>
+
+    <a href="03_ORDERS_TEST_REPORT.html" class="report-card">
+      <div class="report-icon" style="background: rgba(139,92,246,0.1);">🛒</div>
+      <div class="report-info">
+        <h3>03 — Orders Management</h3>
+        <p>View all 12 orders (bypassing RLS), filter tabs (Shipped/Delivered), order detail expand, add tracking number, status change</p>
+      </div>
+      <div class="report-meta">
+        <span class="tests-count">6 tests</span>
+        <span class="pass-badge">PASS</span>
+      </div>
+    </a>
+
+    <a href="04_INVENTORY_TEST_REPORT.html" class="report-card">
+      <div class="report-icon" style="background: rgba(245,158,11,0.1);">📦</div>
+      <div class="report-info">
+        <h3>04 — Inventory Management</h3>
+        <p>Stats cards, inline stock edit (49→100), save button behavior, auto-decrement on purchase via Stripe webhook</p>
+      </div>
+      <div class="report-meta">
+        <span class="tests-count">4 tests</span>
+        <span class="pass-badge">PASS</span>
+      </div>
+    </a>
+
+    <a href="05_REFUNDS_TEST_REPORT.html" class="report-card">
+      <div class="report-icon" style="background: rgba(239,68,68,0.1);">🔄</div>
+      <div class="report-info">
+        <h3>05 — Refund Requests</h3>
+        <p>View 9 refund requests, add admin notes, approve refund (#be138ab9), deny refund (#f6149106), status badge updates</p>
+      </div>
+      <div class="report-meta">
+        <span class="tests-count">4 tests</span>
+        <span class="pass-badge">PASS</span>
+      </div>
+    </a>
+
+    <a href="06_NEWSLETTER_TEST_REPORT.html" class="report-card">
+      <div class="report-icon" style="background: rgba(201,168,76,0.1);">✉</div>
+      <div class="report-info">
+        <h3>06 — Newsletter Subscribers</h3>
+        <p>Stats cards (12 active, 0 unsubscribed), full subscriber list with status badges, null name graceful display</p>
+      </div>
+      <div class="report-meta">
+        <span class="tests-count">3 tests</span>
+        <span class="pass-badge">PASS</span>
+      </div>
+    </a>
+
+    <a href="07_MESSAGES_TEST_REPORT.html" class="report-card">
+      <div class="report-icon" style="background: rgba(16,185,129,0.1);">💬</div>
+      <div class="report-info">
+        <h3>07 — Messages / Contact</h3>
+        <p>View 12 messages (11 unread), mark read toggle, expand/collapse message body, reply mailto: link verification</p>
+      </div>
+      <div class="report-meta">
+        <span class="tests-count">4 tests</span>
+        <span class="pass-badge">PASS</span>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- Bugs Fixed -->
+  <div style="margin-top:3rem">
+    <p class="section-title">Bugs Fixed During Testing</p>
+    <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
+      <thead>
+        <tr>
+          <th style="background:#1a1a1a; color:#c9a84c; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; padding:0.75rem 1rem; text-align:left; border-bottom:1px solid #2a2a2a;">Bug</th>
+          <th style="background:#1a1a1a; color:#c9a84c; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; padding:0.75rem 1rem; text-align:left; border-bottom:1px solid #2a2a2a;">Root Cause</th>
+          <th style="background:#1a1a1a; color:#c9a84c; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; padding:0.75rem 1rem; text-align:left; border-bottom:1px solid #2a2a2a;">Fix</th>
+          <th style="background:#1a1a1a; color:#c9a84c; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; padding:0.75rem 1rem; text-align:left; border-bottom:1px solid #2a2a2a;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:0.875rem 1rem; border-bottom:1px solid #1a1a1a; vertical-align:top;">Admin Orders — only own orders visible</td>
+          <td style="padding:0.875rem 1rem; border-bottom:1px solid #1a1a1a; vertical-align:top; color:#888;">Orders page used anon Supabase client subject to RLS policy <code style="background:#1a1a1a; color:#c9a84c; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.8em;">auth.uid() = user_id</code></td>
+          <td style="padding:0.875rem 1rem; border-bottom:1px solid #1a1a1a; vertical-align:top;">Created service-role API routes <code style="background:#1a1a1a; color:#c9a84c; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.8em;">/api/admin/orders/list</code> and <code style="background:#1a1a1a; color:#c9a84c; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.8em;">/api/admin/orders/status</code> using <code style="background:#1a1a1a; color:#c9a84c; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.8em;">createAdminClient()</code></td>
+          <td style="padding:0.875rem 1rem; border-bottom:1px solid #1a1a1a;"><span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); padding:0.2rem 0.7rem; border-radius:9999px; font-size:0.7rem; font-weight:700;">FIXED</span></td>
+        </tr>
+        <tr>
+          <td style="padding:0.875rem 1rem; border-bottom:1px solid #1a1a1a; vertical-align:top;">Star rating not showing gold color on review form</td>
+          <td style="padding:0.875rem 1rem; border-bottom:1px solid #1a1a1a; vertical-align:top; color:#888;">CSS specificity conflict: <code style="background:#1a1a1a; color:#c9a84c; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.8em;">.star-btn</code> rule appeared after <code style="background:#1a1a1a; color:#c9a84c; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.8em;">.star-filled</code> and overrode the gold color</td>
+          <td style="padding:0.875rem 1rem; border-bottom:1px solid #1a1a1a; vertical-align:top;">Added higher-specificity rule <code style="background:#1a1a1a; color:#c9a84c; padding:0.1rem 0.3rem; border-radius:3px; font-size:0.8em;">.star-btn.star-filled { color: var(--gold) }</code> to globals.css</td>
+          <td style="padding:0.875rem 1rem; border-bottom:1px solid #1a1a1a;"><span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); padding:0.2rem 0.7rem; border-radius:9999px; font-size:0.7rem; font-weight:700;">FIXED</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="footer">
+  Krisha Sparkles — Complete Admin QA Test Suite &nbsp;|&nbsp; Generated: Feb 26, 2026 &nbsp;|&nbsp; 8 Reports Total (1 E2E + 7 Feature)
+</div>
+</body>
+</html>

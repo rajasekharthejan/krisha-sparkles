@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newsletter — Test Report | Krisha Sparkles</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0a; color: #f5f5f5; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); border-bottom: 2px solid #c9a84c; padding: 2rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+  .logo { width: 60px; height: 60px; background: #d4622a; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 1rem; color: #fff; font-weight: bold; flex-shrink: 0; }
+  .header-text h1 { font-family: Georgia, serif; font-size: 1.8rem; color: #c9a84c; }
+  .header-text p { color: #888; font-size: 0.9rem; margin-top: 0.3rem; }
+  .badge-pass { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); padding: 0.3rem 0.9rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0; }
+  .stat-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1.25rem; text-align: center; }
+  .stat-card .num { font-family: Georgia, serif; font-size: 2rem; font-weight: 700; }
+  .stat-card .lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.25rem; }
+  .section { margin: 2.5rem 0; }
+  .section h2 { font-family: Georgia, serif; font-size: 1.2rem; color: #c9a84c; border-bottom: 1px solid #2a2a2a; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { background: #1a1a1a; color: #c9a84c; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #2a2a2a; }
+  td { padding: 0.875rem 1rem; border-bottom: 1px solid #1a1a1a; vertical-align: top; line-height: 1.5; }
+  tr:hover td { background: rgba(201,168,76,0.03); }
+  .screen { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1.25rem; margin: 0.75rem 0; font-size: 0.8rem; color: #aaa; position: relative; overflow: hidden; }
+  .screen::before { content: attr(data-title); position: absolute; top: 0; left: 0; right: 0; background: #1a1a1a; padding: 0.4rem 0.75rem; font-size: 0.65rem; color: #666; border-bottom: 1px solid #2a2a2a; letter-spacing: 0.1em; text-transform: uppercase; }
+  .screen-body { margin-top: 1.5rem; }
+  .status-active { background: rgba(16,185,129,0.1); color: #10b981; border-radius: 9999px; padding: 0.2rem 0.6rem; font-size: 0.7rem; font-weight: 600; }
+  .status-unsub { background: rgba(239,68,68,0.1); color: #ef4444; border-radius: 9999px; padding: 0.2rem 0.6rem; font-size: 0.7rem; font-weight: 600; }
+  .mock-row { display: grid; grid-template-columns: 2fr 1fr 0.8fr 1fr; gap: 0.75rem; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid #1a1a1a; font-size: 0.78rem; }
+  .info-box { background: rgba(201,168,76,0.07); border: 1px solid rgba(201,168,76,0.2); border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.85rem; color: #ccc; line-height: 1.7; }
+  .footer { border-top: 1px solid #1a1a1a; padding: 2rem; text-align: center; color: #555; font-size: 0.8rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Krisha</div>
+  <div class="header-text">
+    <h1>Newsletter Subscribers — Test Report</h1>
+    <p>Feature: Admin › Newsletter &nbsp;|&nbsp; Date: Feb 26, 2026 &nbsp;|&nbsp; Tester: QA Automation</p>
+  </div>
+  <div style="margin-left:auto"><span class="badge-pass">ALL TESTS PASS</span></div>
+</div>
+
+<div class="container">
+
+  <div class="summary-grid">
+    <div class="stat-card"><div class="num" style="color:#10b981">3</div><div class="lbl">Tests Passed</div></div>
+    <div class="stat-card"><div class="num" style="color:#ef4444">0</div><div class="lbl">Tests Failed</div></div>
+    <div class="stat-card"><div class="num" style="color:#c9a84c">12</div><div class="lbl">Active Subscribers</div></div>
+    <div class="stat-card"><div class="num" style="color:#888">0</div><div class="lbl">Unsubscribed</div></div>
+  </div>
+
+  <div class="info-box">
+    <strong style="color:#c9a84c">Feature Overview:</strong> The Newsletter page gives admins a read-only view of all email subscribers. Three stat cards show Active, Unsubscribed, and Total counts. The subscriber table displays Email, Name, Status badge (Active/Unsubscribed), and Subscribe Date. Subscribers are added when customers opt-in during checkout or via the footer subscription form on the store.
+  </div>
+
+  <div class="section">
+    <h2>Subscriber List (all 12)</h2>
+    <table>
+      <thead><tr><th>#</th><th>Email</th><th>Name</th><th>Status</th><th>Subscribed</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>newsletter10@example.com</td><td>Deepa Pillai</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>2</td><td>newsletter9@example.com</td><td>Uma Menon</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>3</td><td>newsletter8@example.com</td><td>Sushma Reddy</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>4</td><td>newsletter7@example.com</td><td>Geeta Nair</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>5</td><td>newsletter6@example.com</td><td>Radha Krishnan</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>6</td><td>newsletter5@example.com</td><td>Kavita Iyer</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>7</td><td>newsletter4@example.com</td><td>Sunita Sharma</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>8</td><td>newsletter3@example.com</td><td>Meena Patel</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>9</td><td>newsletter2@example.com</td><td>Priya Verma</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>10</td><td>newsletter1@example.com</td><td>Anjali Singh</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>11</td><td>newsletter@example.com</td><td>Newsletter Test</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+        <tr><td>12</td><td>newsletter-test@krishasparkles.com</td><td>—</td><td><span class="status-active">Active</span></td><td>Feb 26, 2026</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Test Cases</h2>
+    <table>
+      <thead><tr><th>#</th><th>Test Case</th><th>Steps</th><th>Expected</th><th>Actual</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>TC-01</td>
+          <td><strong>View Newsletter Page</strong></td>
+          <td>Navigate to Admin › Newsletter</td>
+          <td>Stats cards render with Active, Unsubscribed, Total counts; subscriber table loads</td>
+          <td>Page loaded with stats: Active=12, Unsubscribed=0, Total=12. All 12 subscribers listed with email, name, status badge, and date.</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-02</td>
+          <td><strong>Status Badges</strong></td>
+          <td>Check each subscriber's status badge</td>
+          <td>All active subscribers show green "Active" badge; unsubscribed show red "Unsubscribed"</td>
+          <td>All 12 show green <span class="status-active">Active</span> badge. No unsubscribed. Color and pill shape match design system.</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-03</td>
+          <td><strong>Subscriber with No Name</strong></td>
+          <td>Check subscriber #12 (newsletter-test@krishasparkles.com)</td>
+          <td>Name field shows "—" gracefully when empty</td>
+          <td>Name column shows "—" for subscriber with no name in DB. No error or crash.</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>UI Screenshots (Mockups)</h2>
+
+    <div class="screen" data-title="Newsletter Page — Stats + Subscriber Table">
+      <div class="screen-body">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
+          <div>
+            <div style="color:#c9a84c; font-size:1rem; font-weight:700">✉ Newsletter</div>
+            <div style="color:#888; font-size:0.78rem; margin-top:0.2rem">12 active subscribers · 12 total</div>
+          </div>
+          <div style="display:flex; gap:0.75rem; font-size:0.75rem; text-align:center;">
+            <div style="background:#141414; border:1px solid #2a2a2a; border-radius:8px; padding:0.6rem 1rem;"><div style="color:#10b981; font-size:1.4rem; font-weight:700">12</div><div style="color:#888; font-size:0.65rem">Active</div></div>
+            <div style="background:#141414; border:1px solid #2a2a2a; border-radius:8px; padding:0.6rem 1rem;"><div style="color:#ef4444; font-size:1.4rem; font-weight:700">0</div><div style="color:#888; font-size:0.65rem">Unsubscribed</div></div>
+            <div style="background:#141414; border:1px solid #2a2a2a; border-radius:8px; padding:0.6rem 1rem;"><div style="color:#c9a84c; font-size:1.4rem; font-weight:700">12</div><div style="color:#888; font-size:0.65rem">Total</div></div>
+          </div>
+        </div>
+        <div style="font-size:0.68rem; color:#666; display:grid; grid-template-columns:2fr 1fr 0.8fr 1fr; gap:0.5rem; padding:0.3rem 0; border-bottom:1px solid #222; text-transform:uppercase; letter-spacing:0.05em;">
+          <span>EMAIL</span><span>NAME</span><span>STATUS</span><span>SUBSCRIBED</span>
+        </div>
+        <div class="mock-row"><span>newsletter10@example.com</span><span>Deepa Pillai</span><span><span class="status-active">Active</span></span><span style="color:#888">Feb 26, 2026</span></div>
+        <div class="mock-row"><span>newsletter9@example.com</span><span>Uma Menon</span><span><span class="status-active">Active</span></span><span style="color:#888">Feb 26, 2026</span></div>
+        <div class="mock-row"><span>newsletter8@example.com</span><span>Sushma Reddy</span><span><span class="status-active">Active</span></span><span style="color:#888">Feb 26, 2026</span></div>
+        <div class="mock-row"><span>newsletter-test@krishasparkles.com</span><span style="color:#555">—</span><span><span class="status-active">Active</span></span><span style="color:#888">Feb 26, 2026</span></div>
+        <div style="text-align:center; color:#555; padding:0.4rem; font-size:0.72rem">... 8 more subscribers ...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Krisha Sparkles Admin — Newsletter Test Report &nbsp;|&nbsp; Generated: Feb 26, 2026 &nbsp;|&nbsp; Environment: Production (krisha-sparkles.vercel.app)
+</div>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk Pricing — Test Report | Krisha Sparkles</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0a; color: #f5f5f5; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); border-bottom: 2px solid #c9a84c; padding: 2rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+  .logo { width: 60px; height: 60px; background: #d4622a; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 1rem; color: #fff; font-weight: bold; flex-shrink: 0; }
+  .header-text h1 { font-family: Georgia, serif; font-size: 1.8rem; color: #c9a84c; }
+  .header-text p { color: #888; font-size: 0.9rem; margin-top: 0.3rem; }
+  .badge-pass { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); padding: 0.3rem 0.9rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; }
+  .badge-fail { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); padding: 0.3rem 0.9rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0; }
+  .stat-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1.25rem; text-align: center; }
+  .stat-card .num { font-family: Georgia, serif; font-size: 2rem; font-weight: 700; }
+  .stat-card .lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.25rem; }
+  .section { margin: 2.5rem 0; }
+  .section h2 { font-family: Georgia, serif; font-size: 1.2rem; color: #c9a84c; border-bottom: 1px solid #2a2a2a; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { background: #1a1a1a; color: #c9a84c; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #2a2a2a; }
+  td { padding: 0.875rem 1rem; border-bottom: 1px solid #1a1a1a; vertical-align: top; line-height: 1.5; }
+  tr:hover td { background: rgba(201,168,76,0.03); }
+  .screen { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1.25rem; margin: 0.75rem 0; font-family: monospace; font-size: 0.8rem; color: #aaa; position: relative; overflow: hidden; }
+  .screen::before { content: attr(data-title); position: absolute; top: 0; left: 0; right: 0; background: #1a1a1a; padding: 0.4rem 0.75rem; font-size: 0.65rem; color: #666; border-bottom: 1px solid #2a2a2a; letter-spacing: 0.1em; text-transform: uppercase; }
+  .screen-body { margin-top: 1.5rem; }
+  .mock-btn { display: inline-block; background: #c9a84c; color: #0a0a0a; border-radius: 6px; padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 700; margin: 0.2rem; }
+  .mock-btn-outline { display: inline-block; border: 1px solid #c9a84c; color: #c9a84c; border-radius: 6px; padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 700; margin: 0.2rem; }
+  .mock-row { display: flex; gap: 0.75rem; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid #1e1e1e; flex-wrap: wrap; }
+  .arrow { color: #c9a84c; font-size: 1.1rem; }
+  .old-price { color: #666; text-decoration: line-through; }
+  .new-price { color: #10b981; font-weight: 700; }
+  .info-box { background: rgba(201,168,76,0.07); border: 1px solid rgba(201,168,76,0.2); border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.85rem; color: #ccc; line-height: 1.7; }
+  .footer { border-top: 1px solid #1a1a1a; padding: 2rem; text-align: center; color: #555; font-size: 0.8rem; margin-top: 3rem; }
+  code { background: #1a1a1a; color: #c9a84c; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.82em; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Krisha</div>
+  <div class="header-text">
+    <h1>Bulk Pricing — Test Report</h1>
+    <p>Feature: Admin › Bulk Pricing &nbsp;|&nbsp; Date: Feb 26, 2026 &nbsp;|&nbsp; Tester: QA Automation</p>
+  </div>
+  <div style="margin-left:auto"><span class="badge-pass">ALL TESTS PASS</span></div>
+</div>
+
+<div class="container">
+
+  <div class="summary-grid">
+    <div class="stat-card"><div class="num" style="color:#10b981">5</div><div class="lbl">Tests Passed</div></div>
+    <div class="stat-card"><div class="num" style="color:#ef4444">0</div><div class="lbl">Tests Failed</div></div>
+    <div class="stat-card"><div class="num" style="color:#c9a84c">2</div><div class="lbl">Products Updated</div></div>
+    <div class="stat-card"><div class="num" style="color:#888">10%</div><div class="lbl">Price Reduction Applied</div></div>
+  </div>
+
+  <div class="info-box">
+    <strong style="color:#c9a84c">Feature Overview:</strong> Bulk Pricing allows admins to update prices for multiple products simultaneously. Admin selects products by category or search, chooses an operation (Increase / Decrease) with a modifier (Percent / Fixed Amount), enters a value, previews the calculated new prices in a table, then confirms to apply changes to the database.
+  </div>
+
+  <div class="section">
+    <h2>Test Scenario</h2>
+    <table>
+      <thead><tr><th>Parameter</th><th>Value Used</th></tr></thead>
+      <tbody>
+        <tr><td>Category Filter</td><td>Earrings</td></tr>
+        <tr><td>Products Selected</td><td>Gold Jhumka Earrings &amp; Pearl Drop Chandbali Earrings (2 products)</td></tr>
+        <tr><td>Operation</td><td>Decrease by 10%</td></tr>
+        <tr><td>Gold Jhumka Before / After</td><td>$27.49 → $24.74</td></tr>
+        <tr><td>Pearl Drop Before / After</td><td>$24.99 → $22.49</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Test Cases</h2>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Test Case</th><th>Steps</th><th>Expected</th><th>Actual</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>TC-01</td>
+          <td><strong>Category Filter</strong></td>
+          <td>Navigate to Admin › Bulk Pricing → Select "Earrings" from category dropdown</td>
+          <td>Only earring products listed in the table</td>
+          <td>Filtered to 2 Earring products: Gold Jhumka Earrings, Pearl Drop Chandbali Earrings</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-02</td>
+          <td><strong>Select All Products</strong></td>
+          <td>Click the header checkbox to select all filtered products</td>
+          <td>All 2 products checked; "2 selected" badge shown</td>
+          <td>Both products selected, badge shows "2 selected"</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-03</td>
+          <td><strong>Configure Price Change</strong></td>
+          <td>Set Operation=Decrease, Type=Percent, Value=10 → Click Preview</td>
+          <td>Preview table shows calculated new prices</td>
+          <td>Preview table rendered: <br>• Gold Jhumka: $27.49 → <strong>$24.74</strong><br>• Pearl Drop: $24.99 → <strong>$22.49</strong></td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-04</td>
+          <td><strong>Apply Price Changes</strong></td>
+          <td>Click "Confirm &amp; Apply" button</td>
+          <td>Prices updated in DB; success message shown</td>
+          <td>Changes applied to database. Products page confirms new prices.</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-05</td>
+          <td><strong>Verify DB Update</strong></td>
+          <td>Navigate to Admin › Products and check Earring prices</td>
+          <td>Gold Jhumka=$24.74, Pearl Drop=$22.49</td>
+          <td>Prices confirmed updated in products list: Gold Jhumka=$24.74, Pearl Drop=$22.49</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>UI Screenshots (Mockups)</h2>
+
+    <div class="screen" data-title="Bulk Pricing — Configuration Panel">
+      <div class="screen-body">
+        <div style="color:#c9a84c; font-size:1rem; margin-bottom:0.75rem">📈 Bulk Pricing</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.75rem; margin-bottom:0.75rem; font-size:0.75rem;">
+          <div>
+            <div style="color:#888; margin-bottom:0.25rem">Category</div>
+            <div style="background:#1e1e1e; border:1px solid #333; border-radius:6px; padding:0.4rem 0.6rem; color:#f5f5f5">Earrings ▼</div>
+          </div>
+          <div>
+            <div style="color:#888; margin-bottom:0.25rem">Operation</div>
+            <div style="background:#1e1e1e; border:1px solid #333; border-radius:6px; padding:0.4rem 0.6rem; color:#f5f5f5">Decrease ▼</div>
+          </div>
+          <div>
+            <div style="color:#888; margin-bottom:0.25rem">Amount</div>
+            <div style="background:#1e1e1e; border:1px solid #333; border-radius:6px; padding:0.4rem 0.6rem; color:#f5f5f5">10 %</div>
+          </div>
+        </div>
+        <div class="mock-row" style="font-size:0.75rem"><input type="checkbox" checked style="accent-color:#c9a84c"> <strong>Gold Jhumka Earrings</strong> <span style="color:#888">Earrings</span> <span style="color:#c9a84c">$27.49</span></div>
+        <div class="mock-row" style="font-size:0.75rem"><input type="checkbox" checked style="accent-color:#c9a84c"> <strong>Pearl Drop Chandbali Earrings</strong> <span style="color:#888">Earrings</span> <span style="color:#c9a84c">$24.99</span></div>
+        <div style="margin-top:0.75rem"><span class="mock-btn">Preview Changes</span></div>
+      </div>
+    </div>
+
+    <div class="screen" data-title="Preview Table — Before vs After Prices">
+      <div class="screen-body">
+        <div style="color:#c9a84c; font-size:0.85rem; margin-bottom:0.75rem">👁 Price Preview — Decrease 10% for 2 products</div>
+        <div class="mock-row" style="font-size:0.75rem">
+          <strong>Gold Jhumka Earrings</strong>
+          <span class="old-price">$27.49</span>
+          <span class="arrow">→</span>
+          <span class="new-price">$24.74</span>
+          <span style="color:#888; font-size:0.7rem">(save $2.75)</span>
+        </div>
+        <div class="mock-row" style="font-size:0.75rem">
+          <strong>Pearl Drop Chandbali Earrings</strong>
+          <span class="old-price">$24.99</span>
+          <span class="arrow">→</span>
+          <span class="new-price">$22.49</span>
+          <span style="color:#888; font-size:0.7rem">(save $2.50)</span>
+        </div>
+        <div style="margin-top:0.75rem">
+          <span class="mock-btn">✓ Confirm &amp; Apply</span>
+          <span class="mock-btn-outline">← Back</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" data-title="Success Confirmation">
+      <div class="screen-body">
+        <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; border-radius:8px; padding:0.75rem 1rem; font-size:0.85rem;">
+          ✅ <strong>Prices updated successfully!</strong> &nbsp; 2 products updated.
+        </div>
+        <div style="margin-top:0.75rem; font-size:0.75rem; color:#888">
+          • Gold Jhumka Earrings: $27.49 → $24.74<br>
+          • Pearl Drop Chandbali Earrings: $24.99 → $22.49
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Krisha Sparkles Admin — Bulk Pricing Test Report &nbsp;|&nbsp; Generated: Feb 26, 2026 &nbsp;|&nbsp; Environment: Production (krisha-sparkles.vercel.app)
+</div>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refunds — Test Report | Krisha Sparkles</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0a; color: #f5f5f5; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); border-bottom: 2px solid #c9a84c; padding: 2rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+  .logo { width: 60px; height: 60px; background: #d4622a; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 1rem; color: #fff; font-weight: bold; flex-shrink: 0; }
+  .header-text h1 { font-family: Georgia, serif; font-size: 1.8rem; color: #c9a84c; }
+  .header-text p { color: #888; font-size: 0.9rem; margin-top: 0.3rem; }
+  .badge-pass { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); padding: 0.3rem 0.9rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0; }
+  .stat-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1.25rem; text-align: center; }
+  .stat-card .num { font-family: Georgia, serif; font-size: 2rem; font-weight: 700; }
+  .stat-card .lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.25rem; }
+  .section { margin: 2.5rem 0; }
+  .section h2 { font-family: Georgia, serif; font-size: 1.2rem; color: #c9a84c; border-bottom: 1px solid #2a2a2a; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { background: #1a1a1a; color: #c9a84c; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #2a2a2a; }
+  td { padding: 0.875rem 1rem; border-bottom: 1px solid #1a1a1a; vertical-align: top; line-height: 1.5; }
+  tr:hover td { background: rgba(201,168,76,0.03); }
+  .screen { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1.25rem; margin: 0.75rem 0; font-size: 0.8rem; color: #aaa; position: relative; overflow: hidden; }
+  .screen::before { content: attr(data-title); position: absolute; top: 0; left: 0; right: 0; background: #1a1a1a; padding: 0.4rem 0.75rem; font-size: 0.65rem; color: #666; border-bottom: 1px solid #2a2a2a; letter-spacing: 0.1em; text-transform: uppercase; }
+  .screen-body { margin-top: 1.5rem; }
+  .mock-btn-approve { display: inline-block; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #10b981; border-radius: 6px; padding: 0.3rem 0.75rem; font-size: 0.73rem; font-weight: 700; margin: 0.15rem; }
+  .mock-btn-deny { display: inline-block; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; border-radius: 6px; padding: 0.3rem 0.75rem; font-size: 0.73rem; font-weight: 700; margin: 0.15rem; }
+  .status-pending { background: rgba(245,158,11,0.1); color: #f59e0b; border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: 600; }
+  .status-approved { background: rgba(16,185,129,0.12); color: #10b981; border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: 600; }
+  .status-denied { background: rgba(239,68,68,0.12); color: #ef4444; border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: 600; }
+  .mock-row { padding: 0.75rem 0; border-bottom: 1px solid #1a1a1a; font-size: 0.78rem; }
+  .mock-notes { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; padding: 0.35rem 0.6rem; color: #666; font-size: 0.72rem; width: 200px; display: inline-block; }
+  .info-box { background: rgba(201,168,76,0.07); border: 1px solid rgba(201,168,76,0.2); border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.85rem; color: #ccc; line-height: 1.7; }
+  .footer { border-top: 1px solid #1a1a1a; padding: 2rem; text-align: center; color: #555; font-size: 0.8rem; margin-top: 3rem; }
+  code { background: #1a1a1a; color: #c9a84c; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.82em; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Krisha</div>
+  <div class="header-text">
+    <h1>Refund Requests — Test Report</h1>
+    <p>Feature: Admin › Refunds &nbsp;|&nbsp; Date: Feb 26, 2026 &nbsp;|&nbsp; Tester: QA Automation</p>
+  </div>
+  <div style="margin-left:auto"><span class="badge-pass">ALL TESTS PASS</span></div>
+</div>
+
+<div class="container">
+
+  <div class="summary-grid">
+    <div class="stat-card"><div class="num" style="color:#10b981">4</div><div class="lbl">Tests Passed</div></div>
+    <div class="stat-card"><div class="num" style="color:#ef4444">0</div><div class="lbl">Tests Failed</div></div>
+    <div class="stat-card"><div class="num" style="color:#c9a84c">9</div><div class="lbl">Total Requests</div></div>
+    <div class="stat-card"><div class="num" style="color:#888">7</div><div class="lbl">Pending at Start</div></div>
+  </div>
+
+  <div class="info-box">
+    <strong style="color:#c9a84c">Feature Overview:</strong> The Refund Requests page displays all customer refund requests sorted by date. Each request shows: Order ID, Customer email, Reason (Changed Mind, Item Damaged, Wrong Item, Not As Described, Other), truncated detail message, Order total, current Status badge, and action buttons. Admin can add optional notes and click Approve (green) or Deny (red). After action, buttons are replaced with "—" and the status badge updates.
+  </div>
+
+  <div class="section">
+    <h2>Refund Requests — Full List</h2>
+    <table>
+      <thead><tr><th>Order</th><th>Customer</th><th>Reason</th><th>Total</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>#be138ab9</td><td>sunita.reddy@gmail.com</td><td>Changed Mind</td><td>$48.59</td><td><span class="status-approved">approved</span> ← tested</td></tr>
+        <tr><td>#f6149106</td><td>kavitha.menon@gmail.com</td><td>Item Damaged</td><td>$161.99</td><td><span class="status-denied">denied</span> ← tested</td></tr>
+        <tr><td>#0055c223</td><td>lakshmi.iyer@outlook.com</td><td>Other</td><td>$75.60</td><td><span class="status-pending">pending</span></td></tr>
+        <tr><td>#7bb7b0d7</td><td>divya.k@gmail.com</td><td>Wrong Item</td><td>$102.58</td><td><span class="status-pending">pending</span></td></tr>
+        <tr><td>#c6a8d43b</td><td>rekha.joshi@gmail.com</td><td>Not As Described</td><td>$64.79</td><td><span class="status-pending">pending</span></td></tr>
+        <tr><td>#3c202fa4</td><td>usha.pillai@gmail.com</td><td>Changed Mind</td><td>$37.79</td><td><span class="status-pending">pending</span></td></tr>
+        <tr><td>#a7872ddb</td><td>bhavana.rao@gmail.com</td><td>Item Damaged</td><td>$48.59</td><td><span class="status-pending">pending</span></td></tr>
+        <tr><td>—</td><td>—</td><td>—</td><td>—</td><td><span style="color:#888; font-size:0.8rem">2 already processed (approved/denied)</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Test Cases</h2>
+    <table>
+      <thead><tr><th>#</th><th>Test Case</th><th>Steps</th><th>Expected</th><th>Actual</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>TC-01</td>
+          <td><strong>View Refund Requests</strong></td>
+          <td>Navigate to Admin › Refunds</td>
+          <td>All refund requests shown with order info, customer, reason, total, status, and action buttons</td>
+          <td>9 total requests displayed. 7 pending shown with Approve/Deny buttons. 2 already processed shown with "—".</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-02</td>
+          <td><strong>Add Admin Notes</strong></td>
+          <td>Click admin notes textarea on #be138ab9 → Type "Verified order history. Refund approved per policy."</td>
+          <td>Notes field accepts text input</td>
+          <td>Notes field accepted input. Text visible in the textarea before action.</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-03</td>
+          <td><strong>Approve Refund</strong></td>
+          <td>Click "✓ Approve" on #be138ab9 (sunita.reddy, Changed Mind, $48.59)</td>
+          <td>Status badge changes to "approved" (green); Approve/Deny buttons removed; shows "—"</td>
+          <td>Status badge instantly changed to <span class="status-approved">approved</span>. Action buttons replaced with "—". DB updated via POST <code>/api/admin/refunds</code></td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>TC-04</td>
+          <td><strong>Deny Refund</strong></td>
+          <td>Add notes → Click "✗ Deny" on #f6149106 (kavitha.menon, Item Damaged, $161.99)</td>
+          <td>Status badge changes to "denied" (red); buttons removed</td>
+          <td>Status badge instantly changed to <span class="status-denied">denied</span>. Action buttons replaced with "—". Notes saved.</td>
+          <td><span class="badge-pass">PASS</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>UI Screenshots (Mockups)</h2>
+
+    <div class="screen" data-title="Refund Requests — Initial State (7 pending)">
+      <div class="screen-body">
+        <div style="color:#c9a84c; font-size:1rem; margin-bottom:0.5rem">🔄 Refund Requests</div>
+        <div style="color:#888; font-size:0.8rem; margin-bottom:1rem">9 total · <span style="color:#f59e0b">7 pending</span></div>
+        <div style="font-size:0.68rem; color:#666; display:grid; grid-template-columns:1fr 1.5fr 1fr 1.5fr 0.8fr 0.8fr 2fr; gap:0.4rem; padding:0.3rem 0; border-bottom:1px solid #222; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem">
+          <span>ORDER</span><span>CUSTOMER</span><span>REASON</span><span>DETAILS</span><span>TOTAL</span><span>STATUS</span><span>ACTIONS</span>
+        </div>
+        <div class="mock-row" style="display:grid; grid-template-columns:1fr 1.5fr 1fr 1.5fr 0.8fr 0.8fr 2fr; gap:0.4rem; align-items:center;">
+          <span style="color:#c9a84c; font-family:monospace; font-size:0.75rem">#be138ab9</span>
+          <span style="font-size:0.78rem">sunita.reddy@gmail.com</span>
+          <span style="font-size:0.78rem">Changed Mind</span>
+          <span style="color:#888; font-size:0.75rem">Bought as a gift but rec...</span>
+          <span style="color:#c9a84c">$48.59</span>
+          <span><span class="status-pending">pending</span></span>
+          <span>
+            <span class="mock-notes">Admin notes (optional)</span>
+            <span class="mock-btn-approve">✓ Approve</span>
+            <span class="mock-btn-deny">✗ Deny</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" data-title="After Approve — Status = approved, buttons removed">
+      <div class="screen-body">
+        <div class="mock-row" style="display:grid; grid-template-columns:1fr 1.5fr 1fr 1.5fr 0.8fr 0.8fr 2fr; gap:0.4rem; align-items:center;">
+          <span style="color:#c9a84c; font-family:monospace; font-size:0.75rem">#be138ab9</span>
+          <span style="font-size:0.78rem">sunita.reddy@gmail.com</span>
+          <span style="font-size:0.78rem">Changed Mind</span>
+          <span style="color:#888; font-size:0.75rem">Bought as a gift but rec...</span>
+          <span style="color:#c9a84c">$48.59</span>
+          <span><span class="status-approved">approved</span></span>
+          <span style="color:#555">—</span>
+        </div>
+        <div class="mock-row" style="display:grid; grid-template-columns:1fr 1.5fr 1fr 1.5fr 0.8fr 0.8fr 2fr; gap:0.4rem; align-items:center;">
+          <span style="color:#c9a84c; font-family:monospace; font-size:0.75rem">#f6149106</span>
+          <span style="font-size:0.78rem">kavitha.menon@gmail.com</span>
+          <span style="font-size:0.78rem">Item Damaged</span>
+          <span style="color:#888; font-size:0.75rem">Anarkali dress has a vis...</span>
+          <span style="color:#c9a84c">$161.99</span>
+          <span><span class="status-denied">denied</span></span>
+          <span style="color:#555">—</span>
+        </div>
+        <div style="margin-top:0.75rem; font-size:0.75rem; color:#888">✓ Both processed requests show "—" in Actions column. Status badges updated.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Krisha Sparkles Admin — Refunds Test Report &nbsp;|&nbsp; Generated: Feb 26, 2026 &nbsp;|&nbsp; Environment: Production (krisha-sparkles.vercel.app)
+</div>
+</body>
+</html>
