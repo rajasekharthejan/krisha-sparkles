@@ -53,3 +53,62 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS utm_medium text;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS utm_campaign text;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS utm_content text;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code text;
+
+-- ─── Sprint 4: F8 Collections + F9 Instagram + F13 Blog ──────────────────────
+
+-- F8: Ad landing pages / collections
+CREATE TABLE IF NOT EXISTS collections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  handle text UNIQUE NOT NULL,
+  title text NOT NULL,
+  description text,
+  hero_image text,
+  filter_category_slugs text[],
+  meta_title text,
+  meta_description text,
+  active boolean DEFAULT true,
+  display_order integer DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE collections ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can read active collections" ON collections FOR SELECT USING (active = true);
+
+-- F9: Instagram feed
+CREATE TABLE IF NOT EXISTS instagram_posts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_url text NOT NULL,
+  thumbnail_url text NOT NULL,
+  caption text,
+  likes_count integer DEFAULT 0,
+  display_order integer DEFAULT 0,
+  active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE instagram_posts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can read active posts" ON instagram_posts FOR SELECT USING (active = true);
+
+-- F13: Blog posts
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  slug text UNIQUE NOT NULL,
+  excerpt text,
+  content text NOT NULL,
+  cover_image text,
+  published boolean DEFAULT false,
+  author text DEFAULT 'Krisha Sparkles',
+  tags text[] DEFAULT '{}',
+  views integer DEFAULT 0,
+  seo_title text,
+  seo_description text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can read published posts" ON blog_posts FOR SELECT USING (published = true);
+
+CREATE OR REPLACE FUNCTION increment_post_views(post_slug text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN UPDATE blog_posts SET views = views + 1 WHERE slug = post_slug; END;
+$$;

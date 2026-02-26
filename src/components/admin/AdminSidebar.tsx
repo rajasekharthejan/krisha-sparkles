@@ -18,6 +18,9 @@ import {
   RotateCcw,
   Mail,
   MessageCircle,
+  Instagram,
+  Layout,
+  BookOpen,
 } from "lucide-react";
 
 const NAV = [
@@ -33,6 +36,9 @@ const NAV = [
   { href: "/admin/refunds", label: "Refunds", icon: <RotateCcw size={18} /> },
   { href: "/admin/newsletter", label: "Newsletter", icon: <Mail size={18} /> },
   { href: "/admin/messages", label: "Messages", icon: <MessageCircle size={18} /> },
+  { href: "/admin/instagram", label: "Instagram", icon: <Instagram size={18} /> },
+  { href: "/admin/collections", label: "Collections", icon: <Layout size={18} /> },
+  { href: "/admin/blog", label: "Blog", icon: <BookOpen size={18} /> },
 ];
 
 export default function AdminSidebar() {
@@ -109,7 +115,7 @@ export default function AdminSidebar() {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: "1rem 0.75rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+      <nav style={{ flex: 1, padding: "1rem 0.75rem", display: "flex", flexDirection: "column", gap: "0.25rem", overflowY: "auto" }}>
         {NAV.map((item) => {
           const isActive =
             item.href === "/admin"
