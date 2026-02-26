@@ -53,6 +53,27 @@ export const useCartStore = create<CartStore>()(
             ],
           };
         });
+
+        // Fire Meta Pixel AddToCart
+        if (typeof window !== "undefined" && window.fbq) {
+          window.fbq("track", "AddToCart", {
+            value: item.price,
+            currency: "USD",
+            content_ids: [item.productId],
+            content_name: item.name,
+            content_type: "product",
+          });
+        }
+
+        // Fire TikTok Pixel AddToCart
+        if (typeof window !== "undefined" && window.ttq) {
+          window.ttq.track("AddToCart", {
+            value: item.price,
+            currency: "USD",
+            content_id: item.productId,
+            content_name: item.name,
+          });
+        }
       },
 
       removeItem: (id) => {

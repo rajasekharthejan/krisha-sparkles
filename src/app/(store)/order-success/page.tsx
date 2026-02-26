@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
+import { pushDataLayer } from "@/hooks/useDataLayer";
 import { CheckCircle, Package, ArrowRight, Instagram } from "lucide-react";
 
 function OrderSuccessContent() {
@@ -16,8 +17,27 @@ function OrderSuccessContent() {
     if (!cleared) {
       clearCart();
       setCleared(true);
+
+      // Fire Meta Pixel Purchase
+      if (typeof window !== "undefined" && window.fbq) {
+        window.fbq("track", "Purchase", {
+          currency: "USD",
+          value: 0,
+        });
+      }
+
+      // Fire TikTok Pixel CompletePayment
+      if (typeof window !== "undefined" && window.ttq) {
+        window.ttq.track("CompletePayment");
+      }
+
+      // Push to GTM dataLayer
+      pushDataLayer("purchase", {
+        currency: "USD",
+        transaction_id: sessionId || "",
+      });
     }
-  }, [clearCart, cleared]);
+  }, [clearCart, cleared, sessionId]);
 
   return (
     <div

@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import GTMScript from "@/components/GTMScript";
+import MetaPixel from "@/components/MetaPixel";
+import TikTokPixel from "@/components/TikTokPixel";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import "./globals.css";
 
@@ -82,6 +85,9 @@ export default function RootLayout({
         <WhatsAppButton />
         <Analytics />
         <GoogleAnalytics />
+        <GTMScript />
+        <MetaPixel />
+        <TikTokPixel />
       </body>
     </html>
   );

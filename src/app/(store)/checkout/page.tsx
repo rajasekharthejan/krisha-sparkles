@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/utils";
 import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { pushDataLayer } from "@/hooks/useDataLayer";
 
 function CheckoutContent() {
   const { items, totalPrice } = useCartStore();
@@ -85,7 +86,33 @@ function CheckoutContent() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        // Fire Meta Pixel InitiateCheckout
+        if (typeof window !== "undefined" && window.fbq) {
+          window.fbq("track", "InitiateCheckout", {
+            value: finalTotal,
+            currency: "USD",
+            num_items: items.length,
+          });
+        }
+
+        // Fire TikTok Pixel InitiateCheckout
+        if (typeof window !== "undefined" && window.ttq) {
+          window.ttq.track("InitiateCheckout", {
+            value: finalTotal,
+            currency: "USD",
+          });
+        }
+
+        // Push to GTM dataLayer
+        pushDataLayer("initiate_checkout", {
+          value: finalTotal,
+          currency: "USD",
+          num_items: items.length,
+        });
+
+        window.location.href = data.url;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);

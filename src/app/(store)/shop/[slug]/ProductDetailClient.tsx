@@ -49,6 +49,27 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
 
       if (data) {
         setProduct(data as Product);
+
+        // Fire Meta Pixel ViewContent
+        if (typeof window !== "undefined" && window.fbq) {
+          window.fbq("track", "ViewContent", {
+            content_ids: [data.id],
+            content_name: data.name,
+            value: data.price,
+            currency: "USD",
+            content_type: "product",
+          });
+        }
+
+        // Fire TikTok Pixel ViewContent
+        if (typeof window !== "undefined" && window.ttq) {
+          window.ttq.track("ViewContent", {
+            content_id: data.id,
+            content_name: data.name,
+            value: data.price,
+            currency: "USD",
+          });
+        }
         // Fetch related
         const { data: rel } = await supabase
           .from("products")
