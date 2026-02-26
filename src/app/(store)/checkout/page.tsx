@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
@@ -30,6 +30,19 @@ function CheckoutContent() {
 
   const subtotal = totalPrice();
   const finalTotal = Math.max(0, subtotal - discount);
+
+  // Pre-fill coupon from exit intent cookie
+  useEffect(() => {
+    function getCookieVal(name: string) {
+      return document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"))?.[1] ?? null;
+    }
+    const autoCoupon = getCookieVal("ks_coupon");
+    if (autoCoupon) {
+      setCouponCode(autoCoupon);
+      // Clear the cookie so it doesn't re-fill
+      document.cookie = `ks_coupon=; path=/; max-age=0`;
+    }
+  }, []);
 
   async function applyCoupon() {
     if (!couponCode.trim()) return;
@@ -191,7 +204,7 @@ function CheckoutContent() {
                 {item.image ? (
                   <Image src={item.image} alt={item.name} width={60} height={60} style={{ objectFit: "cover" }} />
                 ) : (
-                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>💎</div>
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>&#128142;</div>
                 )}
               </div>
               <div style={{ flex: 1 }}>
@@ -301,7 +314,7 @@ function CheckoutContent() {
                 <Tag size={13} /> Coupon ({appliedCoupon.code})
               </span>
               <span style={{ fontSize: "0.875rem", color: "#10b981", fontWeight: 600 }}>
-                −{formatPrice(discount)}
+                &minus;{formatPrice(discount)}
               </span>
             </div>
           )}
@@ -361,7 +374,7 @@ function CheckoutContent() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", marginTop: "1rem" }}>
           <Lock size={12} style={{ color: "var(--subtle)" }} />
           <span style={{ fontSize: "0.75rem", color: "var(--subtle)" }}>
-            SSL encrypted • Powered by Stripe
+            SSL encrypted &bull; Powered by Stripe
           </span>
         </div>
       </div>

@@ -7,6 +7,7 @@ import type { CartItem } from "@/types";
 interface CartStore {
   items: CartItem[];
   isOpen: boolean;
+  cartUpdatedAt: number;
   addItem: (item: Omit<CartItem, "id" | "quantity"> & { quantity?: number; selectedVariant?: string }) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -23,6 +24,7 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      cartUpdatedAt: Date.now(),
 
       addItem: (item) => {
         // Generate composite key: productId__selectedVariant (or just productId for no-variant items)
@@ -39,6 +41,7 @@ export const useCartStore = create<CartStore>()(
                   ? { ...i, quantity: i.quantity + (item.quantity ?? 1) }
                   : i
               ),
+              cartUpdatedAt: Date.now(),
             };
           }
           return {
@@ -51,6 +54,7 @@ export const useCartStore = create<CartStore>()(
                 selectedVariant: item.selectedVariant,
               },
             ],
+            cartUpdatedAt: Date.now(),
           };
         });
 
@@ -77,7 +81,10 @@ export const useCartStore = create<CartStore>()(
       },
 
       removeItem: (id) => {
-        set((state) => ({ items: state.items.filter((i) => i.id !== id) }));
+        set((state) => ({
+          items: state.items.filter((i) => i.id !== id),
+          cartUpdatedAt: Date.now(),
+        }));
       },
 
       updateQuantity: (id, quantity) => {
@@ -87,10 +94,11 @@ export const useCartStore = create<CartStore>()(
         }
         set((state) => ({
           items: state.items.map((i) => (i.id === id ? { ...i, quantity } : i)),
+          cartUpdatedAt: Date.now(),
         }));
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], cartUpdatedAt: Date.now() }),
 
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
@@ -107,7 +115,7 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "krisha-cart",
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ items: state.items, cartUpdatedAt: state.cartUpdatedAt }),
     }
   )
 );

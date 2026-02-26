@@ -2,6 +2,8 @@ import Navbar from "@/components/store/Navbar";
 import Footer from "@/components/store/Footer";
 import FlashSaleBanner from "@/components/store/FlashSaleBanner";
 import CookieBanner from "@/components/store/CookieBanner";
+import ExitIntentPopup from "@/components/store/ExitIntentPopup";
+import AbandonedCartTracker from "@/components/store/AbandonedCartTracker";
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +13,8 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
       <main style={{ minHeight: "100vh" }}>{children}</main>
       <Footer />
       <CookieBanner />
+      <ExitIntentPopup />
+      <AbandonedCartTracker />
     </>
   );
 }

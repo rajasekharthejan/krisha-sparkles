@@ -244,3 +244,159 @@ export async function sendShippingNotification(params: {
 </html>`,
   });
 }
+
+// ── Abandoned Cart — 1hr Email ─────────────────────────────────────────────
+
+interface CartItem {
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+  slug: string;
+}
+
+function buildCartItemsHtml(items: CartItem[]) {
+  return items
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:12px;border-bottom:1px solid #1a1a1a;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            ${item.image ? `<img src="${item.image}" width="52" height="52" style="border-radius:6px;object-fit:cover;flex-shrink:0;" alt="${item.name}" />` : ""}
+            <div>
+              <p style="margin:0;font-weight:600;font-size:14px;">${item.name}</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#888;">Qty: ${item.quantity}</p>
+            </div>
+          </div>
+        </td>
+        <td style="padding:12px;border-bottom:1px solid #1a1a1a;text-align:right;color:#c9a84c;font-weight:700;">
+          ${formatPrice(item.price * item.quantity)}
+        </td>
+      </tr>`
+    )
+    .join("");
+}
+
+export async function sendAbandonedCart1hr(params: {
+  email: string;
+  cartSnapshot: CartItem[];
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const { email, cartSnapshot } = params;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const total = cartSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  await resend.emails.send({
+    from: `Krisha Sparkles <${FROM}>`,
+    to: email,
+    subject: "You left something behind \u2728",
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <p style="font-size:28px;font-weight:700;color:#c9a84c;margin:0;">\u2746 Krisha Sparkles</p>
+    </div>
+
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:28px;text-align:center;margin-bottom:24px;">
+      <p style="font-size:36px;margin:0 0 8px;">&#128141;</p>
+      <h1 style="font-size:22px;font-weight:700;color:#c9a84c;margin:0 0 8px;">Your cart is waiting!</h1>
+      <p style="color:#888;margin:0;font-size:14px;line-height:1.6;">You left some beautiful pieces behind. Come back and complete your order!</p>
+    </div>
+
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;overflow:hidden;margin-bottom:24px;">
+      <div style="padding:14px 16px;border-bottom:1px solid rgba(201,168,76,0.1);">
+        <p style="margin:0;font-size:12px;font-weight:700;color:#c9a84c;text-transform:uppercase;letter-spacing:0.08em;">Your Cart</p>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tbody>${buildCartItemsHtml(cartSnapshot)}</tbody>
+      </table>
+      <div style="padding:14px 16px;border-top:1px solid rgba(201,168,76,0.1);text-align:right;">
+        <span style="color:#888;font-size:14px;">Total: </span>
+        <span style="font-size:16px;font-weight:700;color:#c9a84c;">${formatPrice(total)}</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:24px;">
+      <a href="${siteUrl}/checkout" style="display:inline-block;padding:14px 32px;background:#c9a84c;color:#0a0a0a;text-decoration:none;border-radius:8px;font-weight:700;font-size:15px;letter-spacing:0.03em;">
+        Complete My Order &rarr;
+      </a>
+    </div>
+
+    <div style="text-align:center;padding:24px 0;border-top:1px solid rgba(255,255,255,0.05);">
+      <p style="color:#444;font-size:11px;margin:0;">&copy; 2025 Krisha Sparkles LLC &middot; Texas, USA</p>
+    </div>
+  </div>
+</body>
+</html>`,
+  });
+}
+
+// ── Abandoned Cart — 24hr Email ────────────────────────────────────────────
+
+export async function sendAbandonedCart24hr(params: {
+  email: string;
+  cartSnapshot: CartItem[];
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const { email, cartSnapshot } = params;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const total = cartSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
+  const discountCode = "SAVE10";
+
+  await resend.emails.send({
+    from: `Krisha Sparkles <${FROM}>`,
+    to: email,
+    subject: "Last chance \u2014 10% off your cart &#128717;",
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <p style="font-size:28px;font-weight:700;color:#c9a84c;margin:0;">\u2746 Krisha Sparkles</p>
+    </div>
+
+    <div style="background:linear-gradient(135deg,rgba(201,168,76,0.12),rgba(201,168,76,0.04));border:1px solid rgba(201,168,76,0.3);border-radius:12px;padding:28px;text-align:center;margin-bottom:24px;">
+      <p style="font-size:36px;margin:0 0 8px;">\u2728</p>
+      <h1 style="font-size:22px;font-weight:700;color:#c9a84c;margin:0 0 8px;">We saved 10% just for you!</h1>
+      <p style="color:#888;margin:0 0 16px;font-size:14px;line-height:1.6;">Your cart is still here. Use code below for an exclusive 10% discount.</p>
+      <div style="background:#0a0a0a;border:2px dashed rgba(201,168,76,0.4);border-radius:8px;padding:12px 20px;display:inline-block;">
+        <p style="font-family:monospace;font-size:22px;font-weight:700;color:#c9a84c;margin:0;letter-spacing:0.12em;">${discountCode}</p>
+      </div>
+    </div>
+
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;overflow:hidden;margin-bottom:24px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tbody>${buildCartItemsHtml(cartSnapshot)}</tbody>
+      </table>
+      <div style="padding:14px 16px;border-top:1px solid rgba(201,168,76,0.1);text-align:right;">
+        <span style="color:#888;font-size:12px;text-decoration:line-through;">${formatPrice(total)}</span>
+        <span style="font-size:16px;font-weight:700;color:#c9a84c;margin-left:8px;">${formatPrice(total * 0.9)}</span>
+        <span style="font-size:12px;color:#10b981;margin-left:4px;">with ${discountCode}</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:24px;">
+      <a href="${siteUrl}/checkout" style="display:inline-block;padding:14px 32px;background:#c9a84c;color:#0a0a0a;text-decoration:none;border-radius:8px;font-weight:700;font-size:15px;letter-spacing:0.03em;">
+        Save 10% &mdash; Claim My Order &rarr;
+      </a>
+    </div>
+
+    <p style="text-align:center;color:#666;font-size:12px;">Offer expires in 24 hours. Limited stock available.</p>
+
+    <div style="text-align:center;padding:24px 0;border-top:1px solid rgba(255,255,255,0.05);">
+      <p style="color:#444;font-size:11px;margin:0;">&copy; 2025 Krisha Sparkles LLC &middot; Texas, USA</p>
+    </div>
+  </div>
+</body>
+</html>`,
+  });
+}
