@@ -631,6 +631,7 @@ button:focus-visible, a:focus-visible {
   color: var(--subtle); transition: color 0.15s ease, transform 0.15s ease;
   font-size: 1.4rem; line-height: 1;
 }
+.star-btn.star-filled { color: var(--gold); }
 .star-btn:hover, .star-btn.active { color: var(--gold); transform: scale(1.15); }
 
 /* ─── Review Card ────────────────────────────────────────── */

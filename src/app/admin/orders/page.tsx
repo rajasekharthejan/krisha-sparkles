@@ -31,18 +31,11 @@ export default function AdminOrdersPage() {
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
-    let query = supabase
-      .from("orders")
-      .select("*, order_items(*)")
-      .order("created_at", { ascending: false });
-
-    if (filter !== "all") {
-      query = query.eq("status", filter);
-    }
-
-    const { data } = await query;
-    setOrders((data as Order[]) || []);
+    // Use the admin API endpoint (service role) so we see ALL orders, bypassing RLS
+    const params = filter !== "all" ? `?status=${filter}` : "";
+    const res = await fetch(`/api/admin/orders/list${params}`);
+    const json = await res.json();
+    setOrders((json.orders as Order[]) || []);
     setLoading(false);
   }, [filter]);
 
@@ -52,8 +45,11 @@ export default function AdminOrdersPage() {
 
   async function updateStatus(orderId: string, newStatus: string) {
     setUpdatingId(orderId);
-    const supabase = createClient();
-    await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
+    await fetch("/api/admin/orders/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: orderId, status: newStatus }),
+    });
     setOrders((prev) =>
       prev.map((o) =>
         o.id === orderId ? { ...o, status: newStatus as Order["status"] } : o
