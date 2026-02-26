@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
           shipping_address,
           user_id: userId || null,
           coupon_code: metadata?.coupon_code || null,
+          points_redeemed: metadata?.points_to_redeem ? parseInt(metadata.points_to_redeem, 10) : null,
           utm_source: metadata?.utm_source || null,
           utm_medium: metadata?.utm_medium || null,
           utm_campaign: metadata?.utm_campaign || null,
@@ -149,6 +150,33 @@ export async function POST(req: NextRequest) {
       }
 
       console.log(`Order ${order.id} created for ${session.customer_details?.email}`);
+
+      // Deduct redeemed loyalty points (must happen BEFORE awarding new points)
+      const pointsToRedeem = metadata?.points_to_redeem ? parseInt(metadata.points_to_redeem, 10) : 0;
+      if (userId && pointsToRedeem > 0) {
+        try {
+          // Direct update: subtract redeemed points from user_profiles.points_balance
+          const { data: profileData } = await supabaseAdmin
+            .from("user_profiles")
+            .select("points_balance")
+            .eq("id", userId)
+            .single();
+          if (profileData) {
+            const newBalance = Math.max(0, (profileData.points_balance || 0) - pointsToRedeem);
+            await supabaseAdmin
+              .from("user_profiles")
+              .update({ points_balance: newBalance })
+              .eq("id", userId);
+            // Also record points_redeemed on the order for history
+            await supabaseAdmin
+              .from("orders")
+              .update({ points_redeemed: pointsToRedeem })
+              .eq("id", order.id);
+          }
+        } catch {
+          console.error("Failed to deduct loyalty points");
+        }
+      }
 
       // Award loyalty points: 1 point per $1 spent (integer floor, logged-in users only)
       if (userId) {

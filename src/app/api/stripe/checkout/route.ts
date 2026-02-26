@@ -13,7 +13,7 @@ import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
   try {
-    const { items, couponCode, discountAmount, notifyWhatsApp, whatsAppPhone, appliedCredit } = await req.json();
+    const { items, couponCode, discountAmount, notifyWhatsApp, whatsAppPhone, appliedCredit, pointsToRedeem, pointsDiscount } = await req.json();
 
     // Get logged-in user if any (optional — guest checkout still works)
     let userId: string | null = null;
@@ -161,8 +161,28 @@ export async function POST(req: NextRequest) {
         notify_whatsapp: notifyWhatsApp ? "true" : "false",
         phone: whatsAppPhone || "",
         applied_credit: appliedCredit ? String(appliedCredit) : "",
+        // Loyalty points redemption metadata — webhook uses this to deduct from points_balance
+        points_to_redeem: pointsToRedeem ? String(pointsToRedeem) : "",
+        points_discount: pointsDiscount ? String(pointsDiscount) : "",
       },
     };
+
+    // Apply loyalty points discount: add as a Stripe coupon (negative amount)
+    // Points deduction from user_profiles happens in webhook after confirmed payment
+    const resolvedPointsDiscount = pointsToRedeem && pointsDiscount ? Number(pointsDiscount) : 0;
+    if (resolvedPointsDiscount > 0 && !sessionParams.discounts) {
+      try {
+        const loyaltyCoupon = await stripe.coupons.create({
+          amount_off: Math.round(resolvedPointsDiscount * 100),
+          currency: "usd",
+          duration: "once",
+          name: `${pointsToRedeem} Loyalty Points`,
+        });
+        sessionParams.discounts = [{ coupon: loyaltyCoupon.id }];
+      } catch {
+        console.log("Stripe loyalty coupon creation skipped");
+      }
+    }
 
     // Apply discount via Stripe coupon if we have a valid one
     if (validatedCoupon && serverDiscount > 0) {

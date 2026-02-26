@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
-import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2, Gift } from "lucide-react";
+import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2, Gift, Star } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { pushDataLayer } from "@/hooks/useDataLayer";
@@ -28,6 +28,13 @@ function CheckoutContent() {
   // Store credits
   const [storeCredit, setStoreCredit] = useState<number>(0);
   const [appliedCredit, setAppliedCredit] = useState<number>(0);
+  // Loyalty points
+  const [pointsBalance, setPointsBalance] = useState<number>(0);
+  const [usePoints, setUsePoints] = useState(false);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [pointsDiscount, setPointsDiscount] = useState(0);
+  const [pointsError, setPointsError] = useState("");
+  const [pointsLoading, setPointsLoading] = useState(false);
   // WhatsApp
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
   const [whatsAppPhone, setWhatsAppPhone] = useState("");
@@ -35,7 +42,7 @@ function CheckoutContent() {
   const cancelled = searchParams.get("cancelled");
 
   const subtotal = totalPrice();
-  const finalTotal = Math.max(0, subtotal - discount - appliedCredit);
+  const finalTotal = Math.max(0, subtotal - discount - appliedCredit - pointsDiscount);
 
   // Pre-fill coupon from exit intent cookie
   useEffect(() => {
@@ -50,11 +57,21 @@ function CheckoutContent() {
     }
   }, []);
 
-  // Fetch available store credits on mount
+  // Fetch available store credits and loyalty points on mount
   useEffect(() => {
     fetch("/api/credits/available")
       .then(r => r.json())
       .then(d => setStoreCredit(d.available || 0))
+      .catch(() => {});
+
+    // Fetch loyalty points balance
+    fetch("/api/loyalty/history")
+      .then(r => r.json())
+      .then(d => {
+        if (d.current_balance !== undefined) {
+          setPointsBalance(d.current_balance || 0);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -90,6 +107,55 @@ function CheckoutContent() {
     setCouponError("");
   }
 
+  // Calculate max redeemable points (can't exceed what's left after other discounts)
+  function getMaxRedeemablePoints() {
+    const remainingAfterDiscounts = subtotal - discount - appliedCredit;
+    // Points must be multiples of 100 (100 pts = $1)
+    const maxFromBalance = Math.floor(pointsBalance / 100) * 100;
+    const maxFromTotal = Math.floor(remainingAfterDiscounts) * 100; // points to cover remaining total
+    return Math.min(maxFromBalance, maxFromTotal);
+  }
+
+  async function toggleLoyaltyPoints(checked: boolean) {
+    setUsePoints(checked);
+    setPointsError("");
+
+    if (!checked) {
+      setPointsToRedeem(0);
+      setPointsDiscount(0);
+      return;
+    }
+
+    // Calculate how many points to apply
+    const maxPoints = getMaxRedeemablePoints();
+    if (maxPoints < 100) {
+      setPointsError("Not enough points to redeem (minimum 100 points = $1).");
+      setUsePoints(false);
+      return;
+    }
+
+    setPointsLoading(true);
+    try {
+      const res = await fetch("/api/loyalty/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ points_to_redeem: maxPoints }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        setPointsError(data.error || "Could not apply points.");
+        setUsePoints(false);
+      } else {
+        setPointsToRedeem(data.points_to_redeem);
+        setPointsDiscount(data.discount_amount);
+      }
+    } catch {
+      setPointsError("Could not apply points. Please try again.");
+      setUsePoints(false);
+    }
+    setPointsLoading(false);
+  }
+
   async function handleCheckout() {
     if (items.length === 0) return;
     setLoading(true);
@@ -111,6 +177,9 @@ function CheckoutContent() {
           appliedCredit,
           notifyWhatsApp,
           whatsAppPhone,
+          // Loyalty points redemption
+          pointsToRedeem: usePoints ? pointsToRedeem : 0,
+          pointsDiscount: usePoints ? pointsDiscount : 0,
         }),
       });
 
@@ -342,6 +411,61 @@ function CheckoutContent() {
           </div>
         )}
 
+        {/* Loyalty Points */}
+        {pointsBalance >= 100 && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.85rem" }}>
+              <Star size={15} style={{ color: "var(--gold)" }} />
+              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>Loyalty Points</span>
+              <span style={{ marginLeft: "auto", fontSize: "0.875rem", color: "var(--gold)", fontWeight: 700 }}>
+                {pointsBalance.toLocaleString()} pts
+              </span>
+            </div>
+
+            {usePoints && pointsDiscount > 0 ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.25)", borderRadius: "8px" }}>
+                <Check size={16} style={{ color: "var(--gold)", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--gold)", margin: 0 }}>
+                    {pointsToRedeem.toLocaleString()} Points Applied
+                  </p>
+                  <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: 0 }}>
+                    Saves {formatPrice(pointsDiscount)} off your order
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setUsePoints(false); setPointsToRedeem(0); setPointsDiscount(0); setPointsError(""); }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: "4px" }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div>
+                <button
+                  onClick={() => toggleLoyaltyPoints(true)}
+                  disabled={pointsLoading || getMaxRedeemablePoints() < 100}
+                  className="btn-gold-outline"
+                  style={{ width: "100%", justifyContent: "center", opacity: getMaxRedeemablePoints() < 100 ? 0.5 : 1 }}
+                >
+                  {pointsLoading ? (
+                    <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+                  ) : (
+                    <Star size={14} />
+                  )}
+                  Use {Math.min(getMaxRedeemablePoints(), pointsBalance).toLocaleString()} pts — save {formatPrice(Math.floor(Math.min(getMaxRedeemablePoints(), pointsBalance) / 100))}
+                </button>
+                <p style={{ color: "var(--muted)", fontSize: "0.74rem", marginTop: "0.4rem", textAlign: "center" }}>
+                  100 points = $1 off
+                </p>
+                {pointsError && (
+                  <p style={{ color: "#ef4444", fontSize: "0.8rem", marginTop: "0.5rem" }}>{pointsError}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Totals */}
         <div
           style={{
@@ -376,6 +500,16 @@ function CheckoutContent() {
               </span>
             </div>
           )}
+          {pointsDiscount > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <span style={{ color: "var(--gold)", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <Star size={13} /> Loyalty Points ({pointsToRedeem.toLocaleString()} pts)
+              </span>
+              <span style={{ fontSize: "0.875rem", color: "var(--gold)", fontWeight: 600 }}>
+                &minus;{formatPrice(pointsDiscount)}
+              </span>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
             <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>Shipping</span>
             <span style={{ fontSize: "0.875rem", color: "#10b981" }}>
@@ -385,7 +519,7 @@ function CheckoutContent() {
           <div style={{ borderTop: "1px solid var(--gold-border)", paddingTop: "0.75rem", marginTop: "0.75rem", display: "flex", justifyContent: "space-between" }}>
             <span style={{ fontWeight: 700 }}>Total</span>
             <div style={{ textAlign: "right" }}>
-              {(discount > 0 || appliedCredit > 0) && (
+              {(discount > 0 || appliedCredit > 0 || pointsDiscount > 0) && (
                 <span style={{ display: "block", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "line-through" }}>
                   {formatPrice(subtotal)}
                 </span>
@@ -452,7 +586,9 @@ function CheckoutContent() {
           ) : (
             <>
               <Lock size={16} />
-              {(appliedCoupon || appliedCredit > 0) ? `Pay ${formatPrice(finalTotal)} — Secure Checkout` : "Secure Checkout"}
+              {(appliedCoupon || appliedCredit > 0 || pointsDiscount > 0)
+                ? `Pay ${formatPrice(finalTotal)} — Secure Checkout`
+                : "Secure Checkout"}
             </>
           )}
         </button>

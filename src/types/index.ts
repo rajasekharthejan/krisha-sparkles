@@ -115,6 +115,17 @@ export interface RefundRequest {
   orders?: Pick<Order, "id" | "total" | "status" | "created_at">;
 }
 
+// ── Phase 7 — Loyalty Redemption ───────────────────────────────────────────
+export interface PointsHistory {
+  order_id: string;
+  order_short: string;       // last 8 chars uppercase, e.g. "A1B2C3D4"
+  points_earned: number;     // Math.floor(order.total) — 1pt per $1 spent
+  points_redeemed: number;   // points deducted at this order's checkout (0 if none)
+  order_total: number;
+  status: string;
+  created_at: string;
+}
+
 export interface WishlistItem {
   id: string;
   user_id: string;

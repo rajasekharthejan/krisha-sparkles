@@ -165,3 +165,27 @@ CREATE TABLE IF NOT EXISTS public.admin_login_attempts (
 -- Only service role can access this table (no anon/user access)
 ALTER TABLE public.admin_login_attempts ENABLE ROW LEVEL SECURITY;
 -- No RLS policies = only service role (bypasses RLS) can insert/select
+
+
+-- ============================================================
+-- PHASE 7 MIGRATION — Loyalty Redemption (Feature 1)
+-- Run these statements in Supabase SQL Editor
+-- ============================================================
+
+-- Add points_redeemed column to orders (tracks how many points were spent at checkout)
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS points_redeemed integer DEFAULT 0;
+
+-- Ensure points_balance column exists on user_profiles (added in Phase 6 loyalty earning)
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS points_balance integer DEFAULT 0;
+
+-- increment_points RPC (creates or replaces — safe to run again)
+-- Used by webhook to award points: 1 point per $1 spent
+CREATE OR REPLACE FUNCTION increment_points(user_id uuid, pts integer)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  UPDATE user_profiles
+  SET points_balance = COALESCE(points_balance, 0) + pts
+  WHERE id = user_id;
+END;
+$$;

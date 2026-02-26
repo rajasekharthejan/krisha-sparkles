@@ -1,11 +1,11 @@
 import { requireAuth } from "@/lib/auth-server";
 import { createAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Star, ShoppingBag, ChevronRight, Gift, Zap } from "lucide-react";
+import { Star, ShoppingBag, ChevronRight, Gift, Zap, TrendingUp, Minus } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "My Points",
+  title: "My Points — Krisha Sparkles",
 };
 
 export default async function PointsPage() {
@@ -13,7 +13,17 @@ export default async function PointsPage() {
   const supabase = await createAdminClient();
 
   let pointsBalance = 0;
-  let totalOrders = 0;
+  let history: Array<{
+    order_id: string;
+    order_short: string;
+    points_earned: number;
+    points_redeemed: number;
+    order_total: number;
+    status: string;
+    created_at: string;
+  }> = [];
+  let totalEarned = 0;
+  let totalRedeemed = 0;
 
   try {
     const { data: profile } = await supabase
@@ -25,19 +35,43 @@ export default async function PointsPage() {
   } catch { /* column may not exist */ }
 
   try {
-    const { count } = await supabase
+    const { data: orders } = await supabase
       .from("orders")
-      .select("id", { count: "exact", head: true })
+      .select("id, total, status, created_at, points_redeemed")
       .eq("user_id", user.id)
-      .eq("status", "paid");
-    totalOrders = count ?? 0;
-  } catch { /* orders table may not have user_id yet */ }
+      .in("status", ["paid", "shipped", "delivered"])
+      .order("created_at", { ascending: false });
+
+    if (orders) {
+      history = orders.map((o) => {
+        const earned = Math.floor(o.total);
+        const redeemed = o.points_redeemed || 0;
+        totalEarned += earned;
+        totalRedeemed += redeemed;
+        return {
+          order_id: o.id,
+          order_short: o.id.slice(-8).toUpperCase(),
+          points_earned: earned,
+          points_redeemed: redeemed,
+          order_total: o.total,
+          status: o.status,
+          created_at: o.created_at,
+        };
+      });
+    }
+  } catch { /* orders table may not have user_id */ }
 
   const HOW_TO_EARN = [
     { icon: <ShoppingBag size={20} style={{ color: "var(--gold)" }} />, title: "Shop & Earn", desc: "Earn 1 point for every $1 you spend on any order." },
-    { icon: <Zap size={20} style={{ color: "var(--gold)" }} />, title: "Automatic", desc: "Points are added automatically after payment is confirmed." },
-    { icon: <Gift size={20} style={{ color: "var(--gold)" }} />, title: "Redeem Soon", desc: "Redemption & exclusive rewards are coming soon. Keep shopping!" },
+    { icon: <Zap size={20} style={{ color: "var(--gold)" }} />, title: "Auto-Awarded", desc: "Points are added automatically after payment is confirmed." },
+    { icon: <Gift size={20} style={{ color: "var(--gold)" }} />, title: "Redeem at Checkout", desc: "Use points at checkout — 100 points = $1 off your order." },
   ];
+
+  function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  const dollarValue = Math.floor(pointsBalance / 100);
 
   return (
     <div style={{ paddingTop: "80px", minHeight: "100vh", background: "var(--bg)" }}>
@@ -59,7 +93,7 @@ export default async function PointsPage() {
             borderRadius: "20px",
             padding: "2.5rem",
             textAlign: "center",
-            marginBottom: "2rem",
+            marginBottom: "1.5rem",
             position: "relative",
             overflow: "hidden",
           }}
@@ -99,23 +133,46 @@ export default async function PointsPage() {
               pts
             </p>
 
-            {totalOrders > 0 && (
-              <p style={{
-                marginTop: "1.25rem",
-                color: "var(--muted)",
+            {dollarValue > 0 && (
+              <div style={{
+                marginTop: "1rem",
+                display: "inline-block",
+                background: "rgba(201,168,76,0.15)",
+                border: "1px solid rgba(201,168,76,0.3)",
+                borderRadius: "20px",
+                padding: "0.35rem 0.9rem",
                 fontSize: "0.8rem",
+                color: "var(--gold)",
+                fontWeight: 600,
               }}>
-                Earned across{" "}
-                <span style={{ color: "var(--text)" }}>{totalOrders} order{totalOrders !== 1 ? "s" : ""}</span>
-              </p>
+                Worth ${dollarValue} off your next order
+              </div>
             )}
           </div>
         </div>
 
-        {/* Redemption coming-soon pill */}
+        {/* Stats row */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "2rem" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.25rem", textAlign: "center" }}>
+            <TrendingUp size={20} style={{ color: "#10b981", margin: "0 auto 0.5rem", display: "block" }} />
+            <p style={{ fontFamily: "var(--font-playfair)", fontSize: "1.5rem", fontWeight: 700, color: "#10b981", margin: "0 0 0.2rem" }}>
+              {totalEarned.toLocaleString()}
+            </p>
+            <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: 0 }}>Total Earned</p>
+          </div>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.25rem", textAlign: "center" }}>
+            <Gift size={20} style={{ color: "var(--gold)", margin: "0 auto 0.5rem", display: "block" }} />
+            <p style={{ fontFamily: "var(--font-playfair)", fontSize: "1.5rem", fontWeight: 700, color: "var(--gold)", margin: "0 0 0.2rem" }}>
+              {totalRedeemed.toLocaleString()}
+            </p>
+            <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: 0 }}>Total Redeemed</p>
+          </div>
+        </div>
+
+        {/* Redemption explainer */}
         <div style={{
           background: "rgba(201,168,76,0.07)",
-          border: "1px dashed rgba(201,168,76,0.35)",
+          border: "1px solid rgba(201,168,76,0.3)",
           borderRadius: "12px",
           padding: "1rem 1.5rem",
           display: "flex",
@@ -123,12 +180,105 @@ export default async function PointsPage() {
           gap: "0.75rem",
           marginBottom: "2rem",
         }}>
-          <Gift size={18} style={{ color: "var(--gold)", flexShrink: 0 }} />
-          <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
-            <strong style={{ color: "var(--text)" }}>Redemption coming soon!</strong>{" "}
-            We&apos;re building rewards so you can spend your points on discounts and exclusive gifts.
+          <Star size={18} style={{ color: "var(--gold)", flexShrink: 0 }} fill="#c9a84c" />
+          <p style={{ color: "var(--text)", fontSize: "0.875rem", margin: 0 }}>
+            <strong style={{ color: "var(--gold)" }}>100 points = $1 off</strong>{" "}
+            — Redeem your points at checkout using the &ldquo;Loyalty Points&rdquo; toggle. Minimum 100 points required.
           </p>
         </div>
+
+        {/* Points History Table */}
+        <h2 style={{
+          fontFamily: "var(--font-playfair)",
+          fontSize: "1.25rem",
+          fontWeight: 700,
+          marginBottom: "1rem",
+        }}>
+          Points History
+        </h2>
+
+        {history.length === 0 ? (
+          <div style={{
+            background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px",
+            padding: "3rem", textAlign: "center", marginBottom: "2rem",
+          }}>
+            <Star size={40} style={{ color: "var(--subtle)", margin: "0 auto 1rem", display: "block" }} strokeWidth={1} />
+            <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
+              No points earned yet. Place your first order to start earning!
+            </p>
+          </div>
+        ) : (
+          <div style={{
+            background: "var(--surface)", border: "1px solid var(--gold-border)",
+            borderRadius: "12px", overflow: "hidden", marginBottom: "2rem",
+          }}>
+            {/* Table header */}
+            <div style={{
+              display: "grid", gridTemplateColumns: "1fr auto auto",
+              padding: "0.75rem 1.25rem",
+              borderBottom: "1px solid var(--gold-border)",
+              background: "rgba(201,168,76,0.05)",
+            }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Order</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right", paddingRight: "1.5rem" }}>Earned</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Redeemed</span>
+            </div>
+
+            {history.map((entry, i) => (
+              <div
+                key={entry.order_id}
+                style={{
+                  display: "grid", gridTemplateColumns: "1fr auto auto",
+                  padding: "1rem 1.25rem",
+                  borderBottom: i < history.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.2rem" }}>
+                    <Link
+                      href={`/account/orders`}
+                      style={{ fontFamily: "monospace", fontSize: "0.875rem", color: "var(--gold)", fontWeight: 600, textDecoration: "none" }}
+                    >
+                      #{entry.order_short}
+                    </Link>
+                    <span style={{
+                      fontSize: "0.7rem", padding: "1px 6px", borderRadius: "20px", fontWeight: 600,
+                      background: entry.status === "delivered" ? "rgba(16,185,129,0.12)" : "rgba(201,168,76,0.12)",
+                      color: entry.status === "delivered" ? "#10b981" : "var(--gold)",
+                    }}>
+                      {entry.status}
+                    </span>
+                  </div>
+                  <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: 0 }}>
+                    {formatDate(entry.created_at)} &bull; ${entry.order_total.toFixed(2)} order
+                  </p>
+                </div>
+
+                <div style={{ textAlign: "right", paddingRight: "1.5rem" }}>
+                  <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.875rem" }}>
+                    +{entry.points_earned.toLocaleString()}
+                  </span>
+                  <p style={{ color: "var(--muted)", fontSize: "0.7rem", margin: 0 }}>pts</p>
+                </div>
+
+                <div style={{ textAlign: "right" }}>
+                  {entry.points_redeemed > 0 ? (
+                    <>
+                      <span style={{ display: "flex", alignItems: "center", gap: "2px", color: "var(--gold)", fontWeight: 700, fontSize: "0.875rem", justifyContent: "flex-end" }}>
+                        <Minus size={10} />
+                        {entry.points_redeemed.toLocaleString()}
+                      </span>
+                      <p style={{ color: "var(--muted)", fontSize: "0.7rem", margin: 0 }}>redeemed</p>
+                    </>
+                  ) : (
+                    <span style={{ color: "var(--subtle)", fontSize: "0.875rem" }}>—</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* How to Earn */}
         <h2 style={{
@@ -137,7 +287,7 @@ export default async function PointsPage() {
           fontWeight: 700,
           marginBottom: "1rem",
         }}>
-          How to Earn Points
+          How It Works
         </h2>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "2.5rem" }}>
@@ -176,7 +326,7 @@ export default async function PointsPage() {
             Shop &amp; Earn Points
           </Link>
           <p style={{ color: "var(--muted)", fontSize: "0.78rem", marginTop: "0.75rem" }}>
-            1 point earned for every $1 spent
+            1 point earned for every $1 spent &bull; 100 points = $1 off
           </p>
         </div>
 
@@ -195,7 +345,7 @@ export default async function PointsPage() {
             <ShoppingBag size={20} style={{ color: "var(--gold)" }} />
             <div style={{ flex: 1 }}>
               <p style={{ fontWeight: 600, fontSize: "0.9rem", margin: 0 }}>View My Orders</p>
-              <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>See orders where you earned points</p>
+              <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>See all orders where you earned points</p>
             </div>
             <ChevronRight size={16} style={{ color: "var(--muted)" }} />
           </Link>
