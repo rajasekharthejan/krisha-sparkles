@@ -1,0 +1,844 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useCartStore } from "@/store/cartStore";
+import { useAuthStore } from "@/store/authStore";
+import { formatPrice } from "@/lib/utils";
+import { ShoppingBag, Heart, ChevronLeft, ChevronRight, Check, Share2, Truck, RefreshCw, Shield, Star, Send, Loader2, X, Ruler } from "lucide-react";
+import { toggleGuestWishlist, isInGuestWishlist } from "@/lib/wishlistUtils";
+import type { Product, Review } from "@/types";
+import ProductCard from "@/components/store/ProductCard";
+
+export default function ProductDetailClient({ slug: initialSlug }: { slug?: string }) {
+  const params = useParams<{ slug: string }>();
+  const slug = initialSlug || params?.slug || "";
+  const [product, setProduct] = useState<Product | null>(null);
+  const [related, setRelated] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeImage, setActiveImage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+  const [wished, setWished] = useState(false);
+  const [wishLoading, setWishLoading] = useState(false);
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  // Reviews state
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", body: "" });
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const { addItem, openCart } = useCartStore();
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    async function fetchProduct() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("products")
+        .select("*, category:categories(id,name,slug)")
+        .eq("slug", slug)
+        .eq("active", true)
+        .single();
+
+      if (data) {
+        setProduct(data as Product);
+        // Fetch related
+        const { data: rel } = await supabase
+          .from("products")
+          .select("*, category:categories(id,name,slug)")
+          .eq("category_id", data.category_id)
+          .eq("active", true)
+          .neq("id", data.id)
+          .limit(4);
+        setRelated((rel as Product[]) || []);
+        // Fetch approved reviews
+        const { data: revs } = await supabase
+          .from("reviews")
+          .select("*, user_profiles(first_name, last_name)")
+          .eq("product_id", data.id)
+          .eq("approved", true)
+          .order("created_at", { ascending: false });
+        setReviews((revs as Review[]) || []);
+        // Check wishlist state
+        if (user) {
+          const { data: wl } = await supabase
+            .from("wishlists")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("product_id", data.id)
+            .single();
+          setWished(!!wl);
+          // Check if user already reviewed
+          const { data: myReview } = await supabase
+            .from("reviews")
+            .select("id")
+            .eq("product_id", data.id)
+            .eq("user_id", user.id)
+            .single();
+          setHasReviewed(!!myReview);
+        } else {
+          setWished(isInGuestWishlist(data.id));
+        }
+      }
+      setLoading(false);
+    }
+    fetchProduct();
+  }, [slug, user]);
+
+  // Close lightbox / size guide on Escape
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { setLightboxOpen(false); setSizeGuideOpen(false); }
+    }
+    if (lightboxOpen || sizeGuideOpen) window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxOpen, sizeGuideOpen]);
+
+  function handleAddToCart() {
+    if (!product) return;
+
+    // Build selected variant string (e.g. "Color: Gold, Size: M")
+    const variantEntries = Object.entries(selectedVariants)
+      .filter(([, val]) => val)
+      .map(([key, val]) => `${key}: ${val}`);
+    const selectedVariantStr = variantEntries.length > 0 ? variantEntries.join(", ") : undefined;
+
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.images?.[0] || "",
+      slug: product.slug,
+      quantity,
+      selectedVariant: selectedVariantStr,
+    });
+    setAdded(true);
+    openCart();
+    setTimeout(() => setAdded(false), 2000);
+  }
+
+  async function handleWish() {
+    if (!product || wishLoading) return;
+    setWishLoading(true);
+    if (user) {
+      const supabase = createClient();
+      if (wished) {
+        await supabase.from("wishlists").delete().eq("user_id", user.id).eq("product_id", product.id);
+        setWished(false);
+      } else {
+        await supabase.from("wishlists").upsert({ user_id: user.id, product_id: product.id });
+        setWished(true);
+      }
+    } else {
+      const nowIn = toggleGuestWishlist(product.id);
+      setWished(nowIn);
+    }
+    setWishLoading(false);
+  }
+
+  async function handleReviewSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!product || !user) return;
+    setReviewSubmitting(true);
+    setReviewError("");
+    const supabase = createClient();
+    const { error } = await supabase.from("reviews").insert({
+      product_id: product.id,
+      user_id: user.id,
+      rating: reviewForm.rating,
+      title: reviewForm.title || null,
+      body: reviewForm.body,
+    });
+    if (error) {
+      setReviewError(error.message.includes("unique") ? "You have already reviewed this product." : "Failed to submit review. Please try again.");
+    } else {
+      setReviewSuccess(true);
+      setHasReviewed(true);
+    }
+    setReviewSubmitting(false);
+  }
+
+  if (loading) {
+    return (
+      <div style={{ paddingTop: "80px", minHeight: "100vh", background: "var(--bg)" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "3rem 1.5rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem" }}>
+            <div className="shimmer-box" style={{ aspectRatio: "1", borderRadius: "16px" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="shimmer-box" style={{ height: i === 0 ? "40px" : "20px", borderRadius: "8px", width: i === 2 ? "40%" : "100%" }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div style={{ paddingTop: "80px", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontSize: "4rem" }}>💎</p>
+          <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.5rem", margin: "1rem 0" }}>Product Not Found</h2>
+          <Link href="/shop" className="btn-gold">Back to Shop</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const images = product.images?.length ? product.images : [""];
+  const hasDiscount = product.compare_price && product.compare_price > product.price;
+  const discountPct = hasDiscount
+    ? Math.round(((product.compare_price! - product.price) / product.compare_price!) * 100)
+    : 0;
+
+  return (
+    <div style={{ paddingTop: "80px", minHeight: "100vh", background: "var(--bg)" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "2rem 1.5rem" }}>
+        {/* Breadcrumb */}
+        <nav style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "2rem", fontSize: "0.8rem", color: "var(--muted)" }}>
+          <Link href="/" style={{ color: "var(--muted)", textDecoration: "none" }}>Home</Link>
+          <span>/</span>
+          <Link href="/shop" style={{ color: "var(--muted)", textDecoration: "none" }}>Shop</Link>
+          {product.category && (
+            <>
+              <span>/</span>
+              <Link href={`/shop?category=${product.category.slug}`} style={{ color: "var(--muted)", textDecoration: "none" }}>
+                {product.category.name}
+              </Link>
+            </>
+          )}
+          <span>/</span>
+          <span style={{ color: "var(--gold)" }}>{product.name}</span>
+        </nav>
+
+        {/* Main Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "4rem", alignItems: "start" }}>
+          {/* Images */}
+          <div>
+            {/* Main Image */}
+            <div
+              onClick={() => images[activeImage] && setLightboxOpen(true)}
+              style={{
+                position: "relative",
+                aspectRatio: "1",
+                borderRadius: "16px",
+                overflow: "hidden",
+                background: "var(--surface)",
+                border: "1px solid var(--gold-border)",
+                marginBottom: "1rem",
+                cursor: images[activeImage] ? "zoom-in" : "default",
+              }}
+            >
+              {images[activeImage] ? (
+                <Image
+                  src={images[activeImage]}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  style={{ objectFit: "cover" }}
+                  priority
+                />
+              ) : (
+                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}>
+                  💎
+                </div>
+              )}
+
+              {/* Nav Arrows */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setActiveImage((activeImage - 1 + images.length) % images.length)}
+                    style={{
+                      position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)",
+                      width: "36px", height: "36px", borderRadius: "50%",
+                      background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
+                      border: "1px solid var(--gold-border)", cursor: "pointer",
+                      color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    onClick={() => setActiveImage((activeImage + 1) % images.length)}
+                    style={{
+                      position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                      width: "36px", height: "36px", borderRadius: "50%",
+                      background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
+                      border: "1px solid var(--gold-border)", cursor: "pointer",
+                      color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnail Strip */}
+            {images.length > 1 && (
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                {images.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImage(i)}
+                    style={{
+                      width: "72px", height: "72px", borderRadius: "8px", overflow: "hidden",
+                      border: `2px solid ${activeImage === i ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
+                      cursor: "pointer", padding: 0, background: "var(--surface)",
+                      transition: "border-color 0.2s ease",
+                    }}
+                  >
+                    {img && <Image src={img} alt="" width={72} height={72} style={{ objectFit: "cover", width: "100%", height: "100%" }} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            {/* Category & badges */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+              {product.category && (
+                <Link href={`/shop?category=${product.category.slug}`} className="badge-gold" style={{ textDecoration: "none" }}>
+                  {product.category.name}
+                </Link>
+              )}
+              {product.featured && (
+                <span className="badge-gold">Featured</span>
+              )}
+              {hasDiscount && (
+                <span style={{ padding: "0.2rem 0.75rem", background: "rgba(239,68,68,0.15)", color: "#ef4444", borderRadius: "9999px", fontSize: "0.75rem", fontWeight: 700 }}>
+                  {discountPct}% Off
+                </span>
+              )}
+            </div>
+
+            {/* Title */}
+            <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "clamp(1.5rem, 3vw, 2rem)", fontWeight: 700, lineHeight: 1.2 }}>
+              {product.name}
+            </h1>
+
+            {/* Price */}
+            <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem" }}>
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", fontWeight: 700, color: "var(--gold)" }}>
+                {formatPrice(product.price)}
+              </span>
+              {hasDiscount && (
+                <span style={{ fontSize: "1.1rem", color: "var(--subtle)", textDecoration: "line-through" }}>
+                  {formatPrice(product.compare_price!)}
+                </span>
+              )}
+            </div>
+
+            {/* Description */}
+            {product.description && (
+              <p style={{ color: "var(--muted)", lineHeight: 1.8, fontSize: "0.9rem" }}>
+                {product.description}
+              </p>
+            )}
+
+            {/* Stock */}
+            <div>
+              {product.stock_quantity > 0 ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#10b981", fontSize: "0.875rem" }}>
+                  <Check size={16} />
+                  {product.stock_quantity <= 5 ? `Only ${product.stock_quantity} left in stock` : "In Stock"}
+                </div>
+              ) : (
+                <p style={{ color: "#ef4444", fontSize: "0.875rem" }}>Out of Stock</p>
+              )}
+            </div>
+
+            {/* Quantity */}
+            {product.stock_quantity > 0 && (
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                  Quantity
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    style={{
+                      width: "40px", height: "40px", border: "1px solid var(--gold-border)", borderRight: "none",
+                      borderRadius: "4px 0 0 4px", background: "var(--elevated)", color: "var(--gold)",
+                      cursor: "pointer", fontSize: "1.1rem", display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    −
+                  </button>
+                  <span style={{
+                    width: "50px", height: "40px", border: "1px solid var(--gold-border)",
+                    background: "var(--elevated)", color: "var(--text)", fontSize: "0.875rem",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600,
+                  }}>
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
+                    style={{
+                      width: "40px", height: "40px", border: "1px solid var(--gold-border)", borderLeft: "none",
+                      borderRadius: "0 4px 4px 0", background: "var(--elevated)", color: "var(--gold)",
+                      cursor: "pointer", fontSize: "1.1rem", display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Variant Selectors */}
+            {product.variants && product.variants.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {product.variants.map((variant) => (
+                  <div key={variant.name}>
+                    <label style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                      {variant.name}
+                      {selectedVariants[variant.name] && (
+                        <span style={{ color: "var(--gold)", marginLeft: "0.5rem", textTransform: "none", fontWeight: 500 }}>
+                          {selectedVariants[variant.name]}
+                        </span>
+                      )}
+                    </label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                      {variant.options.map((option) => {
+                        const isSelected = selectedVariants[variant.name] === option;
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => setSelectedVariants((prev) => ({ ...prev, [variant.name]: option }))}
+                            style={{
+                              padding: "0.4rem 0.9rem",
+                              borderRadius: "6px",
+                              border: `1px solid ${isSelected ? "var(--gold)" : "rgba(201,168,76,0.2)"}`,
+                              background: isSelected ? "var(--gold-muted)" : "var(--elevated)",
+                              color: isSelected ? "var(--gold)" : "var(--muted)",
+                              fontSize: "0.8rem",
+                              fontWeight: isSelected ? 600 : 400,
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* CTA Buttons */}
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button
+                onClick={handleAddToCart}
+                disabled={product.stock_quantity === 0}
+                className="btn-gold"
+                style={{ flex: 1, justifyContent: "center", minWidth: "140px" }}
+              >
+                <ShoppingBag size={16} />
+                {added ? "Added to Cart!" : "Add to Cart"}
+              </button>
+              <button
+                onClick={handleWish}
+                disabled={wishLoading}
+                style={{
+                  width: "44px", height: "44px", border: "1px solid var(--gold-border)",
+                  borderRadius: "4px", background: wished ? "var(--gold-muted)" : "var(--elevated)",
+                  cursor: wishLoading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  color: wished ? "#ef4444" : "var(--muted)", transition: "all 0.2s", flexShrink: 0,
+                }}
+                title={wished ? "Remove from wishlist" : "Add to wishlist"}
+              >
+                <Heart size={17} style={{ fill: wished ? "#ef4444" : "none" }} />
+              </button>
+              <button
+                onClick={() => navigator.share?.({ title: product.name, url: window.location.href })}
+                style={{
+                  width: "44px", height: "44px", border: "1px solid var(--gold-border)",
+                  borderRadius: "4px", background: "var(--elevated)",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "var(--muted)", transition: "all 0.2s", flexShrink: 0,
+                }}
+              >
+                <Share2 size={17} />
+              </button>
+            </div>
+
+            {/* Trust Badges */}
+            <div
+              style={{
+                display: "flex", flexDirection: "column", gap: "0.75rem",
+                padding: "1.25rem", background: "var(--surface)",
+                border: "1px solid var(--gold-border)", borderRadius: "10px",
+              }}
+            >
+              {[
+                { icon: <Truck size={15} />, text: "Free shipping on orders over $75" },
+                { icon: <RefreshCw size={15} />, text: "7-day easy return policy" },
+                { icon: <Shield size={15} />, text: "Secure payment via Stripe" },
+              ].map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <span style={{ color: "var(--gold)" }}>{item.icon}</span>
+                  <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{item.text}</span>
+                </div>
+              ))}
+            {/* Size Guide */}
+            {["dresses", "bangles-bracelets"].includes(product.category?.slug ?? "") && (
+              <button
+                onClick={() => setSizeGuideOpen(true)}
+                style={{
+                  background: "none",
+                  border: "1px solid var(--gold-border)",
+                  borderRadius: "8px",
+                  padding: "0.6rem 1rem",
+                  color: "var(--muted)",
+                  cursor: "pointer",
+                  fontSize: "0.82rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  transition: "border-color 0.2s, color 0.2s",
+                  width: "fit-content",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--gold)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--gold)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--gold-border)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--muted)"; }}
+              >
+                <Ruler size={14} style={{ color: "var(--gold)" }} />
+                Size Guide
+              </button>
+            )}
+            </div>
+          </div>
+        </div>
+
+        {/* Related Products */}
+        {related.length > 0 && (
+          <div style={{ marginTop: "5rem" }}>
+            <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+              <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.75rem", fontWeight: 700 }}>
+                You May Also Like
+              </h2>
+              <div className="gold-divider" />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1.25rem" }}>
+              {related.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Reviews Section */}
+        <div style={{ marginTop: "5rem" }}>
+          <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+            <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.75rem", fontWeight: 700 }}>
+              Customer Reviews
+            </h2>
+            <div className="gold-divider" />
+            {reviews.length > 0 && (
+              <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.5rem" }}>
+                {reviews.length} review{reviews.length !== 1 ? "s" : ""} · {" "}
+                <span style={{ color: "var(--gold)", fontWeight: 600 }}>
+                  {(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)} / 5 ⭐
+                </span>
+              </p>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "2rem", alignItems: "start" }}>
+            {/* Reviews list */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {reviews.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2.5rem", background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px" }}>
+                  <p style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>✨</p>
+                  <p style={{ color: "var(--muted)" }}>Be the first to review this product!</p>
+                </div>
+              ) : (
+                reviews.map((review) => (
+                  <div key={review.id} className="review-card">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                      <div>
+                        <p style={{ fontWeight: 600, fontSize: "0.9rem", margin: "0 0 0.25rem" }}>
+                          {review.user_profiles?.first_name
+                            ? `${review.user_profiles.first_name} ${review.user_profiles.last_name || ""}`.trim()
+                            : "Verified Buyer"}
+                        </p>
+                        <div className="star-rating">
+                          {[1,2,3,4,5].map((s) => (
+                            <Star key={s} size={13} className={s <= review.rating ? "star-filled" : "star-empty"} />
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ fontSize: "0.72rem", color: "var(--subtle)", margin: 0 }}>
+                          {new Date(review.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </p>
+                        {review.verified_purchase && (
+                          <span style={{ fontSize: "0.65rem", color: "#10b981", fontWeight: 600 }}>✓ Verified</span>
+                        )}
+                      </div>
+                    </div>
+                    {review.title && <p style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.35rem" }}>{review.title}</p>}
+                    <p style={{ color: "var(--muted)", fontSize: "0.875rem", lineHeight: 1.6, margin: 0 }}>{review.body}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Write a review */}
+            <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.5rem", position: "sticky", top: "5rem" }}>
+              <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", fontWeight: 700, color: "var(--gold)", marginBottom: "1.25rem" }}>
+                Write a Review
+              </h3>
+
+              {!user ? (
+                <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
+                  <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>Sign in to leave a review</p>
+                  <Link href="/auth/login" className="btn-gold" style={{ fontSize: "0.85rem" }}>Sign In</Link>
+                </div>
+              ) : hasReviewed || reviewSuccess ? (
+                <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
+                  <p style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🎉</p>
+                  <p style={{ color: "#10b981", fontWeight: 600, fontSize: "0.875rem" }}>Thank you for your review!</p>
+                  <p style={{ color: "var(--muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>It will appear once approved.</p>
+                </div>
+              ) : (
+                <form onSubmit={handleReviewSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {/* Star rating picker */}
+                  <div>
+                    <label style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                      Rating *
+                    </label>
+                    <div className="star-rating" style={{ gap: "0.25rem" }}>
+                      {[1,2,3,4,5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setReviewForm((f) => ({ ...f, rating: s }))}
+                          className={`star-btn ${s <= reviewForm.rating ? "star-filled" : "star-empty"}`}
+                        >
+                          <Star size={22} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                      Title
+                    </label>
+                    <input
+                      value={reviewForm.title}
+                      onChange={(e) => setReviewForm((f) => ({ ...f, title: e.target.value }))}
+                      placeholder="Summarize your review"
+                      className="input-dark"
+                      style={{ width: "100%", padding: "0.75rem 1rem", background: "var(--elevated)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: "6px", color: "var(--text)", fontSize: "0.875rem", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                      Review *
+                    </label>
+                    <textarea
+                      value={reviewForm.body}
+                      onChange={(e) => setReviewForm((f) => ({ ...f, body: e.target.value }))}
+                      required
+                      placeholder="Share your experience with this product..."
+                      rows={4}
+                      className="input-dark"
+                      style={{ width: "100%", padding: "0.75rem 1rem", background: "var(--elevated)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: "6px", color: "var(--text)", fontSize: "0.875rem", outline: "none", resize: "vertical", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  {reviewError && (
+                    <p style={{ color: "#ef4444", fontSize: "0.8rem", padding: "0.5rem 0.75rem", background: "rgba(239,68,68,0.08)", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.3)" }}>
+                      {reviewError}
+                    </p>
+                  )}
+                  <button type="submit" disabled={reviewSubmitting} className="btn-gold" style={{ justifyContent: "center" }}>
+                    {reviewSubmitting ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Submitting...</> : <><Send size={15} /> Submit Review</>}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Image Lightbox ──────────────────────────────────── */}
+      {lightboxOpen && images[activeImage] && (
+        <div
+          onClick={() => setLightboxOpen(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 100,
+            background: "rgba(0,0,0,0.92)", backdropFilter: "blur(10px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "1rem",
+            animation: "fadeIn 0.18s ease",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ position: "relative", maxWidth: "min(90vw, 720px)", width: "100%" }}
+          >
+            <Image
+              src={images[activeImage]}
+              alt={product?.name ?? ""}
+              width={900}
+              height={900}
+              style={{ width: "100%", height: "auto", borderRadius: "12px", display: "block", boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}
+            />
+            {/* Close */}
+            <button
+              onClick={() => setLightboxOpen(false)}
+              style={{
+                position: "absolute", top: "-14px", right: "-14px",
+                width: "36px", height: "36px", borderRadius: "50%",
+                background: "var(--surface)", border: "1px solid var(--gold-border)",
+                cursor: "pointer", color: "var(--gold)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          {/* Prev/Next in lightbox */}
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); setActiveImage((activeImage - 1 + images.length) % images.length); }}
+                style={{ position: "fixed", left: "1rem", top: "50%", transform: "translateY(-50%)", width: "40px", height: "40px", borderRadius: "50%", background: "rgba(10,10,10,0.8)", border: "1px solid var(--gold-border)", cursor: "pointer", color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setActiveImage((activeImage + 1) % images.length); }}
+                style={{ position: "fixed", right: "1rem", top: "50%", transform: "translateY(-50%)", width: "40px", height: "40px", borderRadius: "50%", background: "rgba(10,10,10,0.8)", border: "1px solid var(--gold-border)", cursor: "pointer", color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Size Guide Modal ────────────────────────────────── */}
+      {sizeGuideOpen && product && (
+        <div
+          onClick={() => setSizeGuideOpen(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 100,
+            background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "1rem",
+            animation: "fadeIn 0.18s ease",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "var(--surface)", border: "1px solid var(--gold-border)",
+              borderRadius: "16px", padding: "2rem", maxWidth: "560px", width: "100%",
+              position: "relative", maxHeight: "85vh", overflowY: "auto",
+            }}
+          >
+            {/* Close */}
+            <button
+              onClick={() => setSizeGuideOpen(false)}
+              style={{ position: "absolute", top: "1rem", right: "1rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", display: "flex" }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
+              <Ruler size={20} style={{ color: "var(--gold)" }} />
+              <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Size Guide</h2>
+            </div>
+
+            {product.category?.slug === "dresses" ? (
+              <>
+                <p style={{ color: "var(--muted)", fontSize: "0.82rem", marginBottom: "1rem" }}>
+                  Measurements are in inches. For best fit, measure over light clothing.
+                </p>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="admin-table" style={{ minWidth: "380px" }}>
+                    <thead>
+                      <tr>
+                        <th>Size</th><th>US Size</th><th>Bust</th><th>Waist</th><th>Hips</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { size: "XS", us: "0–2",   bust: "32–33", waist: "25–26", hips: "35–36" },
+                        { size: "S",  us: "4–6",   bust: "34–35", waist: "27–28", hips: "37–38" },
+                        { size: "M",  us: "8–10",  bust: "36–37", waist: "29–30", hips: "39–40" },
+                        { size: "L",  us: "12–14", bust: "38–40", waist: "31–33", hips: "41–43" },
+                        { size: "XL", us: "16–18", bust: "41–43", waist: "34–36", hips: "44–46" },
+                      ].map((row) => (
+                        <tr key={row.size}>
+                          <td style={{ fontWeight: 600, color: "var(--gold)" }}>{row.size}</td>
+                          <td>{row.us}</td>
+                          <td>{row.bust}&quot;</td>
+                          <td>{row.waist}&quot;</td>
+                          <td>{row.hips}&quot;</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p style={{ color: "var(--muted)", fontSize: "0.75rem", marginTop: "1rem" }}>
+                  * If you&apos;re between sizes, we recommend sizing up for comfort.
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ color: "var(--muted)", fontSize: "0.82rem", marginBottom: "1rem" }}>
+                  Measure around the widest part of your hand (near your knuckles, excluding your thumb).
+                </p>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="admin-table" style={{ minWidth: "300px" }}>
+                    <thead>
+                      <tr>
+                        <th>Size</th><th>Diameter</th><th>Wrist / Hand</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { size: "XS", diameter: "56 mm", fits: "Up to 6\"" },
+                        { size: "S",  diameter: "58 mm", fits: "6\" – 6.5\"" },
+                        { size: "M",  diameter: "60 mm", fits: "6.5\" – 7\"" },
+                        { size: "L",  diameter: "62 mm", fits: "7\" – 7.5\"" },
+                        { size: "XL", diameter: "64 mm", fits: "7.5\" – 8\"" },
+                      ].map((row) => (
+                        <tr key={row.size}>
+                          <td style={{ fontWeight: 600, color: "var(--gold)" }}>{row.size}</td>
+                          <td>{row.diameter}</td>
+                          <td>{row.fits}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p style={{ color: "var(--muted)", fontSize: "0.75rem", marginTop: "1rem" }}>
+                  * Traditional bangles are rigid — choose based on your hand measurement, not wrist.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
