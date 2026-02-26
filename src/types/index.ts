@@ -92,6 +92,8 @@ export interface Review {
   body: string;
   verified_purchase: boolean;
   approved: boolean;
+  images?: string[];
+  photo_approved?: boolean | null;
   created_at: string;
   user_profiles?: { first_name?: string; last_name?: string };
 }

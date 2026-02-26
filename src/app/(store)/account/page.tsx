@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth-server";
 import { createAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { User, ShoppingBag, Package, ChevronRight, Star } from "lucide-react";
+import { User, ShoppingBag, Package, ChevronRight, Star, Gift } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
 export default async function AccountPage() {
@@ -64,6 +64,7 @@ export default async function AccountPage() {
             { href: "/account/orders", icon: <ShoppingBag size={22} style={{ color: "var(--gold)" }} />, title: "My Orders", desc: "Track and view your orders" },
             { href: "/account/profile", icon: <User size={22} style={{ color: "var(--gold)" }} />, title: "Edit Profile", desc: "Name, phone, address" },
             { href: "/account/points", icon: <Star size={22} style={{ color: "var(--gold)" }} />, title: "My Points", desc: `${(profile?.points_balance ?? 0).toLocaleString()} pts · Earn 1 pt per $1` },
+            { href: "/account/referrals", icon: <Gift size={22} style={{ color: "var(--gold)" }} />, title: "Refer a Friend", desc: "Earn $5 credit per referral" },
           ].map((card) => (
             <Link
               key={card.href}

@@ -13,7 +13,7 @@ import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
   try {
-    const { items, couponCode, discountAmount } = await req.json();
+    const { items, couponCode, discountAmount, notifyWhatsApp, whatsAppPhone, appliedCredit } = await req.json();
 
     // Get logged-in user if any (optional — guest checkout still works)
     let userId: string | null = null;
@@ -42,6 +42,14 @@ export async function POST(req: NextRequest) {
       if (utmCookie?.value) {
         utmData = JSON.parse(decodeURIComponent(utmCookie.value));
       }
+    } catch { /* ignore */ }
+
+    // Read referral code cookie
+    let referralCode: string | null = null;
+    try {
+      const refCookieStore = await cookies();
+      const refCookie = refCookieStore.get("ks_referral_code");
+      if (refCookie?.value) referralCode = refCookie.value;
     } catch { /* ignore */ }
 
     if (!items || items.length === 0) {
@@ -149,6 +157,10 @@ export async function POST(req: NextRequest) {
         utm_medium: utmData?.utm_medium || "",
         utm_campaign: utmData?.utm_campaign || "",
         utm_content: utmData?.utm_content || "",
+        referral_code: referralCode || "",
+        notify_whatsapp: notifyWhatsApp ? "true" : "false",
+        phone: whatsAppPhone || "",
+        applied_credit: appliedCredit ? String(appliedCredit) : "",
       },
     };
 

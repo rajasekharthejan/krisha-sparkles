@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendOrderConfirmation } from "@/lib/email";
+import { sendWhatsAppOrderConfirmation } from "@/lib/whatsapp-notify";
 
 // Use fetch-based HTTP client — same fix as checkout route (avoids Node.js TLS issues on Vercel)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
           utm_medium: metadata?.utm_medium || null,
           utm_campaign: metadata?.utm_campaign || null,
           utm_content: metadata?.utm_content || null,
+          referral_code: metadata?.referral_code || null,
         })
         .select()
         .single();
@@ -157,6 +159,54 @@ export async function POST(req: NextRequest) {
           }
         } catch {
           console.error("Failed to award loyalty points");
+        }
+      }
+
+      // Complete referral if applicable
+      const referralCode = metadata?.referral_code;
+      if (referralCode && userId) {
+        try {
+          // Only complete on first purchase for this user
+          const { count } = await supabaseAdmin
+            .from("orders")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", userId);
+          
+          if ((count || 0) <= 1) { // This is their first/only order
+            await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app"}/api/referrals/complete`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${process.env.CRON_SECRET}`,
+              },
+              body: JSON.stringify({
+                referral_code: referralCode,
+                referee_user_id: userId,
+                referee_email: session.customer_details?.email || "",
+              }),
+            });
+          }
+        } catch {
+          console.error("Failed to complete referral");
+        }
+      }
+
+      // Save WhatsApp preferences on order and send notification
+      if (metadata?.notify_whatsapp === "true" && metadata?.phone) {
+        try {
+          await supabaseAdmin.from("orders").update({
+            notify_whatsapp: true,
+            phone: metadata.phone,
+          }).eq("id", order.id);
+          
+          // Send WhatsApp order confirmation (non-blocking)
+          sendWhatsAppOrderConfirmation(
+            metadata.phone,
+            order.id.slice(-8).toUpperCase(),
+            total
+          ).catch(() => console.error("WhatsApp notification failed"));
+        } catch {
+          console.error("Failed to save WhatsApp preferences");
         }
       }
 

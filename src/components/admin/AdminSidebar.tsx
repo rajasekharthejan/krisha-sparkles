@@ -21,6 +21,7 @@ import {
   Instagram,
   Layout,
   BookOpen,
+  Gift,
 } from "lucide-react";
 
 const NAV = [
@@ -39,6 +40,7 @@ const NAV = [
   { href: "/admin/instagram", label: "Instagram", icon: <Instagram size={18} /> },
   { href: "/admin/collections", label: "Collections", icon: <Layout size={18} /> },
   { href: "/admin/blog", label: "Blog", icon: <BookOpen size={18} /> },
+  { href: "/admin/referrals", label: "Referrals", icon: <Gift size={18} /> },
 ];
 
 export default function AdminSidebar() {

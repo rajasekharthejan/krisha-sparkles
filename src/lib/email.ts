@@ -400,3 +400,38 @@ export async function sendAbandonedCart24hr(params: {
 </html>`,
   });
 }
+
+// ── Review Request Email ───────────────────────────────────────────────────
+
+export async function sendReviewRequestEmail({ email, name, orderId }: { email: string; name: string; orderId: string }) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+
+  await resend.emails.send({
+    from: `Krisha Sparkles <${FROM}>`,
+    to: email,
+    subject: `How did you like your order? ⭐`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <p style="font-size:28px;font-weight:700;color:#c9a84c;margin:0;">✦ Krisha Sparkles</p>
+      <p style="color:#888;margin:8px 0 0;font-size:13px;">Exquisite Imitation Jewelry</p>
+    </div>
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:32px;margin-bottom:24px;text-align:center;">
+      <p style="font-size:40px;margin:0 0 16px;">⭐</p>
+      <h2 style="color:#c9a84c;font-size:22px;margin:0 0 12px;">How did we do?</h2>
+      <p style="color:#aaa;margin:0 0 24px;">Hi ${name}, we hope you're loving your Krisha Sparkles purchase! Your feedback means the world to us and helps other customers make great choices.</p>
+      <a href="${siteUrl}/account/orders/${orderId}" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;">Leave a Review</a>
+    </div>
+    <p style="color:#555;font-size:12px;text-align:center;">You received this because you recently made a purchase. <br>Order #${orderId.slice(-8).toUpperCase()}</p>
+  </div>
+</body>
+</html>`,
+  });
+}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { sendShippingNotification } from "@/lib/email";
+import { sendWhatsAppShippingUpdate } from "@/lib/whatsapp-notify";
 import { cookies } from "next/headers";
 
 async function verifyAdmin() {
@@ -51,6 +52,15 @@ export async function POST(req: NextRequest) {
       trackingNumber: tracking_number.trim(),
       trackingUrl: tracking_url?.trim() || null,
     }).catch(() => {});
+
+    // Send WhatsApp shipping update if opted in (non-blocking)
+    if (data.notify_whatsapp && data.phone) {
+      sendWhatsAppShippingUpdate(
+        data.phone,
+        data.id.slice(-8).toUpperCase(),
+        tracking_number.trim()
+      ).catch(() => console.error("WhatsApp shipping update failed"));
+    }
   }
 
   return NextResponse.json({ success: true, order: data });

@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, action } = await req.json();
-  if (!id || !["approve", "reject", "delete"].includes(action))
-    return NextResponse.json({ error: "id and action (approve/reject/delete) required" }, { status: 400 });
+  if (!id || !["approve", "reject", "delete", "approve_photos", "reject_photos"].includes(action))
+    return NextResponse.json({ error: "id and action (approve/reject/delete/approve_photos/reject_photos) required" }, { status: 400 });
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,6 +29,24 @@ export async function POST(req: NextRequest) {
 
   if (action === "delete") {
     const { error } = await supabase.from("reviews").delete().eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "approve_photos") {
+    const { error } = await supabase
+      .from("reviews")
+      .update({ photo_approved: true })
+      .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "reject_photos") {
+    const { error } = await supabase
+      .from("reviews")
+      .update({ photo_approved: false })
+      .eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }

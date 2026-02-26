@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Star, Check, X, Trash2 } from "lucide-react";
+import Image from "next/image";
+import { Star, Check, X, Trash2, Camera } from "lucide-react";
 import type { Review } from "@/types";
 
 interface ReviewsTableProps {
@@ -12,7 +13,7 @@ export default function ReviewsTable({ initialReviews }: ReviewsTableProps) {
   const [reviews, setReviews] = useState(initialReviews);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  async function handleAction(id: string, action: "approve" | "reject" | "delete") {
+  async function handleAction(id: string, action: "approve" | "reject" | "delete" | "approve_photos" | "reject_photos") {
     setLoadingId(id);
     await fetch("/api/admin/reviews", {
       method: "POST",
@@ -22,6 +23,14 @@ export default function ReviewsTable({ initialReviews }: ReviewsTableProps) {
 
     if (action === "delete") {
       setReviews((prev) => prev.filter((r) => r.id !== id));
+    } else if (action === "approve_photos") {
+      setReviews((prev) =>
+        prev.map((r) => r.id === id ? { ...r, photo_approved: true } : r)
+      );
+    } else if (action === "reject_photos") {
+      setReviews((prev) =>
+        prev.map((r) => r.id === id ? { ...r, photo_approved: false } : r)
+      );
     } else {
       setReviews((prev) =>
         prev.map((r) => r.id === id ? { ...r, approved: action === "approve" } : r)
@@ -48,6 +57,7 @@ export default function ReviewsTable({ initialReviews }: ReviewsTableProps) {
             <th>Customer</th>
             <th>Rating</th>
             <th>Review</th>
+            <th>Photos</th>
             <th>Status</th>
             <th>Date</th>
             <th>Actions</th>
@@ -81,9 +91,56 @@ export default function ReviewsTable({ initialReviews }: ReviewsTableProps) {
                   ))}
                 </div>
               </td>
-              <td style={{ maxWidth: "260px" }}>
+              <td style={{ maxWidth: "200px" }}>
                 {review.title && <p style={{ fontSize: "0.8rem", fontWeight: 600, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{review.title}</p>}
                 <p style={{ fontSize: "0.78rem", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>{review.body}</p>
+              </td>
+              <td style={{ minWidth: "120px" }}>
+                {review.images && review.images.length > 0 ? (
+                  <div>
+                    <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
+                      {review.images.slice(0, 3).map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                          <Image
+                            src={url}
+                            alt={`Review photo ${i + 1}`}
+                            width={36}
+                            height={36}
+                            style={{ borderRadius: "4px", objectFit: "cover", border: "1px solid var(--gold-border)" }}
+                          />
+                        </a>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      {review.photo_approved === null || review.photo_approved === undefined ? (
+                        <>
+                          <button
+                            onClick={() => handleAction(review.id, "approve_photos")}
+                            disabled={loadingId === review.id}
+                            title="Approve Photos"
+                            style={{ padding: "2px 6px", borderRadius: "4px", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", cursor: "pointer", fontSize: "0.65rem", fontWeight: 600 }}
+                          >
+                            <Camera size={10} style={{ display: "inline", marginRight: "2px" }} />OK
+                          </button>
+                          <button
+                            onClick={() => handleAction(review.id, "reject_photos")}
+                            disabled={loadingId === review.id}
+                            title="Reject Photos"
+                            style={{ padding: "2px 6px", borderRadius: "4px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444", cursor: "pointer", fontSize: "0.65rem", fontWeight: 600 }}
+                          >
+                            <X size={10} style={{ display: "inline", marginRight: "2px" }} />No
+                          </button>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: "0.65rem", fontWeight: 600, color: review.photo_approved ? "#10b981" : "#ef4444" }}>
+                          {review.photo_approved ? "✓ Approved" : "✗ Rejected"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <span style={{ color: "var(--subtle)", fontSize: "0.75rem" }}>—</span>
+                )}
               </td>
               <td>
                 <span style={{

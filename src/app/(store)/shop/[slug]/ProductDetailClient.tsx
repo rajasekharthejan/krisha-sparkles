@@ -8,11 +8,12 @@ import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { formatPrice } from "@/lib/utils";
-import { ShoppingBag, Heart, ChevronLeft, ChevronRight, Check, Share2, Truck, RefreshCw, Shield, Star, Send, Loader2, X, Ruler } from "lucide-react";
+import { ShoppingBag, Heart, ChevronLeft, ChevronRight, Check, Share2, Truck, RefreshCw, Shield, Star, Send, Loader2, X, Ruler, Camera } from "lucide-react";
 import { toggleGuestWishlist, isInGuestWishlist } from "@/lib/wishlistUtils";
 import type { Product, Review } from "@/types";
 import ProductCard from "@/components/store/ProductCard";
 import ViewingNow from "@/components/store/ViewingNow";
+import ReviewImageLightbox from "@/components/store/ReviewImageLightbox";
 import { pushDataLayer } from "@/hooks/useDataLayer";
 
 export default function ProductDetailClient({ slug: initialSlug }: { slug?: string }) {
@@ -34,6 +35,9 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
   const [reviewError, setReviewError] = useState("");
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [hasReviewed, setHasReviewed] = useState(false);
+  const [reviewImages, setReviewImages] = useState<File[]>([]);
+  const [reviewImagePreviews, setReviewImagePreviews] = useState<string[]>([]);
+  const [reviewImageUploading, setReviewImageUploading] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const { addItem, openCart } = useCartStore();
@@ -166,26 +170,56 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
     setWishLoading(false);
   }
 
+  function handleReviewImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []).slice(0, 3);
+    setReviewImages(files);
+    const previews = files.map(f => URL.createObjectURL(f));
+    setReviewImagePreviews(previews);
+  }
+
+  function removeReviewImage(idx: number) {
+    setReviewImages(prev => prev.filter((_, i) => i !== idx));
+    setReviewImagePreviews(prev => prev.filter((_, i) => i !== idx));
+  }
+
   async function handleReviewSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!product || !user) return;
     setReviewSubmitting(true);
     setReviewError("");
-    const supabase = createClient();
-    const { error } = await supabase.from("reviews").insert({
-      product_id: product.id,
-      user_id: user.id,
-      rating: reviewForm.rating,
-      title: reviewForm.title || null,
-      body: reviewForm.body,
-    });
-    if (error) {
-      setReviewError(error.message.includes("unique") ? "You have already reviewed this product." : "Failed to submit review. Please try again.");
-    } else {
-      setReviewSuccess(true);
-      setHasReviewed(true);
+    try {
+      // Upload images first if any
+      let uploadedImageUrls: string[] = [];
+      if (reviewImages.length > 0) {
+        setReviewImageUploading(true);
+        const formData = new FormData();
+        reviewImages.forEach(f => formData.append("images", f));
+        const uploadRes = await fetch("/api/reviews/upload", { method: "POST", body: formData });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error || "Image upload failed");
+        uploadedImageUrls = uploadData.urls || [];
+        setReviewImageUploading(false);
+      }
+      const supabase = createClient();
+      const { error } = await supabase.from("reviews").insert({
+        product_id: product.id,
+        user_id: user.id,
+        rating: reviewForm.rating,
+        title: reviewForm.title || null,
+        body: reviewForm.body,
+        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : null,
+      });
+      if (error) {
+        setReviewError(error.message.includes("unique") ? "You have already reviewed this product." : "Failed to submit review. Please try again.");
+      } else {
+        setReviewSuccess(true);
+        setHasReviewed(true);
+      }
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Failed to submit review. Please try again.");
     }
     setReviewSubmitting(false);
+    setReviewImageUploading(false);
   }
 
   if (loading) {
@@ -656,6 +690,9 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                     </div>
                     {review.title && <p style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.35rem" }}>{review.title}</p>}
                     <p style={{ color: "var(--muted)", fontSize: "0.875rem", lineHeight: 1.6, margin: 0 }}>{review.body}</p>
+                    {review.images && review.images.length > 0 && review.photo_approved !== false && (
+                      <ReviewImageLightbox images={review.images} />
+                    )}
                   </div>
                 ))
               )}
@@ -724,13 +761,48 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                       style={{ width: "100%", padding: "0.75rem 1rem", background: "var(--elevated)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: "6px", color: "var(--text)", fontSize: "0.875rem", outline: "none", resize: "vertical", boxSizing: "border-box" }}
                     />
                   </div>
+                  {/* Photo Upload */}
+                  <div>
+                    <label style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                      Photos (optional, up to 3)
+                    </label>
+                    {reviewImagePreviews.length > 0 && (
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+                        {reviewImagePreviews.map((url, i) => (
+                          <div key={i} style={{ position: "relative", width: "72px", height: "72px" }}>
+                            <Image src={url} alt={`Preview ${i + 1}`} width={72} height={72} style={{ borderRadius: "8px", objectFit: "cover", border: "1px solid var(--gold-border)", width: "72px", height: "72px" }} />
+                            <button
+                              type="button"
+                              onClick={() => removeReviewImage(i)}
+                              style={{ position: "absolute", top: "-6px", right: "-6px", background: "#ef4444", border: "none", borderRadius: "50%", width: "18px", height: "18px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", padding: 0 }}
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        {reviewImagePreviews.length < 3 && (
+                          <label style={{ width: "72px", height: "72px", borderRadius: "8px", border: "2px dashed var(--gold-border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                            <Camera size={18} style={{ color: "var(--muted)" }} />
+                            <input type="file" accept="image/*" multiple onChange={handleReviewImageChange} style={{ display: "none" }} />
+                          </label>
+                        )}
+                      </div>
+                    )}
+                    {reviewImagePreviews.length === 0 && (
+                      <label style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1rem", borderRadius: "8px", border: "1px dashed var(--gold-border)", cursor: "pointer", color: "var(--muted)", fontSize: "0.8rem" }}>
+                        <Camera size={14} />
+                        Add Photos
+                        <input type="file" accept="image/*" multiple onChange={handleReviewImageChange} style={{ display: "none" }} />
+                      </label>
+                    )}
+                  </div>
                   {reviewError && (
                     <p style={{ color: "#ef4444", fontSize: "0.8rem", padding: "0.5rem 0.75rem", background: "rgba(239,68,68,0.08)", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.3)" }}>
                       {reviewError}
                     </p>
                   )}
-                  <button type="submit" disabled={reviewSubmitting} className="btn-gold" style={{ justifyContent: "center" }}>
-                    {reviewSubmitting ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Submitting...</> : <><Send size={15} /> Submit Review</>}
+                  <button type="submit" disabled={reviewSubmitting || reviewImageUploading} className="btn-gold" style={{ justifyContent: "center" }}>
+                    {reviewImageUploading ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Uploading photos...</> : reviewSubmitting ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Submitting...</> : <><Send size={15} /> Submit Review</>}
                   </button>
                 </form>
               )}

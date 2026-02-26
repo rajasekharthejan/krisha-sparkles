@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
-import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2 } from "lucide-react";
+import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2, Gift } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { pushDataLayer } from "@/hooks/useDataLayer";
@@ -25,11 +25,17 @@ function CheckoutContent() {
     description: string | null;
   } | null>(null);
   const [discount, setDiscount] = useState(0);
+  // Store credits
+  const [storeCredit, setStoreCredit] = useState<number>(0);
+  const [appliedCredit, setAppliedCredit] = useState<number>(0);
+  // WhatsApp
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
+  const [whatsAppPhone, setWhatsAppPhone] = useState("");
   const searchParams = useSearchParams();
   const cancelled = searchParams.get("cancelled");
 
   const subtotal = totalPrice();
-  const finalTotal = Math.max(0, subtotal - discount);
+  const finalTotal = Math.max(0, subtotal - discount - appliedCredit);
 
   // Pre-fill coupon from exit intent cookie
   useEffect(() => {
@@ -42,6 +48,14 @@ function CheckoutContent() {
       // Clear the cookie so it doesn't re-fill
       document.cookie = `ks_coupon=; path=/; max-age=0`;
     }
+  }, []);
+
+  // Fetch available store credits on mount
+  useEffect(() => {
+    fetch("/api/credits/available")
+      .then(r => r.json())
+      .then(d => setStoreCredit(d.available || 0))
+      .catch(() => {});
   }, []);
 
   async function applyCoupon() {
@@ -94,6 +108,9 @@ function CheckoutContent() {
           })),
           couponCode: appliedCoupon?.code || null,
           discountAmount: discount,
+          appliedCredit,
+          notifyWhatsApp,
+          whatsAppPhone,
         }),
       });
 
@@ -294,6 +311,37 @@ function CheckoutContent() {
           )}
         </div>
 
+        {/* Store Credits */}
+        {storeCredit > 0 && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.85rem" }}>
+              <Gift size={15} style={{ color: "var(--gold)" }} />
+              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>Store Credits</span>
+              <span style={{ marginLeft: "auto", fontSize: "0.875rem", color: "#10b981", fontWeight: 700 }}>{formatPrice(storeCredit)} available</span>
+            </div>
+            {appliedCredit > 0 ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: "8px" }}>
+                <Check size={16} style={{ color: "#10b981", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "#10b981", margin: 0 }}>Credits Applied</p>
+                  <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: 0 }}>Saves {formatPrice(appliedCredit)}</p>
+                </div>
+                <button onClick={() => setAppliedCredit(0)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: "4px" }}>
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setAppliedCredit(Math.min(storeCredit, subtotal - discount))}
+                className="btn-gold-outline"
+                style={{ width: "100%", justifyContent: "center" }}
+              >
+                Apply {formatPrice(Math.min(storeCredit, subtotal - discount))} credit
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Totals */}
         <div
           style={{
@@ -318,6 +366,16 @@ function CheckoutContent() {
               </span>
             </div>
           )}
+          {appliedCredit > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <span style={{ color: "#10b981", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <Gift size={13} /> Store Credit
+              </span>
+              <span style={{ fontSize: "0.875rem", color: "#10b981", fontWeight: 600 }}>
+                &minus;{formatPrice(appliedCredit)}
+              </span>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
             <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>Shipping</span>
             <span style={{ fontSize: "0.875rem", color: "#10b981" }}>
@@ -327,7 +385,7 @@ function CheckoutContent() {
           <div style={{ borderTop: "1px solid var(--gold-border)", paddingTop: "0.75rem", marginTop: "0.75rem", display: "flex", justifyContent: "space-between" }}>
             <span style={{ fontWeight: 700 }}>Total</span>
             <div style={{ textAlign: "right" }}>
-              {discount > 0 && (
+              {(discount > 0 || appliedCredit > 0) && (
                 <span style={{ display: "block", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "line-through" }}>
                   {formatPrice(subtotal)}
                 </span>
@@ -337,6 +395,34 @@ function CheckoutContent() {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* WhatsApp Order Updates */}
+        <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={notifyWhatsApp}
+              onChange={(e) => setNotifyWhatsApp(e.target.checked)}
+              style={{ width: "16px", height: "16px", accentColor: "var(--gold)", cursor: "pointer" }}
+            />
+            <div>
+              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>📱 Get order updates on WhatsApp</span>
+              <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "2px 0 0" }}>Receive order confirmation &amp; shipping updates</p>
+            </div>
+          </label>
+          {notifyWhatsApp && (
+            <div style={{ marginTop: "0.85rem" }}>
+              <input
+                type="tel"
+                value={whatsAppPhone}
+                onChange={(e) => setWhatsAppPhone(e.target.value)}
+                placeholder="Your WhatsApp number (e.g. +1 555 123 4567)"
+                className="input-dark"
+                style={{ width: "100%" }}
+              />
+            </div>
+          )}
         </div>
 
         {error && (
@@ -366,7 +452,7 @@ function CheckoutContent() {
           ) : (
             <>
               <Lock size={16} />
-              {appliedCoupon ? `Pay ${formatPrice(finalTotal)} — Secure Checkout` : "Secure Checkout"}
+              {(appliedCoupon || appliedCredit > 0) ? `Pay ${formatPrice(finalTotal)} — Secure Checkout` : "Secure Checkout"}
             </>
           )}
         </button>
