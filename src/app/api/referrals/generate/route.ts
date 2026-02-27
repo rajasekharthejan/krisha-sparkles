@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (existing) {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
       return NextResponse.json({ code: existing.coupon_code, link: `${siteUrl}/ref/${existing.coupon_code}` });
     }
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
     return NextResponse.json({ code, link: `${siteUrl}/ref/${code}` });
   } catch (err) {
     console.error("Generate referral error:", err);

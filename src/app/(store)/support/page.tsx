@@ -78,9 +78,9 @@ export default function SupportPage() {
           <ContactCard
             icon={<Instagram size={22} />}
             title="Instagram DM"
-            detail="@krisha.sparkles"
+            detail=""
             sub="Fastest response"
-            href="https://www.instagram.com/krisha.sparkles/"
+            href="https://www.instagram.com/krisha_sparkles/"
           />
           <ContactCard
             icon={<Clock size={22} />}

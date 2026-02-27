@@ -69,7 +69,7 @@ export default function InstagramFeed() {
         {PLACEHOLDER_TILES.map((tile, i) => (
           <a
             key={i}
-            href="https://www.instagram.com/krisha.sparkles/"
+            href="https://www.instagram.com/krisha_sparkles/"
             target="_blank"
             rel="noopener noreferrer"
             style={{ textDecoration: "none", display: "block", animation: `scaleIn 0.5s ease both`, animationDelay: `${i * 0.1}s` }}

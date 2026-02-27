@@ -39,7 +39,7 @@ const FAQ_SECTIONS = [
       { q: "How do I care for my jewelry?", a: "Keep jewelry dry — remove before swimming, showering, or exercising. Store in the included pouch away from direct sunlight. Wipe gently with a soft cloth after wearing." },
       { q: "Will the gold plating fade?", a: "With proper care, our jewelry maintains its finish for 1–2 years with regular wear. Avoid contact with perfumes, lotions, and harsh chemicals." },
       { q: "Are your pieces nickel-free?", a: "Most of our collection is nickel-free and hypoallergenic. If you have specific metal sensitivities, please contact us before purchasing and we'll check the specific piece for you." },
-      { q: "Do you offer customization?", a: "Currently we don't offer customization, but we're working on it! Follow us on Instagram @krisha.sparkles for announcements." },
+      { q: "Do you offer customization?", a: "Currently we don't offer customization, but we're working on it! Follow us on Instagram  for announcements." },
     ],
   },
   {

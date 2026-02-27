@@ -152,7 +152,7 @@ function OrderSuccessContent() {
             <ArrowRight size={16} />
           </Link>
           <a
-            href="https://www.instagram.com/krisha.sparkles/"
+            href="https://www.instagram.com/krisha_sparkles/"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-gold-outline"

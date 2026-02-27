@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   );
 
   const now = new Date();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
 
   // Day 3 window: subscribed between 3d3h ago and 2d21h ago (6-hour window)
   const day3Start = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000);

@@ -390,7 +390,7 @@ export default function EmailMarketingPage() {
                     className="input-dark"
                     value={htmlBody}
                     onChange={(e) => setHtmlBody(e.target.value)}
-                    placeholder={`<div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:28px;text-align:center;margin-bottom:24px;">\n  <h1 style="color:#c9a84c;font-size:22px;">New Arrivals Are Here! 🌟</h1>\n  <p style="color:#aaa;font-size:14px;">Discover our stunning new collection…</p>\n  <a href="https://krisha-sparkles.vercel.app/shop" style="display:inline-block;background:#c9a84c;color:#0a0a0a;padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;">Shop Now →</a>\n</div>`}
+                    placeholder={`<div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:28px;text-align:center;margin-bottom:24px;">\n  <h1 style="color:#c9a84c;font-size:22px;">New Arrivals Are Here! 🌟</h1>\n  <p style="color:#aaa;font-size:14px;">Discover our stunning new collection…</p>\n  <a href="https://shopkrisha.com/shop" style="display:inline-block;background:#c9a84c;color:#0a0a0a;padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;">Shop Now →</a>\n</div>`}
                     required
                     rows={12}
                     style={{ width: "100%", boxSizing: "border-box", fontFamily: "monospace", fontSize: "0.78rem", resize: "vertical" }}

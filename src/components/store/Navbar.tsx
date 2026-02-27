@@ -194,7 +194,7 @@ export default function Navbar() {
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               {/* Instagram — desktop only */}
               <a
-                href="https://www.instagram.com/krisha.sparkles/"
+                href="https://www.instagram.com/krisha_sparkles/"
                 target="_blank" rel="noopener noreferrer"
                 className="nav-ig-icon"
                 style={{ color: "var(--muted)", transition: "color 0.2s ease", alignItems: "center" }}
@@ -431,7 +431,7 @@ export default function Navbar() {
               )}
             </div>
             <a
-              href="https://www.instagram.com/krisha.sparkles/"
+              href="https://www.instagram.com/krisha_sparkles/"
               target="_blank" rel="noopener noreferrer"
               style={{
                 display: "flex", alignItems: "center", gap: "0.5rem",
@@ -440,7 +440,7 @@ export default function Navbar() {
               }}
             >
               <Instagram size={16} />
-              Follow @krisha.sparkles
+              Follow 
             </a>
           </div>
         )}

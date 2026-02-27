@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Shop All Jewelry | Krisha Sparkles",
     description: "Handpicked imitation jewelry for every occasion. Necklaces, earrings, bangles, pendant sets, and Jadau jewelry.",
-    images: [{ url: "https://krisha-sparkles.vercel.app/logo.png", width: 800, height: 800 }],
+    images: [{ url: "https://shopkrisha.com/logo.png", width: 800, height: 800 }],
   },
 };
 

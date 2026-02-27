@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ processed: 0, message: "No pending back-in-stock notifications" });
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   let notifiedCount = 0;
   const failedIds: string[] = [];
 

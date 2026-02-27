@@ -22,7 +22,7 @@ export default async function ReferralsPage() {
 
   const availableCredit = (credits || []).filter(c => !c.used).reduce((sum, c) => sum + Number(c.amount), 0);
   const existingCode = referrals?.[0]?.coupon_code || null;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
 
   return (
     <div style={{ paddingTop: "80px", minHeight: "100vh", background: "var(--bg)" }}>

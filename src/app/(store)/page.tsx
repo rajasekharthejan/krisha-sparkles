@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Krisha Sparkles — Exquisite Imitation Jewelry",
     description: "Shop handpicked imitation jewelry — necklaces, earrings, bangles, Jadau sets. USA. Free shipping over $75.",
-    images: [{ url: "https://krisha-sparkles.vercel.app/logo.png", width: 800, height: 800 }],
+    images: [{ url: "https://shopkrisha.com/logo.png", width: 800, height: 800 }],
   },
 };
 import ProductCard from "@/components/store/ProductCard";
@@ -169,7 +169,7 @@ export default async function HomePage() {
               Shop Collection <ArrowRight size={16} />
             </Link>
             <a
-              href="https://www.instagram.com/krisha.sparkles/"
+              href="https://www.instagram.com/krisha_sparkles/"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold-outline"
@@ -409,7 +409,7 @@ export default async function HomePage() {
               <div className="gold-divider-left" />
               <p style={{ color: "var(--muted)", margin: "1.25rem 0 2rem", lineHeight: 1.8, fontSize: "0.9rem" }}>
                 Tag us in your photos wearing Krisha Sparkles jewelry. Follow{" "}
-                <span style={{ color: "var(--gold)", fontWeight: 600 }}>@krisha.sparkles</span>{" "}
+                <span style={{ color: "var(--gold)", fontWeight: 600 }}></span>{" "}
                 for daily inspiration, new arrivals &amp; exclusive deals.
               </p>
               {/* Social proof counts */}
@@ -418,7 +418,7 @@ export default async function HomePage() {
                 <span><span style={{ color: "var(--gold)", fontWeight: 700 }}>180+</span> Posts</span>
               </div>
               <a
-                href="https://www.instagram.com/krisha.sparkles/"
+                href="https://www.instagram.com/krisha_sparkles/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-gold"

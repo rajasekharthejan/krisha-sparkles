@@ -25,7 +25,7 @@ export async function GET() {
     .gt("stock_quantity", 0)
     .order("created_at", { ascending: false });
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
 
   const items = (products || [])
     .map((p) => {

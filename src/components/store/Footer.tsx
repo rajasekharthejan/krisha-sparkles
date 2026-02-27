@@ -43,7 +43,7 @@ export default function Footer() {
             </p>
             <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem" }}>
               <a
-                href="https://www.instagram.com/krisha.sparkles/"
+                href="https://www.instagram.com/krisha_sparkles/"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -180,12 +180,12 @@ export default function Footer() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <Instagram size={14} style={{ color: "var(--gold)", flexShrink: 0 }} />
                 <a
-                  href="https://www.instagram.com/krisha.sparkles/"
+                  href="https://www.instagram.com/krisha_sparkles/"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ fontSize: "0.875rem", color: "var(--muted)", textDecoration: "none" }}
                 >
-                  @krisha.sparkles
+                  
                 </a>
               </div>
               <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>

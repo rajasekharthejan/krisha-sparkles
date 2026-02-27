@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     if (!product) return { title: "Product Not Found" };
 
-    const image = product.images?.[0] || "https://krisha-sparkles.vercel.app/logo.png";
+    const image = product.images?.[0] || "https://shopkrisha.com/logo.png";
     const categoryName = (product.category as { name?: string } | null)?.name;
     const title = `${product.name}${categoryName ? ` — ${categoryName}` : ""}`;
     const desc = product.description

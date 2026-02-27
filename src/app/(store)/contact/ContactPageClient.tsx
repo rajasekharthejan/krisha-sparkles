@@ -107,8 +107,8 @@ export default function ContactPageClient() {
             {
               icon: <Instagram size={18} />,
               label: "Instagram",
-              value: "@krisha.sparkles",
-              href: "https://www.instagram.com/krisha.sparkles/",
+              value: "",
+              href: "https://www.instagram.com/krisha_sparkles/",
               external: true,
             },
             {
