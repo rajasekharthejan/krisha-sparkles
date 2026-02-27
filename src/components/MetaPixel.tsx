@@ -1,10 +1,20 @@
 "use client";
 
+/**
+ * MetaPixel — only loads after cookie consent is granted.
+ * On iOS WKWebView, consent is auto-declined → pixel never loads.
+ * This satisfies Apple App Store Guideline 5.1.2 (ATT / Privacy).
+ */
+
 import Script from "next/script";
+import { useCookieConsent } from "@/hooks/useCookieConsent";
 
 export default function MetaPixel() {
   const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
-  if (!pixelId) return null;
+  const { consent } = useCookieConsent();
+
+  // Only fire if pixel ID exists AND user has granted consent
+  if (!pixelId || consent !== "granted") return null;
 
   return (
     <>

@@ -1,6 +1,13 @@
 "use client";
 
+/**
+ * TikTokPixel — only loads after cookie consent is granted.
+ * On iOS WKWebView, consent is auto-declined → pixel never loads.
+ * This satisfies Apple App Store Guideline 5.1.2 (ATT / Privacy).
+ */
+
 import Script from "next/script";
+import { useCookieConsent } from "@/hooks/useCookieConsent";
 
 export function trackTikTok(event: string, params?: Record<string, unknown>) {
   if (typeof window !== "undefined" && window.ttq) {
@@ -10,7 +17,10 @@ export function trackTikTok(event: string, params?: Record<string, unknown>) {
 
 export default function TikTokPixel() {
   const pixelId = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID;
-  if (!pixelId) return null;
+  const { consent } = useCookieConsent();
+
+  // Only fire if pixel ID exists AND user has granted consent
+  if (!pixelId || consent !== "granted") return null;
 
   return (
     <>

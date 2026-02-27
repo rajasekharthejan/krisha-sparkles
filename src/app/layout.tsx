@@ -6,6 +6,7 @@ import GTMScript from "@/components/GTMScript";
 import MetaPixel from "@/components/MetaPixel";
 import TikTokPixel from "@/components/TikTokPixel";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import CookieConsentBanner from "@/components/CookieConsentBanner";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -84,6 +85,7 @@ export default function RootLayout({
       <body style={{ fontFamily: "var(--font-inter, sans-serif)" }}>
         {children}
         <WhatsAppButton />
+        <CookieConsentBanner />
         <Analytics />
         <GoogleAnalytics />
         <GTMScript />
