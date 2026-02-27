@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/back-in-stock",
-      "schedule": "0 * * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/welcome-drip",
