@@ -76,6 +76,100 @@ export async function sendBackInStockEmail(
   });
 }
 
+// ── Admin New Order Notification ───────────────────────────────────────────
+// Sent to ADMIN_EMAIL whenever a new order is placed.
+
+export async function sendAdminOrderNotification(order: Order) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const adminEmail = process.env.ADMIN_EMAIL || "hello@shopkrisha.com";
+  const orderRef = order.id.slice(-8).toUpperCase();
+  const addr = order.shipping_address;
+  const addrText = addr
+    ? `${addr.line1}${addr.line2 ? ", " + addr.line2 : ""}, ${addr.city}, ${addr.state} ${addr.postal_code}, ${addr.country}`
+    : "—";
+
+  const itemRows = (order.order_items || [])
+    .map(
+      (item) =>
+        `<tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#f5f5f5;">${item.product_name}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;text-align:center;color:#aaa;">×${item.quantity}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;text-align:right;color:#c9a84c;">${formatPrice(item.price * item.quantity)}</td>
+        </tr>`
+    )
+    .join("");
+
+  await resend.emails.send({
+    from: `Krisha Sparkles Orders <${FROM}>`,
+    to: adminEmail,
+    subject: `🛍️ New Order #${orderRef} — ${formatPrice(order.total)} from ${order.name}`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;padding:32px 20px;">
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:24px;">
+      <p style="font-size:26px;font-weight:700;color:#c9a84c;margin:0;">✦ Krisha Sparkles</p>
+      <p style="color:#888;margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Admin Order Alert</p>
+    </div>
+
+    <!-- Alert Banner -->
+    <div style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:20px 24px;margin-bottom:20px;text-align:center;">
+      <p style="font-size:32px;margin:0 0 6px;">🛍️</p>
+      <h1 style="font-size:20px;font-weight:700;color:#10b981;margin:0 0 4px;">New Order Received!</h1>
+      <p style="color:#888;font-size:14px;margin:0;">Order <strong style="color:#f5f5f5;">#${orderRef}</strong> &nbsp;|&nbsp; <strong style="color:#c9a84c;">${formatPrice(order.total)}</strong></p>
+    </div>
+
+    <!-- Customer Info -->
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:20px;margin-bottom:16px;">
+      <p style="font-size:12px;font-weight:700;color:#c9a84c;margin:0 0 12px;text-transform:uppercase;letter-spacing:0.08em;">Customer</p>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;color:#888;font-size:13px;width:90px;">Name</td><td style="padding:4px 0;font-size:13px;">${order.name}</td></tr>
+        <tr><td style="padding:4px 0;color:#888;font-size:13px;">Email</td><td style="padding:4px 0;font-size:13px;"><a href="mailto:${order.email}" style="color:#c9a84c;text-decoration:none;">${order.email}</a></td></tr>
+        <tr><td style="padding:4px 0;color:#888;font-size:13px;vertical-align:top;">Ship To</td><td style="padding:4px 0;font-size:13px;line-height:1.5;">${addrText}</td></tr>
+      </table>
+    </div>
+
+    <!-- Order Items -->
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;overflow:hidden;margin-bottom:16px;">
+      <div style="padding:14px 20px;border-bottom:1px solid rgba(201,168,76,0.15);">
+        <p style="font-size:12px;font-weight:700;color:#c9a84c;margin:0;text-transform:uppercase;letter-spacing:0.08em;">Items Ordered</p>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#0a0a0a;">
+            <th style="padding:8px 12px;text-align:left;font-size:11px;color:#666;font-weight:600;text-transform:uppercase;">Product</th>
+            <th style="padding:8px 12px;text-align:center;font-size:11px;color:#666;font-weight:600;text-transform:uppercase;">Qty</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:#666;font-weight:600;text-transform:uppercase;">Price</th>
+          </tr>
+        </thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+      <div style="padding:14px 20px;border-top:1px solid rgba(201,168,76,0.15);text-align:right;">
+        <span style="color:#888;font-size:13px;">Total: </span>
+        <span style="font-size:16px;font-weight:700;color:#c9a84c;">${formatPrice(order.total)}</span>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-bottom:24px;">
+      <a href="https://shopkrisha.com/admin/orders" style="display:inline-block;background:#c9a84c;color:#0a0a0a;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:14px;">
+        View in Admin Panel →
+      </a>
+    </div>
+
+    <p style="color:#444;font-size:11px;text-align:center;margin:0;">© 2025 Krisha Sparkles LLC · This is an internal admin notification.</p>
+  </div>
+</body>
+</html>`,
+  });
+}
+
 // ── Order Confirmation ─────────────────────────────────────────────────────
 
 export async function sendOrderConfirmation(order: Order) {

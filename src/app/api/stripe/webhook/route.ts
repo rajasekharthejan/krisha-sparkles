@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { sendOrderConfirmation } from "@/lib/email";
-import { sendWhatsAppOrderConfirmation } from "@/lib/whatsapp-notify";
+import { sendOrderConfirmation, sendAdminOrderNotification } from "@/lib/email";
+import { sendWhatsAppOrderConfirmation, notifyAdminNewOrder } from "@/lib/whatsapp-notify";
 
 // Use fetch-based HTTP client — same fix as checkout route (avoids Node.js TLS issues on Vercel)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
             .eq("user_id", userId);
           
           if ((count || 0) <= 1) { // This is their first/only order
-            await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app"}/api/referrals/complete`, {
+            await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com"}/api/referrals/complete`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -238,9 +238,26 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Send order confirmation email (non-blocking)
+      // Send order confirmation email to customer (non-blocking)
       sendOrderConfirmation({ ...order, order_items: orderItems.map((oi) => ({ ...oi, id: oi.order_id + oi.product_id })) }).catch(() => {
         console.error("Failed to send order confirmation email");
+      });
+
+      // Send admin notification email + WhatsApp (non-blocking)
+      sendAdminOrderNotification({ ...order, order_items: orderItems.map((oi) => ({ ...oi, id: oi.order_id + oi.product_id })) }).catch(() => {
+        console.error("Failed to send admin order notification email");
+      });
+
+      notifyAdminNewOrder({
+        orderRef: order.id.slice(-8).toUpperCase(),
+        customerName: order.name,
+        customerEmail: order.email,
+        total,
+        items: orderItems.map((oi) => ({ product_name: oi.product_name, quantity: oi.quantity, price: oi.price })),
+        shippingCity: shipping_address?.city,
+        shippingState: shipping_address?.state,
+      }).catch(() => {
+        console.error("Failed to send admin WhatsApp notification");
       });
     } catch (err) {
       console.error("Error processing webhook:", err);
