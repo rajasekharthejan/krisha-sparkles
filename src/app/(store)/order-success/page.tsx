@@ -165,8 +165,8 @@ function OrderSuccessContent() {
 
         <p style={{ fontSize: "0.8rem", color: "var(--subtle)", marginTop: "2rem" }}>
           Questions? Email us at{" "}
-          <a href="mailto:hello@krishasparkles.com" style={{ color: "var(--gold)", textDecoration: "none" }}>
-            hello@krishasparkles.com
+          <a href="mailto:hello@shopkrisha.com" style={{ color: "var(--gold)", textDecoration: "none" }}>
+            hello@shopkrisha.com
           </a>
         </p>
       </div>

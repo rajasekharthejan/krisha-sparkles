@@ -159,8 +159,8 @@ export default function PrivacyPolicyPage() {
             <strong style={{ color: "var(--text)" }}>Unsubscribe:</strong> Every marketing email we
             send contains an unsubscribe link at the bottom. Clicking it will immediately remove you
             from all future marketing communications. You may also email{" "}
-            <a href="mailto:privacy@krishasparkles.com" style={{ color: "var(--gold)" }}>
-              privacy@krishasparkles.com
+            <a href="mailto:hello@shopkrisha.com" style={{ color: "var(--gold)" }}>
+              hello@shopkrisha.com
             </a>{" "}
             to unsubscribe manually. We process all unsubscribe requests within 10 business days,
             in compliance with the CAN-SPAM Act.
@@ -176,8 +176,8 @@ export default function PrivacyPolicyPage() {
               <li>Opt out of analytics tracking (decline via our consent banner or iOS ATT)</li>
             </ul>
             To exercise any of these rights, email us at{" "}
-            <a href="mailto:privacy@krishasparkles.com" style={{ color: "var(--gold)" }}>
-              privacy@krishasparkles.com
+            <a href="mailto:hello@shopkrisha.com" style={{ color: "var(--gold)" }}>
+              hello@shopkrisha.com
             </a>
           </Section>
 
@@ -205,12 +205,12 @@ export default function PrivacyPolicyPage() {
             <div style={{ marginTop: "0.75rem", padding: "1rem 1.25rem", background: "var(--surface)", borderRadius: "8px", border: "1px solid var(--gold-border)" }}>
               <strong style={{ color: "var(--text)" }}>Krisha Sparkles LLC</strong><br />
               Email:{" "}
-              <a href="mailto:privacy@krishasparkles.com" style={{ color: "var(--gold)" }}>
-                privacy@krishasparkles.com
+              <a href="mailto:hello@shopkrisha.com" style={{ color: "var(--gold)" }}>
+                hello@shopkrisha.com
               </a><br />
               Website:{" "}
-              <a href="https://krisha-sparkles.vercel.app" style={{ color: "var(--gold)" }}>
-                krisha-sparkles.vercel.app
+              <a href="https://shopkrisha.com" style={{ color: "var(--gold)" }}>
+                shopkrisha.com
               </a>
             </div>
           </Section>

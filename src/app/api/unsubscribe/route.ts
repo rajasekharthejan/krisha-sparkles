@@ -32,7 +32,7 @@ export function buildUnsubscribeToken(email: string): string {
 
 export function buildUnsubscribeUrl(email: string): string {
   const base =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+    process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   const token = buildUnsubscribeToken(email);
   return `${base}/api/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
 }
@@ -40,7 +40,7 @@ export function buildUnsubscribeUrl(email: string): string {
 function confirmationHtml(email: string, success: boolean) {
   const message = success
     ? `<strong style="color:#10b981">${email}</strong> has been unsubscribed. You won't receive marketing emails from us.`
-    : `Something went wrong. Please email us at <a href="mailto:hello@krishasparkles.com" style="color:#c9a84c;">hello@krishasparkles.com</a> to unsubscribe.`;
+    : `Something went wrong. Please email us at <a href="mailto:hello@shopkrisha.com" style="color:#c9a84c;">hello@shopkrisha.com</a> to unsubscribe.`;
 
   return `<!DOCTYPE html>
 <html>
@@ -57,7 +57,7 @@ function confirmationHtml(email: string, success: boolean) {
       <p style="font-size:36px;margin:0 0 1rem;">${success ? "✅" : "⚠️"}</p>
       <h1 style="font-size:1.3rem;color:${success ? "#10b981" : "#f59e0b"};margin:0 0 1rem;">${success ? "Successfully Unsubscribed" : "Unsubscribe Failed"}</h1>
       <p style="color:#aaa;font-size:0.9rem;line-height:1.7;margin:0 0 1.5rem;">${message}</p>
-      <a href="https://krisha-sparkles.vercel.app/shop" style="display:inline-block;padding:10px 24px;border:1px solid rgba(201,168,76,0.4);color:#c9a84c;text-decoration:none;border-radius:8px;font-size:14px;">
+      <a href="https://shopkrisha.com/shop" style="display:inline-block;padding:10px 24px;border:1px solid rgba(201,168,76,0.4);color:#c9a84c;text-decoration:none;border-radius:8px;font-size:14px;">
         Continue Shopping →
       </a>
     </div>

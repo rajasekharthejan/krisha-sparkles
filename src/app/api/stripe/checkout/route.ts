@@ -139,8 +139,8 @@ export async function POST(req: NextRequest) {
           },
         },
       ],
-      success_url: `https://krisha-sparkles.vercel.app/order-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `https://krisha-sparkles.vercel.app/checkout?cancelled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com"}/order-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com"}/checkout?cancelled=true`,
       customer_email: userEmail || undefined,
       metadata: {
         items: JSON.stringify(

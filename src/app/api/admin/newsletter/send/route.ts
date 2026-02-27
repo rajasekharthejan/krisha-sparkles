@@ -58,8 +58,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Resend not configured" }, { status: 503 });
   }
 
-  const FROM = process.env.RESEND_FROM_EMAIL || "noreply@krishasparkles.com";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const FROM = process.env.RESEND_FROM_EMAIL || "noreply@shopkrisha.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
 
   // ── Fetch subscribers ────────────────────────────────────────────────────
   let subscriberQuery = supabase

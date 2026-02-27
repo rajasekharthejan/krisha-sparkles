@@ -174,7 +174,7 @@ export default function Footer() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <Mail size={14} style={{ color: "var(--gold)", flexShrink: 0 }} />
                 <span style={{ fontSize: "0.875rem", color: "var(--muted)" }}>
-                  hello@krishasparkles.com
+                  hello@shopkrisha.com
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>

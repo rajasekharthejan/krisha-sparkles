@@ -71,9 +71,9 @@ export default function SupportPage() {
           <ContactCard
             icon={<Mail size={22} />}
             title="Email Us"
-            detail="support@krishasparkles.com"
+            detail="hello@shopkrisha.com"
             sub="Response within 24 hours"
-            href="mailto:support@krishasparkles.com"
+            href="mailto:hello@shopkrisha.com"
           />
           <ContactCard
             icon={<Instagram size={22} />}
@@ -93,9 +93,9 @@ export default function SupportPage() {
 
         {/* Quick Links */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem", marginBottom: "3.5rem" }}>
-          <QuickLink icon={<Package size={16} />} label="Track My Order" href="mailto:support@krishasparkles.com?subject=Order%20Tracking" />
-          <QuickLink icon={<RotateCcw size={16} />} label="Start a Return" href="mailto:support@krishasparkles.com?subject=Return%20Request" />
-          <QuickLink icon={<MessageCircle size={16} />} label="Order Question" href="mailto:support@krishasparkles.com?subject=Order%20Question" />
+          <QuickLink icon={<Package size={16} />} label="Track My Order" href="mailto:hello@shopkrisha.com?subject=Order%20Tracking" />
+          <QuickLink icon={<RotateCcw size={16} />} label="Start a Return" href="mailto:hello@shopkrisha.com?subject=Return%20Request" />
+          <QuickLink icon={<MessageCircle size={16} />} label="Order Question" href="mailto:hello@shopkrisha.com?subject=Order%20Question" />
         </div>
 
         {/* FAQ */}

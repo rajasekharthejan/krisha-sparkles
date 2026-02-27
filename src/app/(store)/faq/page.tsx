@@ -19,14 +19,14 @@ const FAQ_SECTIONS = [
       { q: "Do you offer free shipping?", a: "Yes! Orders over $75 qualify for free standard shipping automatically — no coupon needed." },
       { q: "Do you ship internationally?", a: "Currently we ship within the USA only. We're working on international shipping and will announce when it's available." },
       { q: "How do I track my order?", a: "Once your order ships, you'll receive a tracking number via email. You can also view tracking details in your account under Order History." },
-      { q: "Can I change my shipping address after ordering?", a: "Contact us at support@krishasparkles.com within 2 hours of placing your order. After that, the order may already be processing and we cannot guarantee changes." },
+      { q: "Can I change my shipping address after ordering?", a: "Contact us at hello@shopkrisha.com within 2 hours of placing your order. After that, the order may already be processing and we cannot guarantee changes." },
     ],
   },
   {
     title: "↩️ Returns & Refunds",
     items: [
       { q: "What is your return policy?", a: "We accept returns within 14 days of delivery for unworn, undamaged items in original packaging. Sale items and custom orders are final sale." },
-      { q: "How do I start a return?", a: "Email support@krishasparkles.com with your order number and reason for return. We'll send you a prepaid return label within 1 business day." },
+      { q: "How do I start a return?", a: "Email hello@shopkrisha.com with your order number and reason for return. We'll send you a prepaid return label within 1 business day." },
       { q: "When will I receive my refund?", a: "Once we receive and inspect the returned item, refunds are processed within 3–5 business days to your original payment method." },
       { q: "What if my item arrived damaged?", a: "We're so sorry! Please email us within 48 hours of delivery with photos of the damage. We'll send a replacement or full refund at no cost to you." },
       { q: "Can I exchange instead of returning?", a: "Yes! Mention in your return request that you'd like an exchange, and we'll reserve the replacement item for you." },
@@ -48,7 +48,7 @@ const FAQ_SECTIONS = [
       { q: "What payment methods do you accept?", a: "We accept all major credit/debit cards (Visa, Mastercard, Amex, Discover), Apple Pay, Google Pay, and other methods via Stripe." },
       { q: "Is my payment information secure?", a: "Absolutely. All payments are processed by Stripe, which is PCI DSS Level 1 certified — the highest security standard for payment processing. We never store your card details." },
       { q: "Can I apply a coupon code?", a: "Yes! Enter your coupon code on the checkout page before completing your purchase. Only one coupon can be applied per order." },
-      { q: "Why was my payment declined?", a: "Common reasons include incorrect card details, insufficient funds, or bank security flags on new online merchants. Try again or contact your bank. You can also reach us at support@krishasparkles.com." },
+      { q: "Why was my payment declined?", a: "Common reasons include incorrect card details, insufficient funds, or bank security flags on new online merchants. Try again or contact your bank. You can also reach us at hello@shopkrisha.com." },
     ],
   },
   {
@@ -56,8 +56,8 @@ const FAQ_SECTIONS = [
     items: [
       { q: "Do I need an account to order?", a: "No, guest checkout is fully supported. However, creating an account lets you track orders, save your wishlist, and speed up future checkouts." },
       { q: "How do I reset my password?", a: "Click 'Forgot Password' on the login page. We'll email you a secure reset link valid for 1 hour." },
-      { q: "Can I cancel my order?", a: "Contact us at support@krishasparkles.com within 2 hours of placing your order. After that, the order may have already shipped." },
-      { q: "I didn't receive an order confirmation email.", a: "Check your spam/junk folder first. If it's not there, email support@krishasparkles.com with your name and the email you used at checkout." },
+      { q: "Can I cancel my order?", a: "Contact us at hello@shopkrisha.com within 2 hours of placing your order. After that, the order may have already shipped." },
+      { q: "I didn't receive an order confirmation email.", a: "Check your spam/junk folder first. If it's not there, email hello@shopkrisha.com with your name and the email you used at checkout." },
       { q: "How do I leave a product review?", a: "Visit the product page after receiving your order and scroll to the Reviews section. You must be logged in to submit a review." },
     ],
   },
@@ -120,7 +120,7 @@ export default function FAQPage() {
           <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>Our team usually responds within a few hours.</p>
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/contact" className="btn-gold">Send us a Message</Link>
-            <a href="mailto:support@krishasparkles.com" className="btn-gold-outline" style={{ display: "inline-flex", alignItems: "center" }}>
+            <a href="mailto:hello@shopkrisha.com" className="btn-gold-outline" style={{ display: "inline-flex", alignItems: "center" }}>
               Email Support
             </a>
           </div>

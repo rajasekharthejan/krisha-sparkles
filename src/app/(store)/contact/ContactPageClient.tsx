@@ -101,8 +101,8 @@ export default function ContactPageClient() {
             {
               icon: <Mail size={18} />,
               label: "Email",
-              value: "support@krishasparkles.com",
-              href: "mailto:support@krishasparkles.com",
+              value: "hello@shopkrisha.com",
+              href: "mailto:hello@shopkrisha.com",
             },
             {
               icon: <Instagram size={18} />,

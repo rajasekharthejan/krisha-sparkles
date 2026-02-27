@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { createHmac } from "crypto";
 import type { Order } from "@/types";
 
-const FROM = process.env.RESEND_FROM_EMAIL || "noreply@krishasparkles.com";
+const FROM = process.env.RESEND_FROM_EMAIL || "noreply@shopkrisha.com";
 
 // ── Unsubscribe helper ─────────────────────────────────────────────────────
 // Generates a signed one-click unsubscribe URL (CAN-SPAM compliance).
@@ -16,7 +16,7 @@ function buildUnsubscribeUrl(email: string): string {
     .update(email.toLowerCase().trim())
     .digest("hex");
   const base =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+    process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   return `${base}/api/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
 }
 
@@ -160,7 +160,7 @@ export async function sendOrderConfirmation(order: Order) {
     <!-- Footer -->
     <div style="text-align:center;padding:24px 0;border-top:1px solid rgba(255,255,255,0.05);">
       <p style="color:#888;font-size:13px;margin:0 0 8px;">Questions? Reply to this email or visit</p>
-      <a href="https://krisha-sparkles.vercel.app/contact" style="color:#c9a84c;font-size:13px;text-decoration:none;">krishasparkles.com/contact</a>
+      <a href="https://shopkrisha.com/contact" style="color:#c9a84c;font-size:13px;text-decoration:none;">shopkrisha.com/contact</a>
       <p style="color:#444;font-size:11px;margin:16px 0 0;">© 2025 Krisha Sparkles LLC · Texas, USA</p>
     </div>
   </div>
@@ -229,7 +229,7 @@ export async function sendRefundStatusEmail(params: {
 
     <div style="text-align:center;padding:24px 0;border-top:1px solid rgba(255,255,255,0.05);">
       <p style="color:#888;font-size:13px;margin:0 0 8px;">Have questions? We're here to help.</p>
-      <a href="https://krisha-sparkles.vercel.app/contact" style="color:#c9a84c;font-size:13px;text-decoration:none;">Contact Support</a>
+      <a href="https://shopkrisha.com/contact" style="color:#c9a84c;font-size:13px;text-decoration:none;">Contact Support</a>
       <p style="color:#444;font-size:11px;margin:16px 0 0;">© 2025 Krisha Sparkles LLC · Texas, USA</p>
     </div>
   </div>
@@ -293,14 +293,14 @@ export async function sendShippingNotification(params: {
     </div>
 
     <div style="text-align:center;margin-bottom:24px;">
-      <a href="https://krisha-sparkles.vercel.app/account/orders" style="display:inline-block;padding:12px 24px;border:1px solid rgba(201,168,76,0.4);color:#c9a84c;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+      <a href="https://shopkrisha.com/account/orders" style="display:inline-block;padding:12px 24px;border:1px solid rgba(201,168,76,0.4);color:#c9a84c;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
         View Order in Account →
       </a>
     </div>
 
     <div style="text-align:center;padding:24px 0;border-top:1px solid rgba(255,255,255,0.05);">
       <p style="color:#888;font-size:13px;margin:0 0 8px;">Need help? We're always here.</p>
-      <a href="https://krisha-sparkles.vercel.app/contact" style="color:#c9a84c;font-size:13px;text-decoration:none;">Contact Support</a>
+      <a href="https://shopkrisha.com/contact" style="color:#c9a84c;font-size:13px;text-decoration:none;">Contact Support</a>
       <p style="color:#444;font-size:11px;margin:16px 0 0;">© 2025 Krisha Sparkles LLC · Texas, USA</p>
     </div>
   </div>
@@ -349,7 +349,7 @@ export async function sendAbandonedCart1hr(params: {
   if (!resend) return;
 
   const { email, cartSnapshot } = params;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   const total = cartSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
 
   await resend.emails.send({
@@ -408,7 +408,7 @@ export async function sendAbandonedCart24hr(params: {
   if (!resend) return;
 
   const { email, cartSnapshot } = params;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   const total = cartSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
   const discountCode = "SAVE10";
 
@@ -469,7 +469,7 @@ export async function sendWelcomeEmail({ email, name }: { email: string; name?: 
   const resend = getResend();
   if (!resend) return;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   const greeting = name ? `Hi ${name}!` : "Hi there!";
 
   await resend.emails.send({
@@ -653,7 +653,7 @@ export async function sendReviewRequestEmail({ email, name, orderId }: { email: 
   const resend = getResend();
   if (!resend) return;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
 
   await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
