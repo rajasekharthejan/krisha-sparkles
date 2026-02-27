@@ -153,3 +153,24 @@ export interface ContactMessage {
   read: boolean;
   created_at: string;
 }
+
+export interface EmailCampaign {
+  id: string;
+  subject: string;
+  preview_text?: string | null;
+  html_body: string;
+  segment: "all" | "buyers" | "non-buyers";
+  recipient_count: number;
+  sent_at: string;
+  created_by: string;
+}
+
+export interface PointsHistory {
+  order_id: string;
+  order_short: string;
+  points_earned: number;
+  points_redeemed: number;
+  order_total: number;
+  status: string;
+  created_at: string;
+}

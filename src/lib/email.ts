@@ -461,6 +461,192 @@ export async function sendAbandonedCart24hr(params: {
   });
 }
 
+// ── Welcome Email (Day 0 drip) ─────────────────────────────────────────────
+// Sent immediately when a new subscriber signs up.
+// Includes WELCOME10 promo code for 10% off first order.
+
+export async function sendWelcomeEmail({ email, name }: { email: string; name?: string | null }) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  const greeting = name ? `Hi ${name}!` : "Hi there!";
+
+  await resend.emails.send({
+    from: `Krisha Sparkles <${FROM}>`,
+    to: email,
+    subject: "Welcome to Krisha Sparkles ✨ Here's 10% off",
+    headers: {
+      "List-Unsubscribe": `<${buildUnsubscribeUrl(email)}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <p style="font-size:28px;font-weight:700;color:#c9a84c;margin:0;">✦ Krisha Sparkles</p>
+      <p style="color:#888;margin:8px 0 0;font-size:13px;">Exquisite Imitation Jewelry</p>
+    </div>
+
+    <div style="background:linear-gradient(135deg,rgba(201,168,76,0.12),rgba(201,168,76,0.04));border:1px solid rgba(201,168,76,0.3);border-radius:12px;padding:32px;text-align:center;margin-bottom:24px;">
+      <p style="font-size:40px;margin:0 0 12px;">💎</p>
+      <h1 style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#c9a84c;margin:0 0 12px;">
+        Welcome to the Family!
+      </h1>
+      <p style="color:#aaa;font-size:15px;line-height:1.7;margin:0 0 24px;">
+        ${greeting} Thank you for joining Krisha Sparkles — your destination for exquisite
+        Indian imitation jewelry in the USA. As a welcome gift, here's 10% off your first order:
+      </p>
+      <div style="background:#0a0a0a;border:2px dashed rgba(201,168,76,0.5);border-radius:8px;padding:14px 24px;display:inline-block;margin-bottom:24px;">
+        <p style="font-family:monospace;font-size:24px;font-weight:700;color:#c9a84c;margin:0;letter-spacing:0.12em;">WELCOME10</p>
+      </div>
+      <br>
+      <a href="${siteUrl}/shop" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:16px;">
+        Start Shopping →
+      </a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
+      ${[
+        ["💫", "Premium Quality", "Handcrafted imitation jewelry"],
+        ["🚚", "Fast Shipping", "Ships within 2–3 business days"],
+        ["💬", "WhatsApp Support", "Reply within 1 hour (9am–9pm IST)"],
+      ].map(([icon, title, desc]) => `
+        <div style="background:#111;border:1px solid rgba(201,168,76,0.15);border-radius:10px;padding:16px;text-align:center;">
+          <p style="font-size:22px;margin:0 0 6px;">${icon}</p>
+          <p style="font-size:12px;font-weight:700;color:#f5f5f5;margin:0 0 4px;">${title}</p>
+          <p style="font-size:11px;color:#666;margin:0;line-height:1.4;">${desc}</p>
+        </div>`).join("")}
+    </div>
+
+    ${unsubscribeFooter(email)}
+  </div>
+</body>
+</html>`,
+  });
+}
+
+// ── Welcome Drip — Day 3: Best Sellers ────────────────────────────────────
+// Sent 3 days after subscription via /api/cron/welcome-drip
+
+export async function sendDripDay3({ email, name, siteUrl }: { email: string; name?: string | null; siteUrl: string }) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const greeting = name ? `Hi ${name}!` : "Hey there!";
+
+  await resend.emails.send({
+    from: `Krisha Sparkles <${FROM}>`,
+    to: email,
+    subject: "Our most-loved pieces this season ✨",
+    headers: {
+      "List-Unsubscribe": `<${buildUnsubscribeUrl(email)}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <p style="font-size:28px;font-weight:700;color:#c9a84c;margin:0;">✦ Krisha Sparkles</p>
+      <p style="color:#888;margin:8px 0 0;font-size:13px;">Exquisite Imitation Jewelry</p>
+    </div>
+
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:32px;text-align:center;margin-bottom:24px;">
+      <p style="font-size:36px;margin:0 0 12px;">👑</p>
+      <h1 style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#c9a84c;margin:0 0 12px;">
+        Our Best Sellers
+      </h1>
+      <p style="color:#aaa;font-size:14px;line-height:1.7;margin:0 0 24px;">
+        ${greeting} Discover the pieces our customers can't stop wearing — from traditional
+        Jhumka earrings to stunning bridal sets. These are our all-time favorites.
+      </p>
+      <a href="${siteUrl}/shop?sort=popular" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:15px;">
+        View Best Sellers →
+      </a>
+    </div>
+
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.15);border-radius:12px;padding:20px;margin-bottom:24px;">
+      <p style="color:#888;font-size:14px;line-height:1.7;margin:0;">
+        💡 <strong style="color:#f5f5f5;">Pro tip:</strong> Our Jhumka earrings and Kundan necklaces are
+        perfect for weddings, festivals, and everyday glam. Free shipping on orders over $50!
+      </p>
+    </div>
+
+    ${unsubscribeFooter(email)}
+  </div>
+</body>
+</html>`,
+  });
+}
+
+// ── Welcome Drip — Day 7: Refer-a-Friend ──────────────────────────────────
+// Sent 7 days after subscription via /api/cron/welcome-drip
+
+export async function sendDripDay7({ email, name, siteUrl }: { email: string; name?: string | null; siteUrl: string }) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const greeting = name ? `Hi ${name}!` : "Hey there!";
+
+  await resend.emails.send({
+    from: `Krisha Sparkles <${FROM}>`,
+    to: email,
+    subject: "Share the sparkle — earn rewards ✨",
+    headers: {
+      "List-Unsubscribe": `<${buildUnsubscribeUrl(email)}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <p style="font-size:28px;font-weight:700;color:#c9a84c;margin:0;">✦ Krisha Sparkles</p>
+      <p style="color:#888;margin:8px 0 0;font-size:13px;">Exquisite Imitation Jewelry</p>
+    </div>
+
+    <div style="background:linear-gradient(135deg,rgba(201,168,76,0.12),rgba(201,168,76,0.04));border:1px solid rgba(201,168,76,0.3);border-radius:12px;padding:32px;text-align:center;margin-bottom:24px;">
+      <p style="font-size:36px;margin:0 0 12px;">🎁</p>
+      <h1 style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#c9a84c;margin:0 0 12px;">
+        Refer Friends, Earn Rewards!
+      </h1>
+      <p style="color:#aaa;font-size:14px;line-height:1.7;margin:0 0 24px;">
+        ${greeting} Love Krisha Sparkles? Share the sparkle with your friends and family!
+        When they shop using your personal referral link, you both get rewarded.
+      </p>
+      <a href="${siteUrl}/account/referrals" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:15px;">
+        Get My Referral Link →
+      </a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
+      ${[
+        ["📤", "Share your link", "Send to friends & family"],
+        ["🛍️", "They shop", "First purchase with your link"],
+        ["💰", "Both earn", "You get store credit!"],
+      ].map(([icon, title, desc]) => `
+        <div style="background:#111;border:1px solid rgba(201,168,76,0.15);border-radius:10px;padding:16px;text-align:center;">
+          <p style="font-size:22px;margin:0 0 6px;">${icon}</p>
+          <p style="font-size:12px;font-weight:700;color:#f5f5f5;margin:0 0 4px;">${title}</p>
+          <p style="font-size:11px;color:#666;margin:0;line-height:1.4;">${desc}</p>
+        </div>`).join("")}
+    </div>
+
+    ${unsubscribeFooter(email)}
+  </div>
+</body>
+</html>`,
+  });
+}
+
 // ── Review Request Email ───────────────────────────────────────────────────
 
 export async function sendReviewRequestEmail({ email, name, orderId }: { email: string; name: string; orderId: string }) {

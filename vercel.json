@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/back-in-stock",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/welcome-drip",
+      "schedule": "0 9 * * *"
     }
   ]
 }

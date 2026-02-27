@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const { email, name } = await req.json();
@@ -12,10 +13,13 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedName = name?.trim() || null;
+
   const { data: existing } = await supabase
     .from("newsletter_subscribers")
     .select("id, active")
-    .eq("email", email.toLowerCase().trim())
+    .eq("email", normalizedEmail)
     .single();
 
   if (existing) {
@@ -27,10 +31,14 @@ export async function POST(req: NextRequest) {
   }
 
   const { error } = await supabase.from("newsletter_subscribers").insert({
-    email: email.toLowerCase().trim(),
-    name: name?.trim() || null,
+    email: normalizedEmail,
+    name: normalizedName,
   });
 
   if (error) return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
-  return NextResponse.json({ success: true, message: "Successfully subscribed!" });
+
+  // Day 0 drip: send welcome email with WELCOME10 code — fire and forget
+  sendWelcomeEmail({ email: normalizedEmail, name: normalizedName }).catch(() => {});
+
+  return NextResponse.json({ success: true, message: "Successfully subscribed! Check your email for a welcome gift 🎁" });
 }
