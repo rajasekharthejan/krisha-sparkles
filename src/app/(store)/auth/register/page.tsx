@@ -32,7 +32,7 @@ export default function RegisterPage() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
         password: form.password,
         options: {
@@ -42,7 +42,21 @@ export default function RegisterPage() {
       });
 
       if (signUpError) throw signUpError;
-      setDone(true);
+
+      // Subscribe to newsletter → triggers Welcome email with WELCOME10 code
+      const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`.trim();
+      fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email.trim().toLowerCase(), name: fullName }),
+      }).catch(() => {});
+
+      // If auto-confirmed (email confirmation disabled), go straight to account
+      if (signUpData?.session) {
+        router.push("/account");
+      } else {
+        setDone(true);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
