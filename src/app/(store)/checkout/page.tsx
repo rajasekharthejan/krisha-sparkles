@@ -8,7 +8,7 @@ import { formatPrice } from "@/lib/utils";
 import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2, Gift, Star } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { pushDataLayer } from "@/hooks/useDataLayer";
+import { trackEvent } from "@/lib/trackEvent";
 
 function CheckoutContent() {
   const { items, totalPrice } = useCartStore();
@@ -186,25 +186,9 @@ function CheckoutContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
       if (data.url) {
-        // Fire Meta Pixel InitiateCheckout
-        if (typeof window !== "undefined" && window.fbq) {
-          window.fbq("track", "InitiateCheckout", {
-            value: finalTotal,
-            currency: "USD",
-            num_items: items.length,
-          });
-        }
-
-        // Fire TikTok Pixel InitiateCheckout
-        if (typeof window !== "undefined" && window.ttq) {
-          window.ttq.track("InitiateCheckout", {
-            value: finalTotal,
-            currency: "USD",
-          });
-        }
-
-        // Push to GTM dataLayer
-        pushDataLayer("initiate_checkout", {
+        // Consent-gated: fires Meta Pixel + TikTok + GTM only if user accepted cookies
+        // Apple 5.1.2: no-op on iOS WKWebView (consent auto-declined)
+        trackEvent("InitiateCheckout", {
           value: finalTotal,
           currency: "USD",
           num_items: items.length,

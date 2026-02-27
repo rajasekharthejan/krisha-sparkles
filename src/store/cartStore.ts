@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartItem } from "@/types";
+import { trackEvent } from "@/lib/trackEvent";
 
 interface CartStore {
   items: CartItem[];
@@ -58,26 +59,15 @@ export const useCartStore = create<CartStore>()(
           };
         });
 
-        // Fire Meta Pixel AddToCart
-        if (typeof window !== "undefined" && window.fbq) {
-          window.fbq("track", "AddToCart", {
-            value: item.price,
-            currency: "USD",
-            content_ids: [item.productId],
-            content_name: item.name,
-            content_type: "product",
-          });
-        }
-
-        // Fire TikTok Pixel AddToCart
-        if (typeof window !== "undefined" && window.ttq) {
-          window.ttq.track("AddToCart", {
-            value: item.price,
-            currency: "USD",
-            content_id: item.productId,
-            content_name: item.name,
-          });
-        }
+        // Consent-gated AddToCart — no-op on iOS WKWebView (Apple 5.1.2)
+        trackEvent("AddToCart", {
+          value: item.price,
+          currency: "USD",
+          content_ids: [item.productId],
+          content_id: item.productId,
+          content_name: item.name,
+          content_type: "product",
+        });
       },
 
       removeItem: (id) => {

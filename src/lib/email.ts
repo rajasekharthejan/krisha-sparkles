@@ -1,7 +1,37 @@
 import { Resend } from "resend";
+import { createHmac } from "crypto";
 import type { Order } from "@/types";
 
 const FROM = process.env.RESEND_FROM_EMAIL || "noreply@krishasparkles.com";
+
+// ── Unsubscribe helper ─────────────────────────────────────────────────────
+// Generates a signed one-click unsubscribe URL (CAN-SPAM compliance).
+// Same HMAC logic as /api/unsubscribe/route.ts — keep in sync.
+function buildUnsubscribeUrl(email: string): string {
+  const secret =
+    process.env.UNSUBSCRIBE_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "krisha-sparkles-unsub-fallback";
+  const token = createHmac("sha256", secret)
+    .update(email.toLowerCase().trim())
+    .digest("hex");
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://krisha-sparkles.vercel.app";
+  return `${base}/api/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
+}
+
+// Standard unsubscribe footer HTML for all marketing emails
+function unsubscribeFooter(email: string): string {
+  const url = buildUnsubscribeUrl(email);
+  return `
+    <div style="text-align:center;padding:20px 0;border-top:1px solid rgba(255,255,255,0.05);margin-top:8px;">
+      <p style="color:#444;font-size:11px;margin:0 0 6px;">&copy; 2025 Krisha Sparkles LLC &middot; Texas, USA</p>
+      <p style="color:#333;font-size:10px;margin:0;">
+        You received this email because you shopped with us or subscribed to our newsletter.<br>
+        <a href="${url}" style="color:#555;text-decoration:underline;">Unsubscribe</a> from marketing emails at any time.
+      </p>
+    </div>`;
+}
 
 function getResend() {
   if (!process.env.RESEND_API_KEY) return null;
@@ -361,9 +391,7 @@ export async function sendAbandonedCart1hr(params: {
       </a>
     </div>
 
-    <div style="text-align:center;padding:24px 0;border-top:1px solid rgba(255,255,255,0.05);">
-      <p style="color:#444;font-size:11px;margin:0;">&copy; 2025 Krisha Sparkles LLC &middot; Texas, USA</p>
-    </div>
+    ${unsubscribeFooter(email)}
   </div>
 </body>
 </html>`,
@@ -426,9 +454,7 @@ export async function sendAbandonedCart24hr(params: {
 
     <p style="text-align:center;color:#666;font-size:12px;">Offer expires in 24 hours. Limited stock available.</p>
 
-    <div style="text-align:center;padding:24px 0;border-top:1px solid rgba(255,255,255,0.05);">
-      <p style="color:#444;font-size:11px;margin:0;">&copy; 2025 Krisha Sparkles LLC &middot; Texas, USA</p>
-    </div>
+    ${unsubscribeFooter(email)}
   </div>
 </body>
 </html>`,
@@ -464,6 +490,7 @@ export async function sendReviewRequestEmail({ email, name, orderId }: { email: 
       <a href="${siteUrl}/account/orders/${orderId}" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;">Leave a Review</a>
     </div>
     <p style="color:#555;font-size:12px;text-align:center;">You received this because you recently made a purchase. <br>Order #${orderId.slice(-8).toUpperCase()}</p>
+    ${unsubscribeFooter(email)}
   </div>
 </body>
 </html>`,

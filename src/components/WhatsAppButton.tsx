@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { pushDataLayer } from "@/hooks/useDataLayer";
+import { trackEvent } from "@/lib/trackEvent";
 
 const DEFAULT_MESSAGE = "Hi! I'm interested in your jewelry at Krisha Sparkles.";
 
@@ -18,10 +18,7 @@ export default function WhatsAppButton() {
   const href = `https://wa.me/${number}?text=${encodeURIComponent(DEFAULT_MESSAGE)}`;
 
   function handleClick() {
-    pushDataLayer("whatsapp_click", { location: "floating_button" });
-    if (typeof window !== "undefined" && window.fbq) {
-      window.fbq("trackCustom", "WhatsAppClick", { location: "floating_button" });
-    }
+    trackEvent("WhatsAppClick", { location: "floating_button" });
   }
 
   return (

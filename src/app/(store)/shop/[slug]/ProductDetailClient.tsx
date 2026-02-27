@@ -15,7 +15,7 @@ import ProductCard from "@/components/store/ProductCard";
 import ViewingNow from "@/components/store/ViewingNow";
 import ReviewImageLightbox from "@/components/store/ReviewImageLightbox";
 import BackInStockButton from "@/components/store/BackInStockButton";
-import { pushDataLayer } from "@/hooks/useDataLayer";
+import { trackEvent } from "@/lib/trackEvent";
 
 export default function ProductDetailClient({ slug: initialSlug }: { slug?: string }) {
   const params = useParams<{ slug: string }>();
@@ -57,26 +57,15 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
       if (data) {
         setProduct(data as Product);
 
-        // Fire Meta Pixel ViewContent
-        if (typeof window !== "undefined" && window.fbq) {
-          window.fbq("track", "ViewContent", {
-            content_ids: [data.id],
-            content_name: data.name,
-            value: data.price,
-            currency: "USD",
-            content_type: "product",
-          });
-        }
-
-        // Fire TikTok Pixel ViewContent
-        if (typeof window !== "undefined" && window.ttq) {
-          window.ttq.track("ViewContent", {
-            content_id: data.id,
-            content_name: data.name,
-            value: data.price,
-            currency: "USD",
-          });
-        }
+        // Consent-gated ViewContent — no-op on iOS WKWebView (Apple 5.1.2)
+        trackEvent("ViewContent", {
+          content_ids: [data.id],
+          content_id: data.id,
+          content_name: data.name,
+          value: data.price,
+          currency: "USD",
+          content_type: "product",
+        });
         // Fetch related
         const { data: rel } = await supabase
           .from("products")
@@ -600,10 +589,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  pushDataLayer("whatsapp_click", { location: "product_page", product: product.name });
-                  if (typeof window !== "undefined" && window.fbq) {
-                    window.fbq("trackCustom", "WhatsAppClick", { location: "product_page" });
-                  }
+                  trackEvent("WhatsAppClick", { location: "product_page", product: product.name });
                 }}
                 style={{
                   display: "flex",
