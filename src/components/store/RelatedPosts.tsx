@@ -65,23 +65,7 @@ export default async function RelatedPosts({ currentSlug, tags }: RelatedPostsPr
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1.25rem" }}>
         {posts.map((post) => (
           <Link key={post.id} href={`/blog/${post.slug}`} style={{ textDecoration: "none", color: "inherit" }}>
-            <article
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--gold-border)",
-                borderRadius: "12px",
-                overflow: "hidden",
-                transition: "transform 0.2s, box-shadow 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
-                (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(201,168,76,0.15)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-                (e.currentTarget as HTMLElement).style.boxShadow = "none";
-              }}
-            >
+            <article className="related-post-card">
               {post.cover_image ? (
                 <div style={{ position: "relative", height: "140px" }}>
                   <Image src={post.cover_image} alt={post.title} fill style={{ objectFit: "cover" }} />

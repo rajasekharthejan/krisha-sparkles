@@ -739,3 +739,16 @@ button:focus-visible, a:focus-visible {
 .blog-content th, .blog-content td { padding: 0.6em 0.9em; border: 1px solid var(--gold-border); font-size: 0.875rem; }
 .blog-content th { background: var(--surface); color: var(--gold); font-weight: 600; }
 .blog-content hr { border: none; border-top: 1px solid var(--gold-border); margin: 2em 0; }
+
+/* ─── Related Posts Card Hover ──────────────────────────── */
+.related-post-card {
+  background: var(--surface);
+  border: 1px solid var(--gold-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.related-post-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(201,168,76,0.15);
+}
