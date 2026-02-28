@@ -103,7 +103,7 @@ export async function proxy(request: NextRequest) {
     }
 
     // LAYER 3: Admin email check
-    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminEmail = (process.env.ADMIN_EMAIL || "admin@krishasparkles.com").trim();
     if (adminEmail && user.email !== adminEmail) {
       // Authenticated but not the admin — sign them out and return 403
       return new NextResponse("Forbidden", {

@@ -18,7 +18,19 @@ import FeaturedSlider from "@/components/store/FeaturedSlider";
 import MarqueeTicker from "@/components/store/MarqueeTicker";
 import type { Product } from "@/types";
 import InstagramFeed from "@/components/store/InstagramFeed";
-import { ArrowRight, Star, Shield, Truck, RefreshCw } from "lucide-react";
+import TikTokFeed from "@/components/store/TikTokFeed";
+import Image from "next/image";
+import { ArrowRight, Star, Shield, Truck, RefreshCw, Gift } from "lucide-react";
+
+interface BundlePreview {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  image: string | null;
+  bundle_price: number;
+  compare_price: number | null;
+}
 
 async function getFeaturedProducts(): Promise<Product[]> {
   try {
@@ -36,8 +48,26 @@ async function getFeaturedProducts(): Promise<Product[]> {
   }
 }
 
+async function getTopBundles(): Promise<BundlePreview[]> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("bundles")
+      .select("id, name, slug, description, image, bundle_price, compare_price")
+      .eq("active", true)
+      .order("display_order", { ascending: true })
+      .limit(3);
+    return (data as BundlePreview[]) || [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const featured = await getFeaturedProducts();
+  const [featured, bundles] = await Promise.all([
+    getFeaturedProducts(),
+    getTopBundles(),
+  ]);
 
   return (
     <div>
@@ -434,6 +464,112 @@ export default async function HomePage() {
         <style>{`
           @media (max-width: 640px) {
             .instagram-grid { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
+      </section>
+
+      {/* ── Gift Sets / Bundles Section ───────────────── */}
+      {bundles.length > 0 && (
+        <section style={{ padding: "5rem 1.5rem", background: "var(--bg)" }}>
+          <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
+              <div>
+                <span className="badge-gold">Curated Sets</span>
+                <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "clamp(1.75rem, 4vw, 2.5rem)", fontWeight: 700, marginTop: "0.75rem" }}>
+                  Shop Gift Sets
+                </h2>
+                <div className="gold-divider-left" />
+                <p style={{ color: "var(--muted)", marginTop: "0.75rem", fontSize: "0.9rem" }}>
+                  Beautifully curated jewelry bundles — perfect for gifting or treating yourself
+                </p>
+              </div>
+              <Link
+                href="/bundles"
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", color: "var(--gold)", textDecoration: "none", fontSize: "0.875rem", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", transition: "gap 0.2s ease", padding: "0.5rem 1rem", border: "1px solid var(--gold-border)", borderRadius: "6px" }}
+              >
+                View All <ArrowRight size={15} />
+              </Link>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem" }}>
+              {bundles.map((bundle) => {
+                const savings = bundle.compare_price ? bundle.compare_price - bundle.bundle_price : 0;
+                return (
+                  <Link key={bundle.id} href={`/bundles/${bundle.slug}`} style={{ textDecoration: "none" }}>
+                    <div
+                      style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "16px", overflow: "hidden", transition: "transform 0.2s, box-shadow 0.2s" }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(0,0,0,0.3)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+                    >
+                      <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden", background: "radial-gradient(ellipse, rgba(201,168,76,0.12), var(--elevated))", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {bundle.image ? (
+                          <Image src={bundle.image} alt={bundle.name} fill style={{ objectFit: "cover" }} sizes="320px" />
+                        ) : (
+                          <Gift size={48} style={{ color: "var(--gold)", opacity: 0.5 }} />
+                        )}
+                        {savings > 0 && (
+                          <div style={{ position: "absolute", top: "0.75rem", right: "0.75rem", background: "var(--gold)", color: "#000", fontSize: "0.7rem", fontWeight: 700, padding: "0.2rem 0.6rem", borderRadius: "999px" }}>
+                            Save ${savings.toFixed(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ padding: "1.25rem" }}>
+                        <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", fontWeight: 700, marginBottom: "0.4rem" }}>{bundle.name}</h3>
+                        {bundle.description && (
+                          <p style={{ color: "var(--muted)", fontSize: "0.8rem", lineHeight: 1.6, marginBottom: "0.75rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                            {bundle.description}
+                          </p>
+                        )}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", fontWeight: 700, color: "var(--gold)" }}>
+                            ${Number(bundle.bundle_price).toFixed(2)}
+                          </span>
+                          {bundle.compare_price && (
+                            <span style={{ fontSize: "0.85rem", color: "var(--subtle)", textDecoration: "line-through" }}>
+                              ${Number(bundle.compare_price).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── TikTok Feed Section ──────────────────────── */}
+      <section style={{ padding: "5rem 1.5rem", background: "var(--surface)", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "linear-gradient(rgba(201,168,76,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.025) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+        <div style={{ maxWidth: "1280px", margin: "0 auto", position: "relative" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", alignItems: "center" }} className="tiktok-grid">
+            <div>
+              <span className="badge-gold">@krishasparkles</span>
+              <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "clamp(1.75rem, 4vw, 2.5rem)", fontWeight: 700, margin: "1rem 0 0.75rem", lineHeight: 1.2 }}>
+                Watch Us on<br />
+                <span className="gold-shimmer-text">TikTok</span>
+              </h2>
+              <div className="gold-divider-left" />
+              <p style={{ color: "var(--muted)", margin: "1.25rem 0 2rem", lineHeight: 1.8, fontSize: "0.9rem" }}>
+                See our jewelry in action — styling tips, unboxings, and behind-the-scenes content on TikTok. Follow us for daily inspiration.
+              </p>
+              <a
+                href="https://www.tiktok.com/@krishasparkles"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-gold"
+                style={{ borderRadius: "6px" }}
+              >
+                Follow on TikTok
+              </a>
+            </div>
+            <TikTokFeed />
+          </div>
+        </div>
+        <style>{`
+          @media (max-width: 640px) {
+            .tiktok-grid { grid-template-columns: 1fr !important; }
           }
         `}</style>
       </section>

@@ -18,7 +18,8 @@ const NAV_LINKS = [
   { label: "Jewelry",   href: "/shop?category=necklaces" },
   { label: "Earrings",  href: "/shop?category=earrings" },
   { label: "Jadau",     href: "/shop?category=jadau-jewelry" },
-  { label: "Dresses",   href: "/shop?category=dresses" },
+  { label: "Gift Sets", href: "/bundles" },
+  { label: "Blog",      href: "/blog" },
 ];
 
 export default function Navbar() {

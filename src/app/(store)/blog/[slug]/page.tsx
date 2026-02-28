@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import BlogPostClient from "./BlogPostClient";
+import RelatedPosts from "@/components/store/RelatedPosts";
 
 function getSupabase() {
   return createClient(
@@ -48,5 +49,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   // Increment views (non-blocking, best-effort)
   void Promise.resolve(supabase.rpc("increment_post_views", { post_slug: slug })).catch(() => {});
 
-  return <BlogPostClient post={post} />;
+  return (
+    <>
+      <BlogPostClient post={post} />
+      {/* Related posts — rendered server-side below the article */}
+      <div style={{ maxWidth: "760px", margin: "0 auto", padding: "0 1.5rem 5rem" }}>
+        <RelatedPosts currentSlug={post.slug} tags={post.tags || []} />
+      </div>
+    </>
+  );
 }

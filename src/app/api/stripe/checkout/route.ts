@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createServerClient } from "@supabase/ssr";
-
-// Use fetch-based HTTP client (avoids Node.js TLS issues on Vercel edge network)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
-  httpClient: Stripe.createFetchHttpClient(),
-  maxNetworkRetries: 0,
-});
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
+// Lazy Stripe init — avoids module-level evaluation at Next.js build time
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2026-01-28.clover",
+    httpClient: Stripe.createFetchHttpClient(),
+    maxNetworkRetries: 0,
+  });
+}
+
 export async function POST(req: NextRequest) {
+  const stripe = getStripe();
   try {
     const { items, couponCode, discountAmount, notifyWhatsApp, whatsAppPhone, appliedCredit, pointsToRedeem, pointsDiscount } = await req.json();
 
@@ -139,8 +142,8 @@ export async function POST(req: NextRequest) {
           },
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com"}/order-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com"}/checkout?cancelled=true`,
+      success_url: `${(process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com").trim()}/order-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${(process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com").trim()}/checkout?cancelled=true`,
       customer_email: userEmail || undefined,
       metadata: {
         items: JSON.stringify(

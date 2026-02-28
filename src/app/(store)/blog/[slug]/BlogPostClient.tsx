@@ -4,7 +4,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Calendar, Eye } from "lucide-react";
+import { ArrowLeft, Calendar, Eye, Clock } from "lucide-react";
+import SocialShare from "@/components/store/SocialShare";
+import BlogNewsletterCTA from "@/components/store/BlogNewsletterCTA";
 
 interface BlogPost {
   id: string;
@@ -19,14 +21,15 @@ interface BlogPost {
   created_at: string;
 }
 
+/** Estimates reading time: average 200 words/min, minimum 1 min */
+function readingTime(content: string): number {
+  const words = content.trim().split(/\s+/).length;
+  return Math.max(1, Math.ceil(words / 200));
+}
+
 export default function BlogPostClient({ post }: { post: BlogPost }) {
-  function handleShare() {
-    if (navigator.share) {
-      navigator.share({ title: post.title, url: window.location.href });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-    }
-  }
+  const readMin = readingTime(post.content);
+  const shareUrl = typeof window !== "undefined" ? window.location.href : `https://shopkrisha.com/blog/${post.slug}`;
 
   return (
     <div style={{ paddingTop: "80px", minHeight: "100vh", background: "var(--bg)" }}>
@@ -59,38 +62,37 @@ export default function BlogPostClient({ post }: { post: BlogPost }) {
         </h1>
 
         {/* Meta */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", fontSize: "0.8rem", color: "var(--subtle)", marginBottom: "2rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", fontSize: "0.8rem", color: "var(--subtle)", marginBottom: "1.5rem", flexWrap: "wrap" }}>
           <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
             <Calendar size={13} />
             {new Date(post.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+            <Clock size={13} /> {readMin} min read
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
             <Eye size={13} /> {post.views} views
           </span>
           <span>By {post.author}</span>
-          <button onClick={handleShare} style={{ background: "none", border: "1px solid var(--gold-border)", borderRadius: "6px", padding: "0.25rem 0.7rem", color: "var(--gold)", cursor: "pointer", fontSize: "0.75rem" }}>
-            Share ↗
-          </button>
         </div>
 
-        <div className="gold-divider" style={{ marginBottom: "2.5rem" }} />
+        {/* Social Share — top */}
+        <SocialShare title={post.title} url={shareUrl} />
+
+        <div className="gold-divider" style={{ margin: "1.75rem 0 2.5rem" }} />
 
         {/* Markdown content */}
-        <div
-          style={{
-            lineHeight: 1.85,
-            fontSize: "0.95rem",
-            color: "var(--muted)",
-          }}
-          className="blog-content"
-        >
+        <div style={{ lineHeight: 1.85, fontSize: "0.95rem", color: "var(--muted)" }} className="blog-content">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {post.content}
           </ReactMarkdown>
         </div>
 
+        {/* Newsletter CTA — after content */}
+        <BlogNewsletterCTA />
+
         {/* Footer */}
-        <div style={{ marginTop: "3rem", paddingTop: "2rem", borderTop: "1px solid var(--gold-border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+        <div style={{ marginTop: "2rem", paddingTop: "2rem", borderTop: "1px solid var(--gold-border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
           <Link href="/blog" className="btn-gold-outline" style={{ fontSize: "0.875rem" }}>
             <ArrowLeft size={15} /> More Posts
           </Link>

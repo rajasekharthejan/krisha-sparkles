@@ -7,6 +7,8 @@ import ExitIntentPopup from "@/components/store/ExitIntentPopup";
 import AbandonedCartTracker from "@/components/store/AbandonedCartTracker";
 import SocialProofToast from "@/components/store/SocialProofToast";
 import UTMCapture from "@/components/store/UTMCapture";
+import CrispChat from "@/components/store/CrispChat";
+import PWAInstaller from "@/components/store/PWAInstaller";
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +24,10 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
       <Suspense fallback={null}>
         <UTMCapture />
       </Suspense>
+      {/* F11: Live Chat — lazy-loads Crisp widget, injects user identity */}
+      <CrispChat />
+      {/* F9: PWA — shows "Add to Home Screen" banner on mobile after 30s */}
+      <PWAInstaller />
     </>
   );
 }

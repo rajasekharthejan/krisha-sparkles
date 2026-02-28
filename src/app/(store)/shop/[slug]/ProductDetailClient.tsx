@@ -16,6 +16,8 @@ import ViewingNow from "@/components/store/ViewingNow";
 import ReviewImageLightbox from "@/components/store/ReviewImageLightbox";
 import BackInStockButton from "@/components/store/BackInStockButton";
 import { trackEvent } from "@/lib/trackEvent";
+import ProductRecommendations from "@/components/store/ProductRecommendations";
+import { openCrisp } from "@/components/store/CrispChat";
 
 export default function ProductDetailClient({ slug: initialSlug }: { slug?: string }) {
   const params = useParams<{ slug: string }>();
@@ -967,6 +969,35 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
           </div>
         </div>
       )}
+
+      {/* F6: AI Style Recommender — "You May Also Love" */}
+      <ProductRecommendations productId={product.id} />
+
+      {/* F11: "Ask a Question" floating button for Crisp live chat */}
+      <button
+        onClick={() => openCrisp()}
+        style={{
+          position: "fixed",
+          bottom: "140px",
+          right: "1.5rem",
+          zIndex: 50,
+          display: "flex",
+          alignItems: "center",
+          gap: "0.4rem",
+          padding: "0.55rem 1rem",
+          background: "var(--surface)",
+          border: "1px solid var(--gold-border)",
+          borderRadius: "9999px",
+          color: "var(--gold)",
+          cursor: "pointer",
+          fontSize: "0.75rem",
+          fontWeight: 600,
+          boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        💬 Ask a Question
+      </button>
     </div>
   );
 }

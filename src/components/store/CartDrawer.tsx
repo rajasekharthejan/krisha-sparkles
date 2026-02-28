@@ -6,11 +6,14 @@ import Image from "next/image";
 import { X, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
+import CartRecommendations from "@/components/store/CartRecommendations";
 
 export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice } =
     useCartStore();
   const total = totalPrice();
+  // First cart item's product ID for recommendations
+  const firstProductId = items[0]?.id;
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
@@ -286,6 +289,9 @@ export default function CartDrawer() {
             <p style={{ fontSize: "0.75rem", color: "var(--subtle)", textAlign: "center" }}>
               Shipping & taxes calculated at checkout
             </p>
+            {/* F6: Cart Recommendations */}
+            {firstProductId && <CartRecommendations firstCartItemProductId={firstProductId} />}
+
             <Link
               href="/checkout"
               onClick={closeCart}

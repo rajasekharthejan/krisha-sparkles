@@ -174,3 +174,50 @@ export interface PointsHistory {
   status: string;
   created_at: string;
 }
+
+// F5: Bundle Builder
+export interface ProductBundle {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  image: string | null;
+  bundle_price: number;
+  compare_price: number | null;
+  active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+  bundle_items?: BundleItem[];
+}
+
+export interface BundleItem {
+  id: string;
+  bundle_id: string;
+  product_id: string;
+  quantity: number;
+  products?: Product;
+}
+
+// F6: AI Recommender
+export interface Recommendation {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  compare_price?: number | null;
+  images: string[];
+  category_id: string | null;
+}
+
+// F10: TikTok
+export interface TikTokPost {
+  id: string;
+  video_url: string;
+  thumbnail_url: string;
+  caption: string | null;
+  views_count: number;
+  display_order: number;
+  active: boolean;
+  created_at: string;
+}

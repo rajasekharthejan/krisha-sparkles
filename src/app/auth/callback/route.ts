@@ -30,8 +30,11 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(new URL(next, origin));
     }
+    // Log the error so we can debug
+    console.error("[auth/callback] exchangeCodeForSession error:", error?.message, error);
   }
 
   // Something went wrong — send to login with error hint
-  return NextResponse.redirect(new URL("/auth/login?error=oauth", origin));
+  console.error("[auth/callback] No code or exchange failed. code:", !!code);
+  return NextResponse.redirect(new URL(`/auth/login?error=oauth`, origin));
 }

@@ -4,12 +4,14 @@ import { createClient } from "@supabase/supabase-js";
 import { sendOrderConfirmation, sendAdminOrderNotification } from "@/lib/email";
 import { sendWhatsAppOrderConfirmation, notifyAdminNewOrder } from "@/lib/whatsapp-notify";
 
-// Use fetch-based HTTP client — same fix as checkout route (avoids Node.js TLS issues on Vercel)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
-  httpClient: Stripe.createFetchHttpClient(),
-  maxNetworkRetries: 0,
-});
+// Lazy Stripe init — avoids module-level evaluation at Next.js build time
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2026-01-28.clover",
+    httpClient: Stripe.createFetchHttpClient(),
+    maxNetworkRetries: 0,
+  });
+}
 
 function getSupabaseAdmin() {
   return createClient(
@@ -19,6 +21,7 @@ function getSupabaseAdmin() {
 }
 
 export async function POST(req: NextRequest) {
+  const stripe = getStripe();
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
 
@@ -48,7 +51,9 @@ export async function POST(req: NextRequest) {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sessionAny = session as any;
-      const shippingAddr = sessionAny.shipping_details?.address ?? sessionAny.shipping?.address;
+      const shippingAddr = sessionAny.shipping_details?.address
+        ?? sessionAny.shipping?.address
+        ?? sessionAny.collected_information?.shipping_details?.address;
       const shipping_address = shippingAddr
         ? {
             line1: shippingAddr.line1 || "",
@@ -238,27 +243,27 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Send order confirmation email to customer (non-blocking)
-      sendOrderConfirmation({ ...order, order_items: orderItems.map((oi) => ({ ...oi, id: oi.order_id + oi.product_id })) }).catch(() => {
-        console.error("Failed to send order confirmation email");
-      });
-
-      // Send admin notification email + WhatsApp (non-blocking)
-      sendAdminOrderNotification({ ...order, order_items: orderItems.map((oi) => ({ ...oi, id: oi.order_id + oi.product_id })) }).catch(() => {
-        console.error("Failed to send admin order notification email");
-      });
-
-      notifyAdminNewOrder({
-        orderRef: order.id.slice(-8).toUpperCase(),
-        customerName: order.name,
-        customerEmail: order.email,
-        total,
-        items: orderItems.map((oi) => ({ product_name: oi.product_name, quantity: oi.quantity, price: oi.price })),
-        shippingCity: shipping_address?.city,
-        shippingState: shipping_address?.state,
-      }).catch(() => {
-        console.error("Failed to send admin WhatsApp notification");
-      });
+      // Await all emails before returning — fire-and-forget gets killed on Vercel serverless
+      const orderWithItems = { ...order, order_items: orderItems.map((oi) => ({ ...oi, id: oi.order_id + oi.product_id })) };
+      await Promise.allSettled([
+        sendOrderConfirmation(orderWithItems).catch((e) =>
+          console.error("Failed to send order confirmation email:", e)
+        ),
+        sendAdminOrderNotification(orderWithItems).catch((e) =>
+          console.error("Failed to send admin order notification email:", e)
+        ),
+        notifyAdminNewOrder({
+          orderRef: order.id.slice(-8).toUpperCase(),
+          customerName: order.name,
+          customerEmail: order.email,
+          total,
+          items: orderItems.map((oi) => ({ product_name: oi.product_name, quantity: oi.quantity, price: oi.price })),
+          shippingCity: shipping_address?.city,
+          shippingState: shipping_address?.state,
+        }).catch((e) =>
+          console.error("Failed to send admin WhatsApp notification:", e)
+        ),
+      ]);
     } catch (err) {
       console.error("Error processing webhook:", err);
       return NextResponse.json({ error: "Processing failed" }, { status: 500 });

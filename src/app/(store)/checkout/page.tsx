@@ -583,6 +583,32 @@ function CheckoutContent() {
             SSL encrypted &bull; Powered by Stripe
           </span>
         </div>
+
+        {/* Need help? Crisp chat trigger */}
+        <div style={{ textAlign: "center", marginTop: "0.75rem" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined" && (window as Window & { $crisp?: { push: (args: unknown[]) => void } }).$crisp) {
+                (window as Window & { $crisp: { push: (args: unknown[]) => void } }).$crisp.push(["do", "chat:open"]);
+              }
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--muted)",
+              fontSize: "0.75rem",
+              textDecoration: "underline",
+              padding: 0,
+              transition: "color 0.2s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--gold)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted)")}
+          >
+            💬 Need help? Chat with us
+          </button>
+        </div>
       </div>
     </div>
   );

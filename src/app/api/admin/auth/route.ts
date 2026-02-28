@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Admin role check ─────────────────────────────────────────
-  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@krishasparkles.com").trim();
   if (adminEmail && data.user.email !== adminEmail) {
     await logAttempt(ip, email, false, "Not admin email");
     // Sign them back out to avoid leaving a rogue session

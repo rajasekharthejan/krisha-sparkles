@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatPrice, formatDate } from "@/lib/utils";
-import { ShoppingCart, ChevronDown, Truck, X, Loader2 } from "lucide-react";
+import { ShoppingCart, ChevronDown, Truck, X, Loader2, Eye } from "lucide-react";
 import type { Order } from "@/types";
 
 const STATUSES = ["pending", "paid", "shipped", "delivered", "cancelled"];
@@ -20,6 +21,7 @@ const statusStyle = (status: string) => {
 };
 
 export default function AdminOrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -137,6 +139,7 @@ export default function AdminOrdersPage() {
                   <th>Date</th>
                   <th>Tracking</th>
                   <th>Update Status</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -144,7 +147,7 @@ export default function AdminOrdersPage() {
                   const badge = statusStyle(order.status);
                   const itemCount = order.order_items?.reduce((s, i) => s + i.quantity, 0) || 0;
                   return (
-                    <tr key={order.id}>
+                    <tr key={order.id} style={{ cursor: "pointer" }} onClick={() => router.push(`/admin/orders/${order.id}`)}>
                       <td style={{ fontSize: "0.75rem", color: "var(--muted)", fontFamily: "monospace" }}>
                         #{order.id.slice(0, 8)}
                       </td>
@@ -185,7 +188,7 @@ export default function AdminOrdersPage() {
                           </button>
                         )}
                       </td>
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ position: "relative" }}>
                           <select
                             value={order.status}
@@ -221,6 +224,14 @@ export default function AdminOrdersPage() {
                             }}
                           />
                         </div>
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => router.push(`/admin/orders/${order.id}`)}
+                          style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.35rem 0.65rem", borderRadius: "6px", background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", color: "var(--gold)", cursor: "pointer", fontSize: "0.7rem", fontWeight: 600 }}
+                        >
+                          <Eye size={11} /> View
+                        </button>
                       </td>
                     </tr>
                   );

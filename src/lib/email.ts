@@ -1,8 +1,40 @@
 import { Resend } from "resend";
 import { createHmac } from "crypto";
+import { createClient } from "@supabase/supabase-js";
 import type { Order } from "@/types";
 
 const FROM = process.env.RESEND_FROM_EMAIL || "noreply@shopkrisha.com";
+
+// ── Email Logger ────────────────────────────────────────────────────────────
+// Logs every email attempt to the email_logs table (fire-and-forget).
+// Admins can view the full log at /admin/emails.
+function logEmail(params: {
+  type: string;
+  to: string;
+  subject: string;
+  resend_id?: string | null;
+  status: "sent" | "failed";
+  error?: string | null;
+  order_id?: string | null;
+}) {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    supabase.from("email_logs").insert({
+      type: params.type,
+      to_email: params.to,
+      subject: params.subject,
+      resend_id: params.resend_id ?? null,
+      status: params.status,
+      error: params.error ?? null,
+      order_id: params.order_id ?? null,
+    }).then(() => {}); // non-blocking
+  } catch {
+    // never let logging break email sending
+  }
+}
 
 // ── Unsubscribe helper ─────────────────────────────────────────────────────
 // Generates a signed one-click unsubscribe URL (CAN-SPAM compliance).
@@ -53,10 +85,11 @@ export async function sendBackInStockEmail(
 ) {
   const resend = getResend();
   if (!resend) return;
-  await resend.emails.send({
+  const subject = `✨ ${productName} is back in stock — Krisha Sparkles`;
+  const { data, error } = await resend.emails.send({
     from: FROM,
     to,
-    subject: `✨ ${productName} is back in stock — Krisha Sparkles`,
+    subject,
     html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
   <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
@@ -74,6 +107,7 @@ export async function sendBackInStockEmail(
   </div>
 </body></html>`,
   });
+  logEmail({ type: "back_in_stock", to, subject, resend_id: data?.id, status: error ? "failed" : "sent", error: error?.message });
 }
 
 // ── Admin New Order Notification ───────────────────────────────────────────
@@ -83,7 +117,7 @@ export async function sendAdminOrderNotification(order: Order) {
   const resend = getResend();
   if (!resend) return;
 
-  const adminEmail = process.env.ADMIN_EMAIL || "hello@shopkrisha.com";
+  const adminEmail = process.env.ADMIN_NOTIFY_EMAIL || process.env.ADMIN_EMAIL || "hello@shopkrisha.com";
   const orderRef = order.id.slice(-8).toUpperCase();
   const addr = order.shipping_address;
   const addrText = addr
@@ -101,10 +135,11 @@ export async function sendAdminOrderNotification(order: Order) {
     )
     .join("");
 
-  await resend.emails.send({
+  const adminSubject = `🛍️ New Order #${orderRef} — ${formatPrice(order.total)} from ${order.name}`;
+  const { data: d1, error: e1 } = await resend.emails.send({
     from: `Krisha Sparkles Orders <${FROM}>`,
     to: adminEmail,
-    subject: `🛍️ New Order #${orderRef} — ${formatPrice(order.total)} from ${order.name}`,
+    subject: adminSubject,
     html: `
 <!DOCTYPE html>
 <html>
@@ -168,6 +203,7 @@ export async function sendAdminOrderNotification(order: Order) {
 </body>
 </html>`,
   });
+  logEmail({ type: "admin_order", to: adminEmail, subject: adminSubject, resend_id: d1?.id, status: e1 ? "failed" : "sent", error: e1?.message, order_id: order.id });
 }
 
 // ── Order Confirmation ─────────────────────────────────────────────────────
@@ -192,10 +228,11 @@ export async function sendOrderConfirmation(order: Order) {
     ? `${addr.line1}${addr.line2 ? ", " + addr.line2 : ""}, ${addr.city}, ${addr.state} ${addr.postal_code}`
     : "—";
 
-  await resend.emails.send({
+  const confirmSubject = `Order Confirmed ✨ #${order.id.slice(-8).toUpperCase()}`;
+  const { data: d2, error: e2 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: order.email,
-    subject: `Order Confirmed ✨ #${order.id.slice(-8).toUpperCase()}`,
+    subject: confirmSubject,
     html: `
 <!DOCTYPE html>
 <html>
@@ -261,6 +298,7 @@ export async function sendOrderConfirmation(order: Order) {
 </body>
 </html>`,
   });
+  logEmail({ type: "order_confirmation", to: order.email, subject: confirmSubject, resend_id: d2?.id, status: e2 ? "failed" : "sent", error: e2?.message, order_id: order.id });
 }
 
 // ── Refund Status ──────────────────────────────────────────────────────────
@@ -277,13 +315,12 @@ export async function sendRefundStatusEmail(params: {
 
   const { email, name, orderId, status, adminNotes } = params;
   const approved = status === "approved";
+  const refundSubject = approved ? "Your Refund Has Been Approved ✅" : "Update on Your Refund Request";
 
-  await resend.emails.send({
+  const { data: d3, error: e3 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: email,
-    subject: approved
-      ? "Your Refund Has Been Approved ✅"
-      : "Update on Your Refund Request",
+    subject: refundSubject,
     html: `
 <!DOCTYPE html>
 <html>
@@ -330,6 +367,7 @@ export async function sendRefundStatusEmail(params: {
 </body>
 </html>`,
   });
+  logEmail({ type: "refund_status", to: email, subject: refundSubject, resend_id: d3?.id, status: e3 ? "failed" : "sent", error: e3?.message, order_id: orderId });
 }
 
 // ── Shipping Notification ──────────────────────────────────────────────────
@@ -345,11 +383,12 @@ export async function sendShippingNotification(params: {
   if (!resend) return;
 
   const { email, name, orderId, trackingNumber, trackingUrl } = params;
+  const shipSubject = `Your Order Has Shipped! 📦`;
 
-  await resend.emails.send({
+  const { data: d4, error: e4 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: email,
-    subject: `Your Order Has Shipped! 📦`,
+    subject: shipSubject,
     html: `
 <!DOCTYPE html>
 <html>
@@ -401,6 +440,7 @@ export async function sendShippingNotification(params: {
 </body>
 </html>`,
   });
+  logEmail({ type: "shipping", to: email, subject: shipSubject, resend_id: d4?.id, status: e4 ? "failed" : "sent", error: e4?.message, order_id: orderId });
 }
 
 // ── Abandoned Cart — 1hr Email ─────────────────────────────────────────────
@@ -446,7 +486,7 @@ export async function sendAbandonedCart1hr(params: {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   const total = cartSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  await resend.emails.send({
+  const { data: d5, error: e5 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: email,
     subject: "You left something behind \u2728",
@@ -490,6 +530,7 @@ export async function sendAbandonedCart1hr(params: {
 </body>
 </html>`,
   });
+  logEmail({ type: "abandoned_cart_1hr", to: email, subject: "You left something behind ✨", resend_id: d5?.id, status: e5 ? "failed" : "sent", error: e5?.message });
 }
 
 // ── Abandoned Cart — 24hr Email ────────────────────────────────────────────
@@ -506,7 +547,7 @@ export async function sendAbandonedCart24hr(params: {
   const total = cartSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
   const discountCode = "SAVE10";
 
-  await resend.emails.send({
+  const { data: d6, error: e6 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: email,
     subject: "Last chance \u2014 10% off your cart &#128717;",
@@ -553,6 +594,7 @@ export async function sendAbandonedCart24hr(params: {
 </body>
 </html>`,
   });
+  logEmail({ type: "abandoned_cart_24hr", to: email, subject: "Last chance — 10% off your cart 🛒", resend_id: d6?.id, status: e6 ? "failed" : "sent", error: e6?.message });
 }
 
 // ── Welcome Email (Day 0 drip) ─────────────────────────────────────────────
@@ -566,7 +608,7 @@ export async function sendWelcomeEmail({ email, name }: { email: string; name?: 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   const greeting = name ? `Hi ${name}!` : "Hi there!";
 
-  await resend.emails.send({
+  const { data: d7, error: e7 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: email,
     subject: "Welcome to Krisha Sparkles ✨ Here's 10% off",
@@ -621,6 +663,7 @@ export async function sendWelcomeEmail({ email, name }: { email: string; name?: 
 </body>
 </html>`,
   });
+  logEmail({ type: "welcome", to: email, subject: "Welcome to Krisha Sparkles ✨ Here's 10% off", resend_id: d7?.id, status: e7 ? "failed" : "sent", error: e7?.message });
 }
 
 // ── Welcome Drip — Day 3: Best Sellers ────────────────────────────────────
@@ -632,7 +675,7 @@ export async function sendDripDay3({ email, name, siteUrl }: { email: string; na
 
   const greeting = name ? `Hi ${name}!` : "Hey there!";
 
-  await resend.emails.send({
+  const { data: d8, error: e8 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: email,
     subject: "Our most-loved pieces this season ✨",
@@ -677,6 +720,7 @@ export async function sendDripDay3({ email, name, siteUrl }: { email: string; na
 </body>
 </html>`,
   });
+  logEmail({ type: "drip_day3", to: email, subject: "Our most-loved pieces this season ✨", resend_id: d8?.id, status: e8 ? "failed" : "sent", error: e8?.message });
 }
 
 // ── Welcome Drip — Day 7: Refer-a-Friend ──────────────────────────────────
@@ -688,7 +732,7 @@ export async function sendDripDay7({ email, name, siteUrl }: { email: string; na
 
   const greeting = name ? `Hi ${name}!` : "Hey there!";
 
-  await resend.emails.send({
+  const { data: d9, error: e9 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: email,
     subject: "Share the sparkle — earn rewards ✨",
@@ -739,6 +783,7 @@ export async function sendDripDay7({ email, name, siteUrl }: { email: string; na
 </body>
 </html>`,
   });
+  logEmail({ type: "drip_day7", to: email, subject: "Share the sparkle — earn rewards ✨", resend_id: d9?.id, status: e9 ? "failed" : "sent", error: e9?.message });
 }
 
 // ── Review Request Email ───────────────────────────────────────────────────
@@ -749,7 +794,7 @@ export async function sendReviewRequestEmail({ email, name, orderId }: { email: 
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
 
-  await resend.emails.send({
+  const { data: d10, error: e10 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: email,
     subject: `How did you like your order? ⭐`,
@@ -775,4 +820,5 @@ export async function sendReviewRequestEmail({ email, name, orderId }: { email: 
 </body>
 </html>`,
   });
+  logEmail({ type: "review_request", to: email, subject: "How did you like your order? ⭐", resend_id: d10?.id, status: e10 ? "failed" : "sent", error: e10?.message, order_id: orderId });
 }
