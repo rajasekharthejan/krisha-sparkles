@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Package, MapPin, CreditCard, Truck, ExternalLink } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Truck, ExternalLink, CheckCircle2, Circle, Clock } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import RefundRequestButton from "@/components/store/RefundRequestButton";
 
@@ -141,38 +141,92 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </div>
         </div>
 
-        {/* Tracking Card */}
-        {order.tracking_number && (
-          <div style={{ background: "var(--surface)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "12px", padding: "1.25rem 1.5rem", marginTop: "1rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-              <Truck size={16} style={{ color: "#3b82f6" }} />
-              <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", margin: 0, color: "#3b82f6" }}>Track Package</h3>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
-              <div>
-                <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "0 0 0.25rem" }}>Tracking Number</p>
-                <p style={{ fontWeight: 600, fontSize: "0.9rem", margin: 0, fontFamily: "monospace" }}>{order.tracking_number}</p>
+        {/* Order Progress Stepper — always shown */}
+        {(() => {
+          const steps = [
+            { key: "pending",   label: "Order Placed",   icon: "🛒", desc: new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) },
+            { key: "paid",      label: "Payment Confirmed", icon: "💳", desc: order.status === "pending" ? "Awaiting payment" : "Paid" },
+            { key: "shipped",   label: "Shipped",        icon: "🚚", desc: order.shipped_at ? new Date(order.shipped_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Preparing your order" },
+            { key: "delivered", label: "Delivered",      icon: "📦", desc: order.delivered_at ? new Date(order.delivered_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Est. 5–8 business days" },
+          ];
+          const stepOrder = ["pending", "paid", "shipped", "delivered"];
+          const cancelledIdx = order.status === "cancelled" ? -1 : -2;
+          const currentIdx = cancelledIdx === -1 ? -1 : stepOrder.indexOf(order.status);
+
+          return (
+            <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.5rem", marginTop: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
+                <Truck size={16} style={{ color: "var(--gold)" }} />
+                <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", margin: 0 }}>Order Progress</h3>
+                {order.status === "cancelled" && (
+                  <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "0.2rem 0.6rem", borderRadius: "9999px" }}>Cancelled</span>
+                )}
               </div>
-              {order.tracking_url && (
-                <a
-                  href={order.tracking_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-gold"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem" }}
-                >
-                  <ExternalLink size={14} />
-                  Track Package
-                </a>
+
+              {/* Steps */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 0, position: "relative" }}>
+                {steps.map((step, idx) => {
+                  const done    = currentIdx >= idx;
+                  const active  = currentIdx === idx;
+                  const lineEnd = idx < steps.length - 1;
+                  return (
+                    <div key={step.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+                      {/* Connector line */}
+                      {lineEnd && (
+                        <div style={{
+                          position: "absolute", top: "16px", left: "50%", width: "100%", height: "2px",
+                          background: done && currentIdx > idx ? "var(--gold)" : "rgba(255,255,255,0.08)",
+                          transition: "background 0.3s",
+                          zIndex: 0,
+                        }} />
+                      )}
+                      {/* Icon circle */}
+                      <div style={{
+                        width: "32px", height: "32px", borderRadius: "50%", zIndex: 1,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "0.9rem",
+                        background: done ? "rgba(201,168,76,0.15)" : "rgba(255,255,255,0.04)",
+                        border: `2px solid ${done ? "var(--gold)" : "rgba(255,255,255,0.1)"}`,
+                        transition: "all 0.3s",
+                      }}>
+                        {done ? (active ? <Clock size={14} style={{ color: "var(--gold)" }} /> : <CheckCircle2 size={14} style={{ color: "var(--gold)" }} />) : <Circle size={14} style={{ color: "rgba(255,255,255,0.2)" }} />}
+                      </div>
+                      {/* Label */}
+                      <p style={{ fontSize: "0.7rem", fontWeight: done ? 600 : 400, color: done ? "var(--text)" : "var(--muted)", margin: "0.4rem 0 0.1rem", textAlign: "center", lineHeight: 1.3 }}>
+                        {step.label}
+                      </p>
+                      <p style={{ fontSize: "0.62rem", color: "var(--subtle, rgba(255,255,255,0.3))", margin: 0, textAlign: "center" }}>
+                        {step.desc}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Tracking details — only when shipped */}
+              {order.tracking_number && (
+                <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
+                  <div>
+                    <p style={{ color: "var(--muted)", fontSize: "0.7rem", margin: "0 0 0.2rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Tracking Number</p>
+                    <p style={{ fontWeight: 700, fontSize: "0.875rem", margin: 0, fontFamily: "monospace", letterSpacing: "0.04em" }}>{order.tracking_number}</p>
+                  </div>
+                  {order.tracking_url && (
+                    <a
+                      href={order.tracking_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-gold"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontSize: "0.8rem" }}
+                    >
+                      <ExternalLink size={13} />
+                      Track on USPS
+                    </a>
+                  )}
+                </div>
               )}
             </div>
-            {order.shipped_at && (
-              <p style={{ color: "var(--muted)", fontSize: "0.78rem", marginTop: "0.5rem", margin: "0.5rem 0 0" }}>
-                Shipped on {new Date(order.shipped_at).toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" })}
-              </p>
-            )}
-          </div>
-        )}
+          );
+        })()}
 
         {/* Refund Button */}
         {(order.status === "paid" || order.status === "shipped" || order.status === "delivered") && (

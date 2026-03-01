@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/welcome-drip",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/tracking-sync",
+      "schedule": "0 */2 * * *"
     }
   ]
 }

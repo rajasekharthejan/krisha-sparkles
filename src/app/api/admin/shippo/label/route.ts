@@ -10,6 +10,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { purchaseLabel } from "@/lib/shippo";
+import { sendShippingNotification } from "@/lib/email";
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -59,6 +60,23 @@ export async function POST(req: NextRequest) {
     if (updateErr) {
       console.error("Failed to update order after label purchase:", updateErr);
       // Don't fail — label was purchased, just return the data
+    }
+
+    // Fire-and-forget: send "Your order has shipped!" email to customer
+    const { data: orderRow } = await supabaseAdmin
+      .from("orders")
+      .select("email, name")
+      .eq("id", order_id)
+      .single();
+
+    if (orderRow?.email) {
+      sendShippingNotification({
+        email:          orderRow.email,
+        name:           orderRow.name  || "Valued Customer",
+        orderId:        order_id,
+        trackingNumber: transaction.tracking_number,
+        trackingUrl:    transaction.tracking_url_provider,
+      }).catch(console.error); // non-blocking
     }
 
     return NextResponse.json({
