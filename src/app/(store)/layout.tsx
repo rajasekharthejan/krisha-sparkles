@@ -9,6 +9,7 @@ import SocialProofToast from "@/components/store/SocialProofToast";
 import UTMCapture from "@/components/store/UTMCapture";
 import CrispChat from "@/components/store/CrispChat";
 import PWAInstaller from "@/components/store/PWAInstaller";
+import CartSessionGuard from "@/components/store/CartSessionGuard";
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -28,6 +29,8 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
       <CrispChat />
       {/* F9: PWA — shows "Add to Home Screen" banner on mobile after 30s */}
       <PWAInstaller />
+      {/* Cart session guard — clears cart on logout / session expiry */}
+      <CartSessionGuard />
     </>
   );
 }

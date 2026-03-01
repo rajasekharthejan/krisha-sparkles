@@ -27,7 +27,7 @@ export default function Navbar() {
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen,  setSearchOpen]  = useState(false);
-  const { totalItems, toggleCart }    = useCartStore();
+  const { totalItems, toggleCart, clearCart } = useCartStore();
   const { user, setUser, setLoading } = useAuthStore();
   const [pointsBalance, setPointsBalance] = useState<number | null>(null);
   const itemCount = totalItems();
@@ -100,6 +100,7 @@ export default function Navbar() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
     await supabase.auth.signOut();
+    clearCart(); // Clear cart on logout — cart is session-specific
     setUser(null);
     router.push("/");
     router.refresh();
