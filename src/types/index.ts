@@ -56,6 +56,7 @@ export interface Order {
   user_id?: string;
   tracking_number?: string;
   tracking_url?: string;
+  label_url?: string;
   shipped_at?: string;
   delivered_at?: string;
   created_at: string;
