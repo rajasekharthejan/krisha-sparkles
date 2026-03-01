@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
 import { CATEGORIES } from "@/lib/utils";
 import { Upload, X, Plus, Loader2, Trash2 } from "lucide-react";
 import type { Product, ProductVariant } from "@/types";
@@ -46,23 +45,33 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setUploading(true);
-    const supabase = createClient();
-    const uploadedUrls: string[] = [];
+    setError("");
 
-    for (const file of files) {
-      const ext = file.name.split(".").pop();
-      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(filename, file, { cacheControl: "3600" });
+    try {
+      const formData = new FormData();
+      files.forEach((file) => formData.append("files", file));
 
-      if (!uploadError) {
-        const { data } = supabase.storage.from("product-images").getPublicUrl(filename);
-        uploadedUrls.push(data.publicUrl);
+      const res = await fetch("/api/admin/products/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Image upload failed");
+      } else {
+        if (data.urls?.length) {
+          setImages((prev) => [...prev, ...data.urls]);
+        }
+        if (data.errors?.length) {
+          setError(`Some files failed: ${data.errors.join(", ")}`);
+        }
       }
+    } catch {
+      setError("Upload failed — check your connection and try again.");
     }
 
-    setImages((prev) => [...prev, ...uploadedUrls]);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
   }
