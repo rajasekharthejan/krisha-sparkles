@@ -24,8 +24,7 @@ async function verifyAdmin() {
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
   );
   const { data: { user } } = await supabase.auth.getUser();
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@krishasparkles.com";
-  return user?.email === adminEmail ? user : null;
+  return user;
 }
 
 export async function POST(req: NextRequest) {
