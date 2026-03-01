@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatPrice, formatDate } from "@/lib/utils";
-import { ShoppingCart, ChevronDown, Truck, X, Loader2, Eye } from "lucide-react";
+import { ShoppingCart, ChevronDown, Truck, X, Loader2, Eye, Archive } from "lucide-react";
 import type { Order } from "@/types";
 
 const STATUSES = ["pending", "paid", "shipped", "delivered", "cancelled"];
@@ -30,16 +30,28 @@ export default function AdminOrdersPage() {
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
   const [trackingLoading, setTrackingLoading] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
-    // Use the admin API endpoint (service role) so we see ALL orders, bypassing RLS
-    const params = filter !== "all" ? `?status=${filter}` : "";
-    const res = await fetch(`/api/admin/orders/list${params}`);
+    const params = new URLSearchParams();
+    if (filter !== "all") params.set("status", filter);
+    if (showArchived) params.set("archived", "true");
+    const res = await fetch(`/api/admin/orders/list?${params}`);
     const json = await res.json();
     setOrders((json.orders as Order[]) || []);
     setLoading(false);
-  }, [filter]);
+  }, [filter, showArchived]);
+
+  async function archiveAll() {
+    if (!confirm(`Archive all ${filter === "all" ? "" : filter + " "}orders? They will be hidden from default view.`)) return;
+    setArchiving(true);
+    const body = filter !== "all" ? { status: filter } : {};
+    await fetch("/api/admin/orders/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    setArchiving(false);
+    fetchOrders();
+  }
 
   useEffect(() => {
     fetchOrders();
@@ -92,7 +104,23 @@ export default function AdminOrdersPage() {
           <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.75rem", fontWeight: 700 }}>Orders</h1>
           <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.25rem" }}>{orders.length} orders</p>
         </div>
-        {/* Filter */}
+        {/* Actions + Filter */}
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            onClick={() => setShowArchived((v) => { fetchOrders(); return !v; })}
+            style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.4rem 0.9rem", borderRadius: "8px", border: "1px solid rgba(201,168,76,0.25)", background: showArchived ? "rgba(201,168,76,0.12)" : "transparent", color: showArchived ? "var(--gold)" : "var(--muted)", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
+          >
+            <Archive size={13} /> {showArchived ? "Hide Archived" : "View Archived"}
+          </button>
+          <button
+            onClick={archiveAll}
+            disabled={archiving}
+            style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.4rem 0.9rem", borderRadius: "8px", border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)", color: "#f59e0b", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
+          >
+            {archiving ? <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> : <Archive size={13} />}
+            Archive {filter === "all" ? "All" : filter.charAt(0).toUpperCase() + filter.slice(1)}
+          </button>
+        </div>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {["all", ...STATUSES].map((status) => (
             <button

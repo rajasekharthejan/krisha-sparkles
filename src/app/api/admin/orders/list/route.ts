@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
   }
 
   const status = req.nextUrl.searchParams.get("status");
+  const showArchived = req.nextUrl.searchParams.get("archived") === "true";
 
   // Use service role — bypasses RLS, returns ALL orders
   const supabase = await createAdminClient();
@@ -27,6 +28,13 @@ export async function GET(req: NextRequest) {
 
   if (status && status !== "all") {
     query = query.eq("status", status);
+  }
+
+  // By default hide archived; show only when ?archived=true
+  if (showArchived) {
+    query = query.eq("archived", true);
+  } else {
+    query = query.or("archived.is.null,archived.eq.false");
   }
 
   const { data, error } = await query;
