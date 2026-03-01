@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   ArrowLeft, Package, MapPin, User, Mail, Truck, MessageCircle,
-  ExternalLink, Copy, CheckCheck, Loader2, Tag, Scale, ChevronDown, X, Printer
+  ExternalLink, Copy, CheckCheck, Loader2, Tag, X, Printer
 } from "lucide-react";
 import { formatPrice, formatDate } from "@/lib/utils";
 import type { Order } from "@/types";
@@ -52,15 +52,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [copied, setCopied] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  // Label modal state
+  // Shippo label modal state
   const [labelOpen, setLabelOpen] = useState(false);
-  const [weightOz, setWeightOz] = useState("8");
-  const [labelLength, setLabelLength] = useState("10");
-  const [labelWidth, setLabelWidth] = useState("7");
-  const [labelHeight, setLabelHeight] = useState("2");
-  const [labelService, setLabelService] = useState("Priority");
+  const [shippoStep, setShippoStep] = useState<"parcel" | "rates" | "buying" | "done">("parcel");
+  const [parcel, setParcel] = useState({ weight_oz: "8", length_in: "6", width_in: "4", height_in: "2" });
+  const [rates, setRates] = useState<Array<{ object_id: string; provider: string; servicelevel: { name: string }; amount: string; estimated_days: number | null }>>([]);
+  const [selectedRateId, setSelectedRateId] = useState("");
   const [labelLoading, setLabelLoading] = useState(false);
-  const [labelResult, setLabelResult] = useState<{ label_url: string; tracking_number: string; tracking_url: string; rate: string; service: string } | null>(null);
+  const [labelResult, setLabelResult] = useState<{ label_url: string; tracking_number: string; tracking_url: string } | null>(null);
   const [labelError, setLabelError] = useState("");
 
   // WhatsApp modal state
@@ -115,31 +114,58 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setWaOpen(false);
   }
 
-  async function generateLabel() {
+  function openLabelModal() {
+    setLabelOpen(true);
+    setShippoStep("parcel");
+    setRates([]);
+    setSelectedRateId("");
+    setLabelError("");
+    setLabelResult(null);
+  }
+
+  function closeLabelModal() {
+    setLabelOpen(false);
+    setShippoStep("parcel");
+    setRates([]);
+    setLabelError("");
+    setLabelResult(null);
+  }
+
+  async function fetchRates() {
     if (!order) return;
     setLabelLoading(true);
     setLabelError("");
-    setLabelResult(null);
-    const res = await fetch("/api/admin/orders/label", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        order_id: order.id,
-        weight_oz: parseFloat(weightOz),
-        length: parseFloat(labelLength),
-        width: parseFloat(labelWidth),
-        height: parseFloat(labelHeight),
-        service: labelService,
-      }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setLabelResult(data);
-      setOrder((o) => o ? { ...o, tracking_number: data.tracking_number, tracking_url: data.tracking_url, status: "shipped" } : o);
-    } else {
-      setLabelError(data.error || "Failed to generate label");
-    }
+    try {
+      const res = await fetch("/api/admin/shippo/rates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: order.id, ...parcel }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setLabelError(data.error || "Failed to get rates"); setLabelLoading(false); return; }
+      setRates(data.rates || []);
+      setSelectedRateId(data.rates?.[0]?.object_id || "");
+      setShippoStep("rates");
+    } catch { setLabelError("Network error. Please try again."); }
     setLabelLoading(false);
+  }
+
+  async function buyLabel() {
+    if (!order || !selectedRateId) return;
+    setShippoStep("buying");
+    setLabelError("");
+    try {
+      const res = await fetch("/api/admin/shippo/label", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: order.id, rate_id: selectedRateId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setLabelError(data.error || "Failed to purchase label"); setShippoStep("rates"); return; }
+      setLabelResult(data);
+      setShippoStep("done");
+      setOrder((o) => o ? { ...o, tracking_number: data.tracking_number, tracking_url: data.tracking_url, label_url: data.label_url, status: "shipped" as Order["status"] } : o);
+    } catch { setLabelError("Network error."); setShippoStep("rates"); }
   }
 
   function copy(text: string) {
@@ -198,8 +224,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <button onClick={sendShippingEmail} disabled={emailSending} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "8px", background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.25)", color: "var(--gold)", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, transition: "all 0.2s" }}>
             {emailSent ? <><CheckCheck size={15} /> Sent!</> : emailSending ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Sending...</> : <><Mail size={15} /> Email Customer</>}
           </button>
-          <button onClick={() => setLabelOpen(true)} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "8px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.25)", color: "#3b82f6", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, transition: "all 0.2s" }}>
-            <Printer size={15} /> Generate USPS Label
+          <button onClick={openLabelModal} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "8px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.25)", color: "#3b82f6", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, transition: "all 0.2s" }}>
+            <Printer size={15} /> Generate Label
           </button>
         </div>
       </div>
@@ -376,74 +402,122 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {/* USPS Label Modal */}
+      {/* Shippo Label Modal */}
       {labelOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }} onClick={(e) => { if (e.target === e.currentTarget) { setLabelOpen(false); setLabelResult(null); setLabelError(""); } }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "16px", padding: "2rem", width: "100%", maxWidth: "480px" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+          onClick={(e) => { if (e.target === e.currentTarget && shippoStep !== "buying") closeLabelModal(); }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "16px", padding: "2rem", width: "100%", maxWidth: "500px" }}>
+            {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Printer size={18} style={{ color: "#3b82f6" }} /> Generate USPS Label
+                <Package size={18} style={{ color: "var(--gold)" }} />
+                {shippoStep === "done" ? "Label Ready!" : "Create Shipping Label"}
               </h2>
-              <button onClick={() => { setLabelOpen(false); setLabelResult(null); setLabelError(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", display: "flex" }}><X size={18} /></button>
+              {shippoStep !== "buying" && (
+                <button onClick={closeLabelModal} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", display: "flex" }}><X size={18} /></button>
+              )}
             </div>
 
-            {labelResult ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div style={{ padding: "1rem", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "8px" }}>
-                  <p style={{ color: "#10b981", fontWeight: 700, margin: "0 0 0.5rem" }}>✅ Label Generated!</p>
-                  <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: "0 0 0.25rem" }}>Tracking: <span style={{ color: "#3b82f6", fontFamily: "monospace" }}>{labelResult.tracking_number}</span></p>
-                  <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: 0 }}>{labelResult.service} · ${labelResult.rate}</p>
-                </div>
-                <div style={{ display: "flex", gap: "0.75rem" }}>
-                  <a href={labelResult.label_url} target="_blank" rel="noopener noreferrer" className="btn-gold" style={{ flex: 1, justifyContent: "center", textDecoration: "none" }}>
-                    <Printer size={14} /> Print Label
-                  </a>
-                  <a href={labelResult.tracking_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem", padding: "0.5rem", borderRadius: "8px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", color: "#3b82f6", fontSize: "0.8rem", fontWeight: 600, textDecoration: "none" }}>
-                    <Truck size={14} /> Track
-                  </a>
-                </div>
+            {/* Steps */}
+            {shippoStep !== "done" && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem", fontSize: "0.72rem" }}>
+                <span style={{ color: "var(--gold)", fontWeight: 600 }}>1. Package</span>
+                <span style={{ color: "var(--muted)" }}>›</span>
+                <span style={{ color: shippoStep === "rates" || shippoStep === "buying" ? "var(--gold)" : "var(--muted)", fontWeight: shippoStep === "rates" ? 600 : 400 }}>2. Select Rate</span>
+                <span style={{ color: "var(--muted)" }}>›</span>
+                <span style={{ color: shippoStep === "buying" ? "var(--gold)" : "var(--muted)" }}>3. Buy</span>
               </div>
-            ) : (
+            )}
+
+            {labelError && (
+              <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1rem", color: "#ef4444", fontSize: "0.8rem" }}>
+                {labelError}
+              </div>
+            )}
+
+            {/* Step 1: Parcel */}
+            {shippoStep === "parcel" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div>
-                  <label style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>Service</label>
-                  <div style={{ position: "relative" }}>
-                    <select value={labelService} onChange={(e) => setLabelService(e.target.value)} style={{ width: "100%", padding: "0.65rem 2rem 0.65rem 0.75rem", background: "var(--elevated)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: "6px", color: "var(--text)", fontSize: "0.875rem", appearance: "none", cursor: "pointer", outline: "none" }}>
-                      <option value="FirstClass">USPS First Class</option>
-                      <option value="Priority">USPS Priority Mail</option>
-                      <option value="ParcelSelect">USPS Parcel Select</option>
-                      <option value="Express">USPS Priority Mail Express</option>
-                    </select>
-                    <ChevronDown size={13} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-                  </div>
+                <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: 0 }}>Defaults are set for jewelry packages. Adjust if needed.</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  {[
+                    { key: "weight_oz", label: "Weight (oz)" },
+                    { key: "length_in", label: "Length (in)" },
+                    { key: "width_in",  label: "Width (in)" },
+                    { key: "height_in", label: "Height (in)" },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", display: "block", marginBottom: "0.35rem" }}>{label}</label>
+                      <input type="number" min="0.1" step="0.1" value={parcel[key as keyof typeof parcel]}
+                        onChange={(e) => setParcel((p) => ({ ...p, [key]: e.target.value }))}
+                        className="input-dark" style={{ width: "100%", boxSizing: "border-box" }} />
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <label style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>Weight (ounces)</label>
-                  <div style={{ position: "relative" }}>
-                    <Scale size={14} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-                    <input type="number" value={weightOz} onChange={(e) => setWeightOz(e.target.value)} min="1" step="0.5" className="input-dark" style={{ paddingLeft: "2rem", width: "100%", boxSizing: "border-box" }} />
-                  </div>
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>Dimensions (inches): L × W × H</label>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-                    <input type="number" value={labelLength} onChange={(e) => setLabelLength(e.target.value)} placeholder="L" className="input-dark" />
-                    <input type="number" value={labelWidth} onChange={(e) => setLabelWidth(e.target.value)} placeholder="W" className="input-dark" />
-                    <input type="number" value={labelHeight} onChange={(e) => setLabelHeight(e.target.value)} placeholder="H" className="input-dark" />
-                  </div>
-                </div>
-                {labelError && (
-                  <div style={{ padding: "0.75rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "6px", color: "#ef4444", fontSize: "0.8rem" }}>
-                    {labelError}
-                  </div>
-                )}
                 <div style={{ display: "flex", gap: "0.75rem" }}>
-                  <button onClick={() => { setLabelOpen(false); setLabelError(""); }} className="btn-gold-outline" style={{ flex: 1 }}>Cancel</button>
-                  <button onClick={generateLabel} disabled={labelLoading} className="btn-gold" style={{ flex: 1, justifyContent: "center" }}>
-                    {labelLoading ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Generating...</> : <><Printer size={14} /> Generate & Buy</>}
+                  <button onClick={closeLabelModal} className="btn-gold-outline" style={{ flex: 1 }}>Cancel</button>
+                  <button onClick={fetchRates} disabled={labelLoading} className="btn-gold" style={{ flex: 2, justifyContent: "center" }}>
+                    {labelLoading ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Getting Rates...</> : <>Get Shipping Rates ›</>}
                   </button>
                 </div>
-                <p style={{ fontSize: "0.72rem", color: "var(--muted)", margin: 0, textAlign: "center" }}>Requires EASYPOST_API_KEY in Vercel env vars</p>
+              </div>
+            )}
+
+            {/* Step 2: Rates */}
+            {shippoStep === "rates" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: 0 }}>Select a shipping service:</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "260px", overflowY: "auto" }}>
+                  {rates.map((rate) => (
+                    <label key={rate.object_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderRadius: "8px", cursor: "pointer", border: `1px solid ${selectedRateId === rate.object_id ? "var(--gold)" : "rgba(201,168,76,0.15)"}`, background: selectedRateId === rate.object_id ? "var(--gold-muted)" : "var(--elevated)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <input type="radio" name="rate" checked={selectedRateId === rate.object_id} onChange={() => setSelectedRateId(rate.object_id)} style={{ accentColor: "var(--gold)" }} />
+                        <div>
+                          <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 600 }}>{rate.provider} — {rate.servicelevel.name}</p>
+                          <p style={{ margin: 0, fontSize: "0.72rem", color: "var(--muted)" }}>{rate.estimated_days ? `Est. ${rate.estimated_days} day${rate.estimated_days !== 1 ? "s" : ""}` : "Delivery time varies"}</p>
+                        </div>
+                      </div>
+                      <span style={{ fontWeight: 700, color: "var(--gold)" }}>${parseFloat(rate.amount).toFixed(2)}</span>
+                    </label>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button onClick={() => setShippoStep("parcel")} className="btn-gold-outline" style={{ flex: 1 }}>← Back</button>
+                  <button onClick={buyLabel} disabled={!selectedRateId} className="btn-gold" style={{ flex: 2, justifyContent: "center" }}>
+                    <Package size={14} /> Buy Label — ${selectedRateId ? parseFloat(rates.find(r => r.object_id === selectedRateId)?.amount || "0").toFixed(2) : "—"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Buying */}
+            {shippoStep === "buying" && (
+              <div style={{ textAlign: "center", padding: "2rem 0" }}>
+                <Loader2 size={40} style={{ color: "var(--gold)", animation: "spin 1s linear infinite", margin: "0 auto" }} />
+                <p style={{ color: "var(--muted)", marginTop: "1rem" }}>Purchasing label from Shippo...</p>
+              </div>
+            )}
+
+            {/* Step 4: Done */}
+            {shippoStep === "done" && labelResult && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div style={{ textAlign: "center", padding: "1rem 0" }}>
+                  <div style={{ fontSize: "2.5rem" }}>✅</div>
+                  <p style={{ fontWeight: 600, marginTop: "0.5rem" }}>Label purchased successfully!</p>
+                </div>
+                <div style={{ background: "var(--elevated)", borderRadius: "8px", padding: "1rem" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", color: "var(--muted)", margin: "0 0 0.35rem" }}>Tracking Number</p>
+                  <p style={{ fontFamily: "monospace", fontSize: "0.95rem", color: "#3b82f6", margin: 0, fontWeight: 700 }}>{labelResult.tracking_number}</p>
+                </div>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <a href={labelResult.tracking_url} target="_blank" rel="noopener noreferrer" className="btn-gold-outline" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", textDecoration: "none" }}>
+                    <Truck size={14} /> Track
+                  </a>
+                  <a href={labelResult.label_url} target="_blank" rel="noopener noreferrer" className="btn-gold" style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", textDecoration: "none" }}>
+                    <Printer size={14} /> Print Label (PDF)
+                  </a>
+                </div>
+                <button onClick={closeLabelModal} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.8rem", textDecoration: "underline" }}>Close</button>
               </div>
             )}
           </div>
