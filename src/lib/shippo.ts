@@ -104,9 +104,9 @@ export async function createShipment(
     throw new Error(`Shippo shipment error: ${msg}`);
   }
 
-  // Filter to VALID rates only
+  // Filter out explicitly INVALID rates — test key returns null object_state, which is fine
   const rates: ShippoRate[] = (data.rates || []).filter(
-    (r: ShippoRate & { object_state?: string }) => r.object_state === "VALID"
+    (r: ShippoRate & { object_state?: string }) => r.object_state !== "INVALID" && r.amount
   );
 
   if (rates.length === 0) {
