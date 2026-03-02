@@ -1,13 +1,20 @@
 /**
  * GET /api/cron/tracking-sync
- * Runs every 2 hours (configured in vercel.json).
- * For every order with status="shipped" that has a tracking_number,
- * queries the Shippo tracking API and auto-advances status:
- *   TRANSIT        → stays "shipped"  (already correct)
- *   DELIVERED      → "delivered"      (updates DB + logs delivered_at)
- *   RETURNED       → "cancelled"      (rare edge case)
+ * Runs every 5 minutes via GitHub Actions.
  *
- * Auth: Bearer CRON_SECRET header (Vercel sets this automatically).
+ * Full USPS → order status mapping:
+ *
+ *   Shippo status      Substatus              → Order status
+ *   ─────────────────────────────────────────────────────────
+ *   PRE_TRANSIT        (any)                  → "label_created"
+ *   TRANSIT            (not out_for_delivery) → "in_transit"
+ *   TRANSIT            out_for_delivery       → "out_for_delivery"
+ *   DELIVERED          (any)                  → "delivered"
+ *   RETURNED           (any)                  → "returned"
+ *   FAILURE            (any)                  → stays as-is (alert only)
+ *   UNKNOWN            (any)                  → stays as-is
+ *
+ * Auth: Bearer CRON_SECRET header.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -19,6 +26,41 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// All in-progress statuses that still need tracking checks
+const ACTIVE_STATUSES = ["shipped", "label_created", "in_transit", "out_for_delivery"];
+
+/**
+ * Map Shippo tracking response → our order status string.
+ * Returns null if no change is needed.
+ */
+function mapShippoStatus(
+  shippoStatus: string,
+  substatusCode: string | null | undefined
+): string | null {
+  switch (shippoStatus) {
+    case "PRE_TRANSIT":
+      return "label_created";
+
+    case "TRANSIT": {
+      const sub = (substatusCode || "").toLowerCase();
+      if (sub.includes("out_for_delivery") || sub.includes("out for delivery")) {
+        return "out_for_delivery";
+      }
+      return "in_transit";
+    }
+
+    case "DELIVERED":
+      return "delivered";
+
+    case "RETURNED":
+      return "returned";
+
+    default:
+      // UNKNOWN, FAILURE — don't change status
+      return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   // Verify CRON_SECRET
   const auth = req.headers.get("authorization") || "";
@@ -26,11 +68,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Fetch all shipped orders that still need tracking (last 60 days)
+  // Fetch all active orders with tracking (last 60 days)
   const { data: orders, error } = await supabaseAdmin
     .from("orders")
-    .select("id, email, name, tracking_number, tracking_url, shipped_at")
-    .eq("status", "shipped")
+    .select("id, status, tracking_number, tracking_url, shipped_at")
+    .in("status", ACTIVE_STATUSES)
     .not("tracking_number", "is", null)
     .gte("shipped_at", new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString());
 
@@ -40,55 +82,56 @@ export async function GET(req: NextRequest) {
   }
 
   if (!orders || orders.length === 0) {
-    return NextResponse.json({ message: "No shipped orders to check", checked: 0 });
+    return NextResponse.json({ message: "No active orders to check", checked: 0 });
   }
 
-  let delivered = 0;
-  let checked   = 0;
-  const errors: string[] = [];
+  const results: Record<string, number> = {
+    checked: 0, updated: 0, unchanged: 0, errors: 0,
+  };
+  const errorList: string[] = [];
 
   for (const order of orders) {
     try {
-      const carrier = detectCarrier(order.tracking_url || "");
-      const status  = await getTrackingStatus(carrier, order.tracking_number);
+      const carrier     = detectCarrier(order.tracking_url || "");
+      const tracking    = await getTrackingStatus(carrier, order.tracking_number);
+      const subCode     = tracking.substatus?.code;
+      const newStatus   = mapShippoStatus(tracking.status, subCode);
 
-      checked++;
+      results.checked++;
 
-      if (status.status === "DELIVERED") {
-        const { error: updateErr } = await supabaseAdmin
-          .from("orders")
-          .update({
-            status:       "delivered",
-            delivered_at: status.status_date || new Date().toISOString(),
-          })
-          .eq("id", order.id);
-
-        if (updateErr) {
-          errors.push(`Order ${order.id}: ${updateErr.message}`);
-        } else {
-          delivered++;
-          console.log(`[tracking-sync] Marked delivered: ${order.id} (${order.tracking_number})`);
-        }
-      } else if (status.status === "RETURNED") {
-        // Package returned to sender — mark cancelled so admin investigates
-        await supabaseAdmin
-          .from("orders")
-          .update({ status: "cancelled" })
-          .eq("id", order.id);
-        console.log(`[tracking-sync] Marked returned/cancelled: ${order.id}`);
+      // Skip if no mapping or already at this status
+      if (!newStatus || newStatus === order.status) {
+        results.unchanged++;
+        continue;
       }
-      // TRANSIT / PRE_TRANSIT / UNKNOWN / FAILURE → stay as "shipped"
 
+      // Build update payload
+      const update: Record<string, string> = { status: newStatus };
+      if (newStatus === "delivered") {
+        update.delivered_at = tracking.status_date || new Date().toISOString();
+      }
+
+      const { error: updateErr } = await supabaseAdmin
+        .from("orders")
+        .update(update)
+        .eq("id", order.id);
+
+      if (updateErr) {
+        errorList.push(`${order.id}: ${updateErr.message}`);
+        results.errors++;
+      } else {
+        results.updated++;
+        console.log(`[tracking-sync] ${order.id}: ${order.status} → ${newStatus} (${tracking.status}/${subCode || "-"})`);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      errors.push(`Order ${order.id}: ${msg}`);
-      console.error(`[tracking-sync] Error for ${order.id}:`, msg);
+      errorList.push(`${order.id}: ${msg}`);
+      results.errors++;
     }
   }
 
   return NextResponse.json({
-    checked,
-    delivered,
-    errors: errors.length > 0 ? errors : undefined,
+    ...results,
+    ...(errorList.length > 0 && { error_details: errorList }),
   });
 }

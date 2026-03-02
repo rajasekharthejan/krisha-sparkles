@@ -8,13 +8,22 @@ import { formatPrice } from "@/lib/utils";
 import RefundRequestButton from "@/components/store/RefundRequestButton";
 
 const STATUS_COLOR: Record<string, string> = {
-  paid: "#10b981", shipped: "#3b82f6", delivered: "#22c55e",
-  cancelled: "#ef4444", pending: "#f59e0b",
+  pending: "#f59e0b", paid: "#10b981",
+  shipped: "#3b82f6", label_created: "#3b82f6",
+  in_transit: "#6366f1", out_for_delivery: "#f59e0b",
+  delivered: "#22c55e", cancelled: "#ef4444", returned: "#ef4444",
 };
 const STATUS_BG: Record<string, string> = {
-  paid: "rgba(16,185,129,0.1)", shipped: "rgba(59,130,246,0.1)",
-  delivered: "rgba(34,197,94,0.1)", cancelled: "rgba(239,68,68,0.1)",
-  pending: "rgba(245,158,11,0.1)",
+  pending: "rgba(245,158,11,0.1)", paid: "rgba(16,185,129,0.1)",
+  shipped: "rgba(59,130,246,0.1)", label_created: "rgba(59,130,246,0.1)",
+  in_transit: "rgba(99,102,241,0.1)", out_for_delivery: "rgba(245,158,11,0.1)",
+  delivered: "rgba(34,197,94,0.1)", cancelled: "rgba(239,68,68,0.1)", returned: "rgba(239,68,68,0.1)",
+};
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Pending", paid: "Paid", shipped: "Label Created",
+  label_created: "Label Created", in_transit: "In Transit",
+  out_for_delivery: "Out for Delivery", delivered: "Delivered",
+  cancelled: "Cancelled", returned: "Returned",
 };
 
 interface OrderDetailPageProps {
@@ -63,7 +72,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             background: STATUS_BG[order.status] || "rgba(100,100,100,0.1)",
             color: STATUS_COLOR[order.status] || "var(--muted)",
           }}>
-            {order.status}
+            {STATUS_LABEL[order.status] || order.status}
           </span>
         </div>
 
@@ -144,22 +153,28 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         {/* Order Progress Stepper — always shown */}
         {(() => {
           const steps = [
-            { key: "pending",   label: "Order Placed",   icon: "🛒", desc: new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) },
-            { key: "paid",      label: "Payment Confirmed", icon: "💳", desc: order.status === "pending" ? "Awaiting payment" : "Paid" },
-            { key: "shipped",   label: "Shipped",        icon: "🚚", desc: order.shipped_at ? new Date(order.shipped_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Preparing your order" },
-            { key: "delivered", label: "Delivered",      icon: "📦", desc: order.delivered_at ? new Date(order.delivered_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Est. 5–8 business days" },
+            { key: "pending",          label: "Order Placed",      desc: new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) },
+            { key: "paid",             label: "Payment Confirmed", desc: order.status === "pending" ? "Awaiting payment" : "Paid via Stripe" },
+            { key: "label_created",    label: "Label Created",     desc: order.shipped_at ? new Date(order.shipped_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Preparing shipment" },
+            { key: "in_transit",       label: "In Transit",        desc: "On the way" },
+            { key: "out_for_delivery", label: "Out for Delivery",  desc: "Arriving today!" },
+            { key: "delivered",        label: "Delivered",         desc: order.delivered_at ? new Date(order.delivered_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Est. 5–8 business days" },
           ];
-          const stepOrder = ["pending", "paid", "shipped", "delivered"];
-          const cancelledIdx = order.status === "cancelled" ? -1 : -2;
-          const currentIdx = cancelledIdx === -1 ? -1 : stepOrder.indexOf(order.status);
+
+          // "shipped" maps to label_created in the stepper
+          const displayStatus = order.status === "shipped" ? "label_created" : order.status;
+          const stepOrder = ["pending", "paid", "label_created", "in_transit", "out_for_delivery", "delivered"];
+          const currentIdx = (order.status === "cancelled" || order.status === "returned") ? -1 : stepOrder.indexOf(displayStatus);
 
           return (
             <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.5rem", marginTop: "1rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
                 <Truck size={16} style={{ color: "var(--gold)" }} />
                 <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", margin: 0 }}>Order Progress</h3>
-                {order.status === "cancelled" && (
-                  <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "0.2rem 0.6rem", borderRadius: "9999px" }}>Cancelled</span>
+                {(order.status === "cancelled" || order.status === "returned") && (
+                  <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "0.2rem 0.6rem", borderRadius: "9999px" }}>
+                    {order.status === "returned" ? "Returned to Sender" : "Cancelled"}
+                  </span>
                 )}
               </div>
 
