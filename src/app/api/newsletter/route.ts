@@ -2,9 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendWelcomeEmail } from "@/lib/email";
 
+/** Regex-free email validation — immune to ReDoS */
+function isValidEmail(email: unknown): boolean {
+  if (typeof email !== "string" || email.length < 3 || email.length > 254) return false;
+  const at = email.lastIndexOf("@");
+  if (at < 1) return false;
+  const domain = email.slice(at + 1);
+  return domain.includes(".") && !domain.startsWith(".") && !domain.endsWith(".");
+}
+
 export async function POST(req: NextRequest) {
   const { email, name } = await req.json();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!isValidEmail(email)) {
     return NextResponse.json({ error: "Valid email required" }, { status: 400 });
   }
 

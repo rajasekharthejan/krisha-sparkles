@@ -110,9 +110,10 @@ export async function POST(req: NextRequest) {
 
   const supabase = getAdminClient();
 
+  const safeName = name.slice(0, 200); // bound input before regex to prevent ReDoS
   let slug =
-    rawSlug?.trim() ||
-    name
+    rawSlug?.trim().slice(0, 200) ||
+    safeName
       .toLowerCase()
       .trim()
       .replace(/[^\w\s-]/g, "")

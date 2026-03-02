@@ -25,9 +25,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "product_id and email are required" }, { status: 400 });
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // Regex-free email validation — immune to ReDoS
+    const atIdx = typeof email === "string" ? email.lastIndexOf("@") : -1;
+    const domain = atIdx > 0 ? email.slice(atIdx + 1) : "";
+    if (typeof email !== "string" || email.length < 3 || email.length > 254 || atIdx < 1 || !domain.includes(".") || domain.startsWith(".") || domain.endsWith(".")) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 

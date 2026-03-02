@@ -7,6 +7,9 @@ on:
   workflow_dispatch:
     # Allow manual trigger from GitHub Actions UI for testing
 
+permissions:
+  contents: read   # read-only; no write access to repo or packages
+
 jobs:
   sync:
     name: Sync Tracking Status

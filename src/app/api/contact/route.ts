@@ -3,11 +3,20 @@ import { createClient } from "@supabase/supabase-js";
 
 const VALID_SUBJECTS = ["order_issue", "return_request", "product_question", "general", "other"];
 
+/** Regex-free email validation — immune to ReDoS */
+function isValidEmail(email: unknown): boolean {
+  if (typeof email !== "string" || email.length < 3 || email.length > 254) return false;
+  const at = email.lastIndexOf("@");
+  if (at < 1) return false;
+  const domain = email.slice(at + 1);
+  return domain.includes(".") && !domain.startsWith(".") && !domain.endsWith(".");
+}
+
 export async function POST(req: NextRequest) {
   const { name, email, subject, message } = await req.json();
 
   if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+  if (!isValidEmail(email))
     return NextResponse.json({ error: "Valid email required" }, { status: 400 });
   if (!subject || !VALID_SUBJECTS.includes(subject))
     return NextResponse.json({ error: "Valid subject required" }, { status: 400 });

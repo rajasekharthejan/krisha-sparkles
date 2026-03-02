@@ -122,23 +122,37 @@ export type ShippoTrackingStatusCode =
   | "UNKNOWN" | "PRE_TRANSIT" | "TRANSIT" | "DELIVERED"
   | "RETURNED" | "FAILURE";
 
+export interface ShippoTrackingEvent {
+  status: string;
+  status_details: string;
+  status_date: string | null;
+  location?: { city?: string; state?: string; country?: string } | null;
+}
+
 export interface ShippoTrackingStatus {
   status: ShippoTrackingStatusCode;
   status_details: string;
   status_date: string | null;
   location?: { city?: string; state?: string; country?: string } | null;
   substatus?: { code?: string; text?: string } | null;
+  tracking_history: ShippoTrackingEvent[];
 }
 
 /**
  * Detect USPS / UPS / FedEx carrier from the tracking URL Shippo returns.
+ * Uses proper URL hostname parsing to avoid substring-match false positives.
  * Defaults to "usps" which covers ~95% of domestic shipments.
  */
 export function detectCarrier(trackingUrl: string): string {
-  const url = (trackingUrl || "").toLowerCase();
-  if (url.includes("ups.com"))   return "ups";
-  if (url.includes("fedex.com")) return "fedex";
-  if (url.includes("dhl.com"))   return "dhl";
+  try {
+    const { hostname } = new URL(trackingUrl);
+    const h = hostname.toLowerCase();
+    if (h === "wwwapps.ups.com" || h.endsWith(".ups.com"))   return "ups";
+    if (h === "www.fedex.com"   || h.endsWith(".fedex.com")) return "fedex";
+    if (h === "www.dhl.com"     || h.endsWith(".dhl.com"))   return "dhl";
+  } catch {
+    // invalid/relative URL — fall through to default
+  }
   return "usps";
 }
 
@@ -156,17 +170,29 @@ export async function getTrackingStatus(
     { headers: headers() }
   );
   if (!res.ok) {
-    return { status: "UNKNOWN", status_details: "Could not fetch status", status_date: null };
+    return { status: "UNKNOWN", status_details: "Could not fetch status", status_date: null, tracking_history: [] };
   }
   const data = await res.json();
   const ts = data.tracking_status;
-  if (!ts) return { status: "UNKNOWN", status_details: "No tracking info yet", status_date: null };
+  if (!ts) return { status: "UNKNOWN", status_details: "No tracking info yet", status_date: null, tracking_history: [] };
+
+  // Map raw history events to our typed interface
+  const tracking_history: ShippoTrackingEvent[] = (data.tracking_history || []).map(
+    (e: Record<string, unknown>) => ({
+      status:         String(e.status         || ""),
+      status_details: String(e.status_details || ""),
+      status_date:    (e.status_date as string) || null,
+      location:       (e.location as ShippoTrackingEvent["location"]) || null,
+    })
+  );
+
   return {
-    status:         ts.status        || "UNKNOWN",
-    status_details: ts.status_details || "",
-    status_date:    ts.status_date    || null,
-    location:       ts.location       || null,
-    substatus:      ts.substatus      || null,
+    status:          ts.status         || "UNKNOWN",
+    status_details:  ts.status_details || "",
+    status_date:     ts.status_date    || null,
+    location:        ts.location       || null,
+    substatus:       ts.substatus      || null,
+    tracking_history,
   };
 }
 

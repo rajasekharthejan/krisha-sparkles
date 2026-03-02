@@ -37,9 +37,19 @@ export function buildUnsubscribeUrl(email: string): string {
   return `${base}/api/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function confirmationHtml(email: string, success: boolean) {
+  const safeEmail = escapeHtml(email);
   const message = success
-    ? `<strong style="color:#10b981">${email}</strong> has been unsubscribed. You won't receive marketing emails from us.`
+    ? `<strong style="color:#10b981">${safeEmail}</strong> has been unsubscribed. You won't receive marketing emails from us.`
     : `Something went wrong. Please email us at <a href="mailto:hello@shopkrisha.com" style="color:#c9a84c;">hello@shopkrisha.com</a> to unsubscribe.`;
 
   return `<!DOCTYPE html>

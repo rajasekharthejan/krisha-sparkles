@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+TEST_REPORT.md
+*.test-report.md
 
 # next.js
 /.next/

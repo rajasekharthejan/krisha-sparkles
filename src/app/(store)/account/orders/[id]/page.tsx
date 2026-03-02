@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Package, MapPin, CreditCard, Truck, ExternalLink, CheckCircle2, Circle, Clock } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Truck, ExternalLink, CheckCircle2, Circle, Clock, MapPinned } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import RefundRequestButton from "@/components/store/RefundRequestButton";
 
@@ -239,6 +239,64 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   )}
                 </div>
               )}
+
+              {/* Tracking scan history */}
+              {Array.isArray(order.tracking_events) && order.tracking_events.length > 0 && (() => {
+                type TrackingEvent = { status: string; status_details: string; status_date: string | null; location?: { city?: string; state?: string; country?: string } | null };
+                const events: TrackingEvent[] = [...order.tracking_events].reverse();
+                const SCAN_ICONS: Record<string, string> = {
+                  PRE_TRANSIT: "🏷️", TRANSIT: "🚚", DELIVERED: "✅", RETURNED: "↩️", FAILURE: "⚠️",
+                };
+                return (
+                  <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "1rem" }}>
+                      <MapPinned size={14} style={{ color: "var(--gold)" }} />
+                      <p style={{ color: "var(--muted)", fontSize: "0.7rem", margin: 0, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Tracking Updates</p>
+                    </div>
+                    <div style={{ position: "relative", paddingLeft: "1.25rem" }}>
+                      {/* Vertical line */}
+                      <div style={{ position: "absolute", left: "7px", top: "8px", bottom: "8px", width: "1px", background: "rgba(201,168,76,0.2)" }} />
+                      {events.map((ev, i) => {
+                        const isLatest = i === 0;
+                        const date = ev.status_date ? new Date(ev.status_date) : null;
+                        const loc = ev.location;
+                        const locStr = loc ? [loc.city, loc.state].filter(Boolean).join(", ") : null;
+                        return (
+                          <div key={i} style={{ position: "relative", marginBottom: i < events.length - 1 ? "1rem" : 0 }}>
+                            {/* Dot */}
+                            <div style={{
+                              position: "absolute", left: "-1.2rem", top: "3px",
+                              width: "10px", height: "10px", borderRadius: "50%",
+                              background: isLatest ? "var(--gold)" : "rgba(201,168,76,0.3)",
+                              border: isLatest ? "2px solid var(--gold)" : "2px solid rgba(201,168,76,0.4)",
+                              boxShadow: isLatest ? "0 0 6px rgba(201,168,76,0.5)" : "none",
+                            }} />
+                            <div>
+                              <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem", flexWrap: "wrap" }}>
+                                <span style={{ fontSize: "0.85rem", fontWeight: isLatest ? 600 : 400, color: isLatest ? "var(--text)" : "var(--muted)" }}>
+                                  {SCAN_ICONS[ev.status] || "📦"} {ev.status_details}
+                                </span>
+                              </div>
+                              <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.15rem", flexWrap: "wrap" }}>
+                                {date && (
+                                  <span style={{ fontSize: "0.72rem", color: "var(--subtle, rgba(255,255,255,0.35))" }}>
+                                    {date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                                  </span>
+                                )}
+                                {locStr && (
+                                  <span style={{ fontSize: "0.72rem", color: "rgba(201,168,76,0.7)" }}>
+                                    📍 {locStr}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}

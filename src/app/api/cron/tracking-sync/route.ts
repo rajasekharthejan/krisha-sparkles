@@ -105,10 +105,13 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      // Build update payload
-      const update: Record<string, string> = { status: newStatus };
+      // Build update payload — always save latest tracking_history if non-empty
+      const update: Record<string, unknown> = { status: newStatus };
       if (newStatus === "delivered") {
         update.delivered_at = tracking.status_date || new Date().toISOString();
+      }
+      if (tracking.tracking_history && tracking.tracking_history.length > 0) {
+        update.tracking_events = tracking.tracking_history;
       }
 
       const { error: updateErr } = await supabaseAdmin
