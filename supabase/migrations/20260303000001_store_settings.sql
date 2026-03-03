@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS store_settings (
 
 -- RLS: public read (checkout page needs it), only service_role writes (admin API)
 ALTER TABLE store_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read_settings" ON store_settings;
 CREATE POLICY "public_read_settings" ON store_settings FOR SELECT USING (true);
 
 -- Default shipping configuration
