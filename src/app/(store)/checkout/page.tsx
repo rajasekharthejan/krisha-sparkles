@@ -35,6 +35,10 @@ function CheckoutContent() {
   const [pointsDiscount, setPointsDiscount] = useState(0);
   const [pointsError, setPointsError] = useState("");
   const [pointsLoading, setPointsLoading] = useState(false);
+  // Shipping settings (fetched from DB — admin-configurable)
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(75);
+  const [standardRate, setStandardRate] = useState(9.99);
+  const [expressRate, setExpressRate] = useState(14.99);
   // Shipping destination + address
   const [shippingState, setShippingState] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -51,11 +55,10 @@ function CheckoutContent() {
   const cancelled = searchParams.get("cancelled");
 
   const subtotal = totalPrice();
-  const FREE_SHIPPING_THRESHOLD = 75;
-  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
+  const freeShipping = subtotal >= freeShippingThreshold;
 
   // Auto-set shipping method based on subtotal
-  const shippingCost = freeShipping ? 0 : selectedShipping === "express" ? 14.99 : 9.99;
+  const shippingCost = freeShipping ? 0 : selectedShipping === "express" ? expressRate : standardRate;
 
   const TX_TAX_RATE = 0.0825; // 8.25% (6.25% TX state + 2% Melissa/Collin County local)
   const afterDiscounts = Math.max(0, subtotal - discount - appliedCredit - pointsDiscount);
@@ -132,6 +135,16 @@ function CheckoutContent() {
         }
       })
       .catch(() => {});
+
+    // Fetch admin-configurable shipping settings (falls back to defaults on error)
+    fetch("/api/settings/shipping")
+      .then(r => r.json())
+      .then(d => {
+        if (d.free_shipping_threshold !== undefined) setFreeShippingThreshold(d.free_shipping_threshold);
+        if (d.standard_shipping_rate !== undefined)  setStandardRate(d.standard_shipping_rate);
+        if (d.express_shipping_rate !== undefined)   setExpressRate(d.express_shipping_rate);
+      })
+      .catch(() => {}); // keep defaults on network error
   }, []);
 
   async function applyCoupon() {
@@ -626,15 +639,15 @@ function CheckoutContent() {
                 <Check size={15} style={{ color: "#10b981" }} />
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0, color: "#10b981" }}>Free Standard Shipping</p>
-                  <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "2px 0 0" }}>5–10 business days · Orders $75+</p>
+                  <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "2px 0 0" }}>5–10 business days · Orders ${freeShippingThreshold.toFixed(0)}+</p>
                 </div>
                 <span style={{ fontWeight: 700, color: "#10b981" }}>FREE</span>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {[
-                  { value: "standard" as const, label: "Standard Shipping", desc: "5–10 business days", price: 9.99 },
-                  { value: "express" as const, label: "Express Shipping",  desc: "2–4 business days",  price: 14.99 },
+                  { value: "standard" as const, label: "Standard Shipping", desc: "5–10 business days", price: standardRate },
+                  { value: "express" as const, label: "Express Shipping",  desc: "2–4 business days",  price: expressRate },
                 ].map((opt) => (
                   <label
                     key={opt.value}

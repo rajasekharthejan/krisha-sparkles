@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Warehouse,
   LogOut, ExternalLink, Upload, TrendingUp, Tag, Star,
   RotateCcw, Mail, MessageCircle, Instagram, Layout,
-  BookOpen, Gift, BarChart3, Boxes, Music2, Users, RefreshCw,
+  BookOpen, Gift, BarChart3, Boxes, Music2, Users, RefreshCw, Settings,
 } from "lucide-react";
 
 const GROUPS = [
@@ -61,6 +61,12 @@ const GROUPS = [
     label: "Support",
     items: [
       { href: "/admin/messages", label: "Messages", icon: <MessageCircle size={16} /> },
+    ],
+  },
+  {
+    label: "Config",
+    items: [
+      { href: "/admin/settings", label: "Settings", icon: <Settings size={16} /> },
     ],
   },
 ];
@@ -181,7 +187,7 @@ export default function AdminSidebar() {
 
         {/* Version */}
         <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.15)", textAlign: "center", padding: "0.4rem 0 0", letterSpacing: "0.05em" }}>
-          v7.24 · Krisha Sparkles Admin
+          v7.25 · Krisha Sparkles Admin
         </p>
       </div>
     </aside>
