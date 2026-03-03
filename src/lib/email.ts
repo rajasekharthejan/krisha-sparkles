@@ -599,19 +599,28 @@ export async function sendAbandonedCart24hr(params: {
 
 // ── Welcome Email (Day 0 drip) ─────────────────────────────────────────────
 // Sent immediately when a new subscriber signs up.
-// Includes WELCOME10 promo code for 10% off first order.
+// couponCode is the unique generated code (e.g. WLCM-4K2M-R7NX) — 15% off, single-use.
 
-export async function sendWelcomeEmail({ email, name }: { email: string; name?: string | null }) {
+export async function sendWelcomeEmail({
+  email,
+  name,
+  couponCode = "WELCOME15",
+}: {
+  email: string;
+  name?: string | null;
+  couponCode?: string;
+}) {
   const resend = getResend();
   if (!resend) return;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   const greeting = name ? `Hi ${name}!` : "Hi there!";
+  const subject  = `Welcome to Krisha Sparkles ✨ Here's 15% off`;
 
   const { data: d7, error: e7 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
     to: email,
-    subject: "Welcome to Krisha Sparkles ✨ Here's 10% off",
+    subject,
     headers: {
       "List-Unsubscribe": `<${buildUnsubscribeUrl(email)}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -632,14 +641,18 @@ export async function sendWelcomeEmail({ email, name }: { email: string; name?: 
       <h1 style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#c9a84c;margin:0 0 12px;">
         Welcome to the Family!
       </h1>
-      <p style="color:#aaa;font-size:15px;line-height:1.7;margin:0 0 24px;">
+      <p style="color:#aaa;font-size:15px;line-height:1.7;margin:0 0 8px;">
         ${greeting} Thank you for joining Krisha Sparkles — your destination for exquisite
-        Indian imitation jewelry in the USA. As a welcome gift, here's 10% off your first order:
+        Indian imitation jewelry in the USA.
       </p>
-      <div style="background:#0a0a0a;border:2px dashed rgba(201,168,76,0.5);border-radius:8px;padding:14px 24px;display:inline-block;margin-bottom:24px;">
-        <p style="font-family:monospace;font-size:24px;font-weight:700;color:#c9a84c;margin:0;letter-spacing:0.12em;">WELCOME10</p>
+      <p style="color:#aaa;font-size:15px;line-height:1.7;margin:0 0 24px;">
+        As a welcome gift, here's <strong style="color:#c9a84c;">15% off</strong> your first order.
+        This is your <strong style="color:#f5f5f5;">unique, personal code</strong> — it can only be used once:
+      </p>
+      <div style="background:#0a0a0a;border:2px dashed rgba(201,168,76,0.5);border-radius:8px;padding:16px 28px;display:inline-block;margin-bottom:8px;">
+        <p style="font-family:monospace;font-size:26px;font-weight:700;color:#c9a84c;margin:0;letter-spacing:0.14em;">${couponCode}</p>
       </div>
-      <br>
+      <p style="color:#666;font-size:12px;margin:0 0 24px;">Single-use · Expires in 30 days · 15% off any order</p>
       <a href="${siteUrl}/shop" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:16px;">
         Start Shopping →
       </a>
@@ -663,7 +676,7 @@ export async function sendWelcomeEmail({ email, name }: { email: string; name?: 
 </body>
 </html>`,
   });
-  logEmail({ type: "welcome", to: email, subject: "Welcome to Krisha Sparkles ✨ Here's 10% off", resend_id: d7?.id, status: e7 ? "failed" : "sent", error: e7?.message });
+  logEmail({ type: "welcome", to: email, subject, resend_id: d7?.id, status: e7 ? "failed" : "sent", error: e7?.message });
 }
 
 // ── Welcome Drip — Day 3: Best Sellers ────────────────────────────────────

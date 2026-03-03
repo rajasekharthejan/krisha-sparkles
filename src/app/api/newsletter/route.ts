@@ -11,10 +11,39 @@ function isValidEmail(email: unknown): boolean {
   return domain.includes(".") && !domain.startsWith(".") && !domain.endsWith(".");
 }
 
+/** Strip non-digits from phone; return null if fewer than 7 digits remain */
+function normalizePhone(phone: unknown): string | null {
+  if (typeof phone !== "string") return null;
+  const digits = phone.replace(/\D/g, "");
+  return digits.length >= 7 ? digits : null;
+}
+
+/**
+ * Generate a unique welcome coupon code like WLCM-4K2M-R7NX.
+ * Uses unambiguous chars (no 0/O, I/1).
+ */
+function generateWelcomeCouponCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const rand4 = () =>
+    Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `WLCM-${rand4()}-${rand4()}`;
+}
+
 export async function POST(req: NextRequest) {
-  const { email, name } = await req.json();
+  const body = await req.json();
+  const { email, name, phone } = body;
+
   if (!isValidEmail(email)) {
     return NextResponse.json({ error: "Valid email required" }, { status: 400 });
+  }
+
+  // Phone is required for coupon generation (anti-abuse)
+  const cleanPhone = normalizePhone(phone);
+  if (!cleanPhone) {
+    return NextResponse.json(
+      { error: "Valid phone number required to claim your coupon" },
+      { status: 400 }
+    );
   }
 
   const supabase = createClient(
@@ -23,31 +52,99 @@ export async function POST(req: NextRequest) {
   );
 
   const normalizedEmail = email.toLowerCase().trim();
-  const normalizedName = name?.trim() || null;
+  const normalizedName  = name?.trim() || null;
 
-  const { data: existing } = await supabase
+  // ── Anti-abuse: one coupon per phone number ──────────────────────────────
+  const { data: phoneExists } = await supabase
     .from("newsletter_subscribers")
-    .select("id, active")
-    .eq("email", normalizedEmail)
-    .single();
+    .select("id, email, welcome_coupon_code")
+    .eq("phone", cleanPhone)
+    .maybeSingle();
 
-  if (existing) {
-    if (!existing.active) {
-      await supabase.from("newsletter_subscribers").update({ active: true }).eq("id", existing.id);
-      return NextResponse.json({ success: true, message: "Welcome back! You've been re-subscribed." });
-    }
-    return NextResponse.json({ success: true, message: "You're already subscribed!" });
+  if (phoneExists) {
+    // Phone already used — block regardless of email
+    return NextResponse.json(
+      { error: "A welcome coupon has already been generated for this phone number." },
+      { status: 409 }
+    );
   }
 
-  const { error } = await supabase.from("newsletter_subscribers").insert({
+  // ── Check if email already subscribed ────────────────────────────────────
+  const { data: emailExists } = await supabase
+    .from("newsletter_subscribers")
+    .select("id, active, welcome_coupon_code")
+    .eq("email", normalizedEmail)
+    .maybeSingle();
+
+  if (emailExists) {
+    if (!emailExists.active) {
+      // Reactivate — add phone and generate a new coupon
+      const couponCode = generateWelcomeCouponCode();
+      await insertCoupon(supabase, couponCode);
+      await supabase
+        .from("newsletter_subscribers")
+        .update({ active: true, phone: cleanPhone, welcome_coupon_code: couponCode })
+        .eq("id", emailExists.id);
+      sendWelcomeEmail({ email: normalizedEmail, name: normalizedName, couponCode }).catch(() => {});
+      return NextResponse.json({
+        success: true,
+        couponCode,
+        message: "Welcome back! Your unique 15% off code has been sent to your email.",
+      });
+    }
+    // Already active — don't issue a second coupon to this email
+    return NextResponse.json(
+      { error: "This email is already subscribed. Each email can only receive one welcome coupon." },
+      { status: 409 }
+    );
+  }
+
+  // ── New subscriber — generate unique coupon ───────────────────────────────
+  const couponCode = generateWelcomeCouponCode();
+
+  // Insert coupon into coupons table: 15% off, single-use, expires 30 days
+  const couponError = await insertCoupon(supabase, couponCode);
+  if (couponError) {
+    return NextResponse.json({ error: "Failed to generate coupon" }, { status: 500 });
+  }
+
+  // Subscribe with phone + coupon code
+  const { error: subError } = await supabase.from("newsletter_subscribers").insert({
     email: normalizedEmail,
-    name: normalizedName,
+    name:  normalizedName,
+    phone: cleanPhone,
+    welcome_coupon_code: couponCode,
   });
 
-  if (error) return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
+  if (subError) {
+    return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
+  }
 
-  // Day 0 drip: send welcome email with WELCOME10 code — fire and forget
-  sendWelcomeEmail({ email: normalizedEmail, name: normalizedName }).catch(() => {});
+  // Send welcome email with the unique code — fire and forget
+  sendWelcomeEmail({ email: normalizedEmail, name: normalizedName, couponCode }).catch(() => {});
 
-  return NextResponse.json({ success: true, message: "Successfully subscribed! Check your email for a welcome gift 🎁" });
+  return NextResponse.json({
+    success: true,
+    couponCode,
+    message: "Your unique 15% off code has been sent to your email! 🎁",
+  });
+}
+
+/** Insert a single-use 15% welcome coupon into the coupons table */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function insertCoupon(supabase: any, code: string): Promise<string | null> {
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+  const { error } = await supabase.from("coupons").insert({
+    code,
+    discount_type:  "percentage",
+    discount_value: 15,
+    max_uses:       1,
+    uses_count:     0,
+    active:         true,
+    expires_at:     expiresAt,
+    description:    "Welcome gift — 15% off first order (unique, single-use)",
+    source:         "welcome",
+    min_order_amount: 0,
+  });
+  return error?.message ?? null;
 }

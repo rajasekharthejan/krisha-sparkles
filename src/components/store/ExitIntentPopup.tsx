@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Sparkles, Mail } from "lucide-react";
+import { X, Sparkles, Mail, Phone } from "lucide-react";
 
 const SHOWN_KEY = "ks_exit_shown";
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -14,8 +14,10 @@ function setCouponCookie(code: string) {
 export default function ExitIntentPopup() {
   const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
   const [error, setError] = useState("");
 
   // Mobile scroll tracking
@@ -73,21 +75,29 @@ export default function ExitIntentPopup() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !phone.trim()) return;
     setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({
+          email: email.trim(),
+          phone: phone.trim(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Something went wrong. Please try again.");
       } else {
-        // Set coupon cookie so checkout can auto-apply it
-        setCouponCookie("WELCOME15");
+        // Use the unique coupon code returned from the API
+        const code = data.couponCode || "";
+        if (code) {
+          setCouponCode(code);
+          // Set coupon cookie so checkout can auto-apply it
+          setCouponCookie(code);
+        }
         setSuccess(true);
       }
     } catch {
@@ -154,7 +164,7 @@ export default function ExitIntentPopup() {
         {!success ? (
           <>
             {/* Header */}
-            <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
+            <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
               <div
                 style={{
                   width: "56px",
@@ -182,12 +192,13 @@ export default function ExitIntentPopup() {
                 Wait &mdash; Here&apos;s 15% Off!
               </h2>
               <p style={{ color: "var(--muted)", fontSize: "0.875rem", lineHeight: 1.6 }}>
-                Join our list and get <strong style={{ color: "var(--gold)" }}>WELCOME15</strong> applied at checkout automatically.
+                Enter your email &amp; phone to receive a <strong style={{ color: "var(--gold)" }}>unique 15% off code</strong> — yours alone, single-use.
               </p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+              {/* Email */}
               <div style={{ position: "relative" }}>
                 <Mail
                   size={15}
@@ -211,24 +222,48 @@ export default function ExitIntentPopup() {
                 />
               </div>
 
+              {/* Phone */}
+              <div style={{ position: "relative" }}>
+                <Phone
+                  size={15}
+                  style={{
+                    position: "absolute",
+                    left: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "var(--muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Phone number (e.g. +1 555 123 4567)"
+                  required
+                  className="input-dark"
+                  style={{ paddingLeft: "2.5rem", width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
+
               {error && (
                 <p style={{ color: "#ef4444", fontSize: "0.8rem", margin: 0 }}>{error}</p>
               )}
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !email.trim() || !phone.trim()}
                 className="btn-gold"
-                style={{ width: "100%", justifyContent: "center", fontSize: "1rem" }}
+                style={{ width: "100%", justifyContent: "center", fontSize: "1rem", marginTop: "0.25rem" }}
               >
                 {loading ? (
-                  <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <span style={{ width: "16px", height: "16px", border: "2px solid currentColor", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
                 ) : null}
-                {loading ? "Claiming..." : "Claim 15% Off"}
+                {loading ? "Generating your code..." : "Claim My 15% Off ✦"}
               </button>
 
               <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--subtle)", margin: 0 }}>
-                No spam. Unsubscribe anytime.
+                No spam. Unsubscribe anytime. We respect your privacy.
               </p>
             </form>
           </>
@@ -247,9 +282,27 @@ export default function ExitIntentPopup() {
             >
               You&apos;re In!
             </h3>
-            <p style={{ color: "var(--muted)", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "1.5rem" }}>
-              Code <strong style={{ color: "var(--gold)", fontFamily: "monospace" }}>WELCOME15</strong> has been applied &mdash; it will auto-fill at checkout!
+            <p style={{ color: "var(--muted)", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "0.75rem" }}>
+              Your unique 15% off code has been <strong style={{ color: "var(--text)" }}>sent to your email</strong> and auto-applied at checkout:
             </p>
+            {couponCode && (
+              <div style={{
+                background: "rgba(201,168,76,0.06)",
+                border: "2px dashed rgba(201,168,76,0.4)",
+                borderRadius: "10px",
+                padding: "0.75rem 1.5rem",
+                display: "inline-block",
+                marginBottom: "1.25rem",
+              }}>
+                <p style={{ fontFamily: "monospace", fontSize: "1.3rem", fontWeight: 700, color: "var(--gold)", margin: 0, letterSpacing: "0.14em" }}>
+                  {couponCode}
+                </p>
+                <p style={{ fontSize: "0.7rem", color: "var(--muted)", margin: "4px 0 0" }}>
+                  Single-use · Expires in 30 days
+                </p>
+              </div>
+            )}
+            <br />
             <button onClick={close} className="btn-gold" style={{ justifyContent: "center" }}>
               Shop Now &#10024;
             </button>
