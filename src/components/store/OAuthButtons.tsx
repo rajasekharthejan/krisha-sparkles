@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -15,7 +15,6 @@ interface OAuthButtonsProps {
 export default function OAuthButtons({ redirectTo = "/account" }: OAuthButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<"google" | "apple" | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const redirectRef = useRef(redirectTo);
   redirectRef.current = redirectTo;
 
@@ -60,14 +59,15 @@ export default function OAuthButtons({ redirectTo = "/account" }: OAuthButtonsPr
 
   // Handle mobile fallback: if redirected back from google-callback with token in sessionStorage
   useEffect(() => {
-    if (searchParams.get("google_callback") === "1") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google_callback") === "1") {
       const token = sessionStorage.getItem("google_id_token");
       if (token) {
         sessionStorage.removeItem("google_id_token");
         signInWithGoogleToken(token);
       }
     }
-  }, [searchParams, signInWithGoogleToken]);
+  }, [signInWithGoogleToken]);
 
   // Open Google OAuth2 popup (implicit flow — returns id_token in URL fragment)
   function handleGoogleClick() {

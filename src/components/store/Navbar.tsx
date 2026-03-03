@@ -63,7 +63,7 @@ export default function Navbar() {
       .from("user_profiles")
       .select("points_balance")
       .eq("id", user.id)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data) setPointsBalance(data.points_balance ?? 0);
       });
