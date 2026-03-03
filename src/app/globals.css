@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /* ─── Design Tokens ─────────────────────────────────────── */
-:root {
+:root,
+[data-theme="dark"] {
   --bg: #0a0a0a;
   --surface: #111111;
   --elevated: #1a1a1a;
@@ -13,6 +14,51 @@
   --text: #f5f5f5;
   --muted: #888888;
   --subtle: #555555;
+  --glass-bg: rgba(17, 17, 17, 0.85);
+  --input-border: rgba(201, 168, 76, 0.2);
+  --input-focus: rgba(201, 168, 76, 0.12);
+  --divider: rgba(255, 255, 255, 0.06);
+  --theme-color: #0a0a0a;
+}
+
+/* ─── Pearl White Theme ──────────────────────────────────── */
+[data-theme="pearl"] {
+  --bg: #faf9f7;
+  --surface: #ffffff;
+  --elevated: #f0ece6;
+  --gold: #96680e;
+  --gold-light: #c9a84c;
+  --gold-dark: #6b4a08;
+  --gold-muted: rgba(150, 104, 14, 0.08);
+  --gold-border: rgba(150, 104, 14, 0.22);
+  --text: #1a1410;
+  --muted: #6b6260;
+  --subtle: #aaa89e;
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --input-border: rgba(150, 104, 14, 0.22);
+  --input-focus: rgba(150, 104, 14, 0.08);
+  --divider: rgba(0, 0, 0, 0.07);
+  --theme-color: #faf9f7;
+}
+
+/* ─── Midnight Rose Theme ────────────────────────────────── */
+[data-theme="rose"] {
+  --bg: #130d10;
+  --surface: #1e1118;
+  --elevated: #281620;
+  --gold: #d4836a;
+  --gold-light: #e8a890;
+  --gold-dark: #a05840;
+  --gold-muted: rgba(212, 131, 106, 0.15);
+  --gold-border: rgba(212, 131, 106, 0.28);
+  --text: #f5ede8;
+  --muted: #9e8880;
+  --subtle: #5e4840;
+  --glass-bg: rgba(30, 17, 24, 0.88);
+  --input-border: rgba(212, 131, 106, 0.22);
+  --input-focus: rgba(212, 131, 106, 0.10);
+  --divider: rgba(255, 255, 255, 0.05);
+  --theme-color: #130d10;
 }
 
 /* ─── Base Reset ─────────────────────────────────────────── */
@@ -54,7 +100,7 @@ h1, h2, h3, h4, h5 {
 .text-gold { color: var(--gold); }
 
 .text-gold-gradient {
-  background: linear-gradient(135deg, #c9a84c 0%, #e8c96a 50%, #c9a84c 100%);
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -62,7 +108,7 @@ h1, h2, h3, h4, h5 {
 
 /* ─── Glass Card ─────────────────────────────────────────── */
 .glass {
-  background: rgba(17, 17, 17, 0.8);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--gold-border);
@@ -76,7 +122,7 @@ h1, h2, h3, h4, h5 {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 2rem;
-  background: linear-gradient(135deg, #c9a84c, #e8c96a, #c9a84c);
+  background: linear-gradient(135deg, var(--gold), var(--gold-light), var(--gold));
   background-size: 200%;
   color: #0a0a0a;
   font-weight: 600;
@@ -151,7 +197,7 @@ h1, h2, h3, h4, h5 {
   left: 0;
   right: 0;
   padding: 0.75rem;
-  background: linear-gradient(to top, rgba(10,10,10,0.9), transparent);
+  background: linear-gradient(to top, color-mix(in srgb, var(--bg) 90%, transparent), transparent);
   transform: translateY(100%);
   transition: transform 0.3s ease;
 }
@@ -205,7 +251,7 @@ h1, h2, h3, h4, h5 {
   width: 100%;
   padding: 0.75rem 1rem;
   background: var(--elevated);
-  border: 1px solid rgba(201, 168, 76, 0.2);
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   color: var(--text);
   font-size: 0.875rem;
@@ -215,7 +261,7 @@ h1, h2, h3, h4, h5 {
 .input-dark::placeholder { color: var(--subtle); }
 .input-dark:focus {
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.1);
+  box-shadow: 0 0 0 3px var(--input-focus);
 }
 
 /* ─── Admin Table ────────────────────────────────────────── */

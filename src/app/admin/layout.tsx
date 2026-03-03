@@ -12,7 +12,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
+    // Force dark theme for admin panel regardless of store theme setting
+    <div data-theme="dark" style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <AdminSidebar />
       <div style={{ flex: 1, overflow: "auto" }}>
         {children}

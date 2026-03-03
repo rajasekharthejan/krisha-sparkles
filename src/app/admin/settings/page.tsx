@@ -2,8 +2,40 @@
 import { useState, useEffect } from "react";
 import {
   Settings, Truck, DollarSign, Package, Save, Loader2,
-  CheckCircle, AlertCircle, RefreshCw,
+  CheckCircle, AlertCircle, RefreshCw, Palette, Check,
 } from "lucide-react";
+
+const THEMES = [
+  {
+    key: "dark",
+    name: "Dark Gold",
+    desc: "Luxurious black with gold accents — the signature Krisha Sparkles look",
+    preview: {
+      bg: "#0a0a0a", surface: "#111", text: "#f5f5f5",
+      gold: "#c9a84c", muted: "#888",
+    },
+  },
+  {
+    key: "pearl",
+    name: "Pearl White",
+    desc: "Clean white with deep amber — bright, elegant & modern",
+    preview: {
+      bg: "#faf9f7", surface: "#fff", text: "#1a1410",
+      gold: "#96680e", muted: "#6b6260",
+    },
+  },
+  {
+    key: "rose",
+    name: "Midnight Rose",
+    desc: "Deep burgundy with rose gold — romantic & feminine",
+    preview: {
+      bg: "#130d10", surface: "#1e1118", text: "#f5ede8",
+      gold: "#d4836a", muted: "#9e8880",
+    },
+  },
+] as const;
+
+type ThemeKey = typeof THEMES[number]["key"];
 
 interface ShippingSettings {
   free_shipping_threshold: string;
@@ -23,16 +55,23 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  // Theme
+  const [activeTheme, setActiveTheme] = useState<ThemeKey>("dark");
+  const [themeSaving, setThemeSaving] = useState(false);
+  const [themeSuccess, setThemeSuccess] = useState(false);
 
   async function loadSettings() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/settings/shipping");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load");
+      const [shippingRes, themeRes] = await Promise.all([
+        fetch("/api/admin/settings/shipping"),
+        fetch("/api/admin/settings/theme"),
+      ]);
+      const shippingData = await shippingRes.json();
+      if (!shippingRes.ok) throw new Error(shippingData.error || "Failed to load");
       const map: Record<string, string> = {};
-      for (const s of data.settings as { key: string; value: string }[]) {
+      for (const s of shippingData.settings as { key: string; value: string }[]) {
         map[s.key] = s.value;
       }
       setShipping({
@@ -40,6 +79,10 @@ export default function AdminSettingsPage() {
         standard_shipping_rate:  map.standard_shipping_rate  ?? DEFAULTS.standard_shipping_rate,
         express_shipping_rate:   map.express_shipping_rate   ?? DEFAULTS.express_shipping_rate,
       });
+      if (themeRes.ok) {
+        const themeData = await themeRes.json();
+        setActiveTheme((themeData.theme || "dark") as ThemeKey);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load settings");
     }
@@ -47,6 +90,26 @@ export default function AdminSettingsPage() {
   }
 
   useEffect(() => { loadSettings(); }, []);
+
+  async function handleSaveTheme(themeKey: ThemeKey) {
+    setThemeSaving(true);
+    setThemeSuccess(false);
+    try {
+      const res = await fetch("/api/admin/settings/theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: themeKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setActiveTheme(themeKey);
+      setThemeSuccess(true);
+      setTimeout(() => setThemeSuccess(false), 3000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save theme");
+    }
+    setThemeSaving(false);
+  }
 
   async function handleSaveShipping(e: React.FormEvent) {
     e.preventDefault();
@@ -148,6 +211,92 @@ export default function AdminSettingsPage() {
         >
           <RefreshCw size={14} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
         </button>
+      </div>
+
+      {/* ── Theme Picker ────────────────────────────────────────────────── */}
+      <div style={card}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1.25rem" }}>
+          <Palette size={16} style={{ color: "var(--gold)" }} />
+          <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>
+            Store Theme
+          </h2>
+          {themeSuccess && (
+            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.3rem", color: "#10b981", fontSize: "0.8rem" }}>
+              <CheckCircle size={13} /> Theme updated! Refresh the store to see it.
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.85rem" }}>
+          {THEMES.map((t) => {
+            const isActive = activeTheme === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => handleSaveTheme(t.key)}
+                disabled={themeSaving}
+                style={{
+                  position: "relative",
+                  padding: "1rem",
+                  borderRadius: "12px",
+                  border: `2px solid ${isActive ? t.preview.gold : "rgba(255,255,255,0.1)"}`,
+                  background: isActive ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.01)",
+                  cursor: themeSaving ? "wait" : "pointer",
+                  transition: "all 0.2s",
+                  textAlign: "left",
+                  opacity: themeSaving && !isActive ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; }}
+                onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
+              >
+                {/* Active check */}
+                {isActive && (
+                  <div style={{
+                    position: "absolute", top: "0.5rem", right: "0.5rem",
+                    width: "20px", height: "20px", borderRadius: "50%",
+                    background: t.preview.gold,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Check size={11} style={{ color: "#0a0a0a" }} />
+                  </div>
+                )}
+
+                {/* Mini preview */}
+                <div style={{
+                  width: "100%", height: "64px", borderRadius: "8px",
+                  background: t.preview.bg, border: `1px solid ${t.preview.gold}40`,
+                  marginBottom: "0.75rem", position: "relative", overflow: "hidden",
+                  display: "flex", flexDirection: "column", padding: "8px",
+                  gap: "4px",
+                }}>
+                  {/* Simulated nav bar */}
+                  <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                    <div style={{ width: "28px", height: "4px", borderRadius: "2px", background: t.preview.gold }} />
+                    <div style={{ flex: 1, height: "3px", borderRadius: "2px", background: t.preview.muted, opacity: 0.4 }} />
+                    <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: t.preview.surface, border: `1px solid ${t.preview.gold}60` }} />
+                  </div>
+                  {/* Simulated product card */}
+                  <div style={{ display: "flex", gap: "5px", marginTop: "4px" }}>
+                    {[0,1,2].map(i => (
+                      <div key={i} style={{ flex: 1, height: "28px", borderRadius: "4px", background: t.preview.surface, border: `1px solid ${t.preview.gold}30` }}>
+                        <div style={{ height: "3px", borderRadius: "2px", background: t.preview.gold, margin: "5px 4px 0", opacity: 0.7 }} />
+                        <div style={{ height: "2px", borderRadius: "2px", background: t.preview.muted, margin: "3px 4px", opacity: 0.3 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <p style={{ fontWeight: 700, fontSize: "0.85rem", margin: "0 0 2px", color: "var(--text)" }}>{t.name}</p>
+                <p style={{ fontSize: "0.72rem", color: "var(--muted)", margin: 0, lineHeight: 1.4 }}>{t.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        <p style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.85rem" }}>
+          💡 Theme applies to the customer-facing store instantly. Admin panel always stays dark.
+          {themeSaving && <span style={{ marginLeft: "0.5rem" }}><Loader2 size={12} style={{ display: "inline", animation: "spin 1s linear infinite" }} /> Saving...</span>}
+        </p>
       </div>
 
       {error && (

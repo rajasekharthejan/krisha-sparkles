@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
+import { unstable_noStore as noStore } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 import { Analytics } from "@vercel/analytics/react";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import GTMScript from "@/components/GTMScript";
@@ -8,6 +10,31 @@ import TikTokPixel from "@/components/TikTokPixel";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
 import "./globals.css";
+
+const THEME_COLORS: Record<string, string> = {
+  dark:  "#0a0a0a",
+  pearl: "#faf9f7",
+  rose:  "#130d10",
+};
+
+async function getActiveTheme(): Promise<string> {
+  noStore(); // always read latest — skips Next.js data cache
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data } = await supabase
+      .from("store_settings")
+      .select("value")
+      .eq("key", "active_theme")
+      .single();
+    const theme = data?.value || "dark";
+    return ["dark", "pearl", "rose"].includes(theme) ? theme : "dark";
+  } catch {
+    return "dark"; // never break the site if DB is unreachable
+  }
+}
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -66,18 +93,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const theme = await getActiveTheme();
+  const themeColor = THEME_COLORS[theme] ?? "#0a0a0a";
+
   return (
-    <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
+    <html lang="en" data-theme={theme} className={`${playfair.variable} ${inter.variable}`}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="theme-color" content="#0a0a0a" />
+        <meta name="theme-color" content={themeColor} />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
