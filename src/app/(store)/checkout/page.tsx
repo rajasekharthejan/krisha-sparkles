@@ -5,10 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
-import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2, Gift, Star, MapPin, Truck } from "lucide-react";
+import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2, Gift, Star, MapPin, Truck, BookmarkCheck } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { trackEvent } from "@/lib/trackEvent";
+import AddressAutocomplete from "@/components/store/AddressAutocomplete";
 
 function CheckoutContent() {
   const { items, totalPrice } = useCartStore();
@@ -51,6 +52,13 @@ function CheckoutContent() {
   // WhatsApp
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
   const [whatsAppPhone, setWhatsAppPhone] = useState("");
+
+  // Saved address
+  const [savedAddress, setSavedAddress] = useState<null | {
+    firstName: string; lastName: string; addressLine1: string;
+    addressLine2: string; city: string; state: string; zipCode: string;
+  }>(null);
+  const [savedAddressUsed, setSavedAddressUsed] = useState(false);
   const searchParams = useSearchParams();
   const cancelled = searchParams.get("cancelled");
 
@@ -145,6 +153,26 @@ function CheckoutContent() {
         if (d.express_shipping_rate !== undefined)   setExpressRate(d.express_shipping_rate);
       })
       .catch(() => {}); // keep defaults on network error
+
+    // Fetch & auto-populate saved address for logged-in users
+    fetch("/api/user/address")
+      .then(r => r.json())
+      .then(d => {
+        if (d.address) {
+          const a = d.address;
+          setSavedAddress(a);
+          // Auto-populate all fields
+          setFirstName(a.firstName || "");
+          setLastName(a.lastName || "");
+          setAddressLine1(a.addressLine1 || "");
+          setAddressLine2(a.addressLine2 || "");
+          setCity(a.city || "");
+          setZipCode(a.zipCode || "");
+          if (a.state) setShippingState(a.state);
+          setSavedAddressUsed(true);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   async function applyCoupon() {
@@ -274,6 +302,21 @@ function CheckoutContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
       if (data.url) {
+        // Save address for next time (non-blocking — don't delay checkout)
+        fetch("/api/user/address", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            addressLine1: addressLine1.trim(),
+            addressLine2: addressLine2.trim(),
+            city: city.trim(),
+            state: shippingState,
+            zipCode: zipCode.trim(),
+          }),
+        }).catch(() => {}); // fire-and-forget — never block checkout
+
         // Consent-gated: fires Meta Pixel + TikTok + GTM only if user accepted cookies
         // Apple 5.1.2: no-op on iOS WKWebView (consent auto-declined)
         trackEvent("InitiateCheckout", {
@@ -569,6 +612,11 @@ function CheckoutContent() {
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.85rem" }}>
               <MapPin size={15} style={{ color: "var(--gold)" }} />
               <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>Shipping Address</span>
+              {savedAddressUsed && savedAddress && (
+                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.7rem", color: "var(--gold)", fontWeight: 600 }}>
+                  <BookmarkCheck size={12} /> Saved address loaded
+                </span>
+              )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
               <input
@@ -586,10 +634,17 @@ function CheckoutContent() {
                 style={{ width: "100%" }}
               />
             </div>
-            <input
+            <AddressAutocomplete
               value={addressLine1}
-              onChange={(e) => setAddressLine1(e.target.value)}
-              placeholder="Address line 1 *"
+              onChange={setAddressLine1}
+              onAddressSelect={(parsed) => {
+                setAddressLine1(parsed.line1);
+                if (parsed.city)  setCity(parsed.city);
+                if (parsed.state) setShippingState(parsed.state);
+                if (parsed.zipCode) setZipCode(parsed.zipCode);
+                setSavedAddressUsed(false); // mark as manually entered
+              }}
+              placeholder="Address line 1 *  (start typing for suggestions)"
               className="input-dark"
               style={{ width: "100%", marginBottom: "0.5rem" }}
             />
