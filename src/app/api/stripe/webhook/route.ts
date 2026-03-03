@@ -157,20 +157,31 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Increment coupon usage count if a coupon was applied
+      // Increment coupon usage count if a coupon was applied.
+      // Auto-deactivate the coupon when max_uses is reached (whichever comes first:
+      // expiry date is checked at validate time; max_uses limit is enforced here).
       const couponId = metadata?.coupon_id;
       if (couponId) {
         try {
           const { data: coupon } = await supabaseAdmin
             .from("coupons")
-            .select("uses_count")
+            .select("uses_count, max_uses")
             .eq("id", couponId)
             .single();
           if (coupon) {
+            const newCount = coupon.uses_count + 1;
+            // Auto-deactivate when max_uses limit is reached
+            const hitLimit = coupon.max_uses !== null && newCount >= coupon.max_uses;
             await supabaseAdmin
               .from("coupons")
-              .update({ uses_count: coupon.uses_count + 1 })
+              .update({
+                uses_count: newCount,
+                ...(hitLimit ? { active: false } : {}),
+              })
               .eq("id", couponId);
+            if (hitLimit) {
+              console.log(`Coupon ${couponId} auto-deactivated — usage limit (${coupon.max_uses}) reached`);
+            }
           }
         } catch {
           console.error("Failed to increment coupon usage");
