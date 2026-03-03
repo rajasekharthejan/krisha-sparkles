@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   ArrowLeft, Package, MapPin, User, Mail, Truck, MessageCircle,
-  ExternalLink, Copy, CheckCheck, Loader2, Tag, X, Printer
+  ExternalLink, Copy, CheckCheck, Loader2, Tag, X, Printer, RotateCcw, AlertTriangle
 } from "lucide-react";
 import { formatPrice, formatDate } from "@/lib/utils";
 import type { Order } from "@/types";
@@ -69,6 +69,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   // Email notification state
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+
+  // Refund state
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refunding, setRefunding] = useState(false);
+  const [refundError, setRefundError] = useState("");
+  const [refundDone, setRefundDone] = useState(false);
 
   useEffect(() => {
     fetch(`/api/admin/orders/${id}`)
@@ -168,6 +174,26 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     } catch { setLabelError("Network error."); setShippoStep("rates"); }
   }
 
+  async function issueRefund() {
+    if (!order) return;
+    setRefunding(true);
+    setRefundError("");
+    try {
+      const res = await fetch("/api/admin/orders/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: order.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setRefundError(data.error || "Refund failed"); setRefunding(false); return; }
+      setRefundDone(true);
+      setOrder((o) => o ? { ...o, status: "cancelled" as Order["status"] } : o);
+    } catch {
+      setRefundError("Network error. Please try again.");
+    }
+    setRefunding(false);
+  }
+
   function copy(text: string) {
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -227,6 +253,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <button onClick={openLabelModal} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "8px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.25)", color: "#3b82f6", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, transition: "all 0.2s" }}>
             <Printer size={15} /> Generate Label
           </button>
+          {/* Cancel & Refund — only for paid / shipped orders */}
+          {(order.status === "paid" || order.status === "shipped") && (
+            <button
+              onClick={() => { setRefundOpen(true); setRefundError(""); setRefundDone(false); }}
+              style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "8px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, transition: "all 0.2s" }}
+            >
+              <RotateCcw size={15} /> Cancel &amp; Refund
+            </button>
+          )}
         </div>
       </div>
 
@@ -398,6 +433,91 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel & Refund Modal */}
+      {refundOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+          onClick={(e) => { if (e.target === e.currentTarget && !refunding) setRefundOpen(false); }}>
+          <div style={{ background: "var(--surface)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: "16px", padding: "2rem", width: "100%", maxWidth: "440px" }}>
+
+            {!refundDone ? (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <AlertTriangle size={18} style={{ color: "#ef4444" }} />
+                    </div>
+                    <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>
+                      Cancel &amp; Refund
+                    </h2>
+                  </div>
+                  {!refunding && (
+                    <button onClick={() => setRefundOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", display: "flex" }}><X size={18} /></button>
+                  )}
+                </div>
+
+                {/* Order summary */}
+                <div style={{ background: "var(--elevated)", borderRadius: "10px", padding: "1rem", marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.825rem" }}>
+                    <span style={{ color: "var(--muted)" }}>Order</span>
+                    <span style={{ fontFamily: "monospace", fontWeight: 600 }}>#{order.id.slice(-8).toUpperCase()}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.825rem" }}>
+                    <span style={{ color: "var(--muted)" }}>Customer</span>
+                    <span>{order.name}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 700, color: "#ef4444", paddingTop: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: "0.25rem" }}>
+                    <span>Refund Amount</span>
+                    <span>{formatPrice(order.total)}</span>
+                  </div>
+                </div>
+
+                <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: "0 0 0.5rem", lineHeight: 1.5 }}>
+                  This will <strong style={{ color: "var(--text)" }}>immediately cancel the order</strong> and issue a full refund of <strong style={{ color: "#ef4444" }}>{formatPrice(order.total)}</strong> back to the customer&apos;s original payment method via Stripe.
+                </p>
+                <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 1.25rem", lineHeight: 1.5 }}>
+                  ⚠️ The original Stripe processing fee (~2.9% + $0.30) is non-refundable. The customer will receive their money within 3–5 business days.
+                </p>
+
+                {refundError && (
+                  <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1rem", color: "#ef4444", fontSize: "0.8rem" }}>
+                    {refundError}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button onClick={() => setRefundOpen(false)} disabled={refunding} className="btn-gold-outline" style={{ flex: 1 }}>
+                    Keep Order
+                  </button>
+                  <button
+                    onClick={issueRefund}
+                    disabled={refunding}
+                    style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", padding: "0.65rem 1.25rem", borderRadius: "8px", background: refunding ? "rgba(239,68,68,0.3)" : "#ef4444", border: "none", color: "#fff", fontWeight: 700, fontSize: "0.875rem", cursor: refunding ? "wait" : "pointer", transition: "all 0.2s" }}
+                  >
+                    {refunding
+                      ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Processing Refund...</>
+                      : <><RotateCcw size={15} /> Confirm Refund</>
+                    }
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* Success state */
+              <div style={{ textAlign: "center", padding: "1rem 0" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>✅</div>
+                <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.5rem" }}>Refund Issued!</h2>
+                <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: "0 0 0.35rem" }}>
+                  <strong style={{ color: "var(--text)" }}>{formatPrice(order.total)}</strong> will be returned to {order.name}&apos;s card within 3–5 business days.
+                </p>
+                <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: "0 0 1.5rem" }}>A confirmation email has been sent to {order.email}.</p>
+                <button onClick={() => setRefundOpen(false)} className="btn-gold" style={{ display: "inline-flex" }}>
+                  Close
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
