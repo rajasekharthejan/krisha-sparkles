@@ -1,7 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
+
+const GOOGLE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ??
+  "392749034350-2rul3jqdu59240tg2l595enhqejcqoev.apps.googleusercontent.com";
 
 interface OAuthButtonsProps {
   redirectTo?: string; // where to go after successful OAuth
@@ -9,8 +14,98 @@ interface OAuthButtonsProps {
 
 export default function OAuthButtons({ redirectTo = "/account" }: OAuthButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<"google" | "apple" | null>(null);
+  const [gsiReady, setGsiReady] = useState(false);
+  const router = useRouter();
+  const redirectRef = useRef(redirectTo);
+  redirectRef.current = redirectTo;
 
-  async function handleOAuth(provider: "google" | "apple") {
+  // Handle Google credential response (called by GIS after user picks account)
+  const handleGoogleCredential = useCallback(
+    async (response: { credential: string }) => {
+      setLoadingProvider("google");
+      try {
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: "google",
+          token: response.credential,
+        });
+        if (error) {
+          console.error("Google sign-in error:", error.message);
+          setLoadingProvider(null);
+          return;
+        }
+        // Success — redirect
+        router.push(redirectRef.current);
+      } catch (err) {
+        console.error("Google sign-in failed:", err);
+        setLoadingProvider(null);
+      }
+    },
+    [router]
+  );
+
+  // Load Google Identity Services script
+  useEffect(() => {
+    // If already loaded
+    if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
+      setGsiReady(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setGsiReady(true);
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup only if we added it
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+  }, []);
+
+  // Initialize GIS when script is ready
+  useEffect(() => {
+    if (!gsiReady) return;
+    const g = (window as any).google?.accounts?.id;
+    if (!g) return;
+
+    g.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredential,
+      ux_mode: "popup",
+    });
+  }, [gsiReady, handleGoogleCredential]);
+
+  // Trigger Google One Tap / account chooser popup
+  function handleGoogleClick() {
+    if (loadingProvider) return;
+    const g = (window as any).google?.accounts?.id;
+    if (!g) {
+      // Fallback: if GIS didn't load, use old redirect flow
+      handleOAuthRedirect("google");
+      return;
+    }
+    setLoadingProvider("google");
+    // prompt() shows the One Tap / account chooser
+    g.prompt((notification: any) => {
+      // If the user dismisses the prompt or it's suppressed, reset state
+      if (
+        notification.isNotDisplayed() ||
+        notification.isSkippedMoment() ||
+        notification.isDismissedMoment()
+      ) {
+        setLoadingProvider(null);
+      }
+    });
+  }
+
+  // Fallback redirect flow (used for Apple, or if GIS fails to load)
+  async function handleOAuthRedirect(provider: "google" | "apple") {
     setLoadingProvider(provider);
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,10 +139,10 @@ export default function OAuthButtons({ redirectTo = "/account" }: OAuthButtonsPr
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-      {/* Google */}
+      {/* Google — uses GIS popup (no redirect to supabase.co) */}
       <button
         type="button"
-        onClick={() => handleOAuth("google")}
+        onClick={handleGoogleClick}
         disabled={loadingProvider !== null}
         style={btnBase}
         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.22)"; }}
@@ -66,10 +161,10 @@ export default function OAuthButtons({ redirectTo = "/account" }: OAuthButtonsPr
         Continue with Google
       </button>
 
-      {/* Apple */}
+      {/* Apple — still uses redirect flow */}
       <button
         type="button"
-        onClick={() => handleOAuth("apple")}
+        onClick={() => handleOAuthRedirect("apple")}
         disabled={loadingProvider !== null}
         style={btnBase}
         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.22)"; }}
