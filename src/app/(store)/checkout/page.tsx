@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
-import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2, Gift, Star } from "lucide-react";
+import { ShoppingBag, ArrowLeft, Lock, Tag, Check, X, Loader2, Gift, Star, MapPin, Truck } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { trackEvent } from "@/lib/trackEvent";
@@ -35,6 +35,15 @@ function CheckoutContent() {
   const [pointsDiscount, setPointsDiscount] = useState(0);
   const [pointsError, setPointsError] = useState("");
   const [pointsLoading, setPointsLoading] = useState(false);
+  // Shipping destination + address
+  const [shippingState, setShippingState] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [selectedShipping, setSelectedShipping] = useState<"free" | "standard" | "express">("standard");
   // WhatsApp
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
   const [whatsAppPhone, setWhatsAppPhone] = useState("");
@@ -42,7 +51,57 @@ function CheckoutContent() {
   const cancelled = searchParams.get("cancelled");
 
   const subtotal = totalPrice();
-  const finalTotal = Math.max(0, subtotal - discount - appliedCredit - pointsDiscount);
+  const FREE_SHIPPING_THRESHOLD = 75;
+  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
+
+  // Auto-set shipping method based on subtotal
+  const shippingCost = freeShipping ? 0 : selectedShipping === "express" ? 14.99 : 9.99;
+
+  const TX_TAX_RATE = 0.0825; // 8.25% (6.25% TX state + 2% Melissa/Collin County local)
+  const afterDiscounts = Math.max(0, subtotal - discount - appliedCredit - pointsDiscount);
+  const taxAmount = shippingState === "TX"
+    ? Math.round(afterDiscounts * TX_TAX_RATE * 100) / 100
+    : 0;
+  const finalTotal = Math.max(0, afterDiscounts + taxAmount + shippingCost);
+
+  // All required fields filled before proceeding to Stripe
+  const canCheckout = !!(
+    shippingState &&
+    firstName.trim() &&
+    lastName.trim() &&
+    addressLine1.trim() &&
+    city.trim() &&
+    zipCode.trim()
+  );
+
+  const US_STATES = [
+    { code: "AL", name: "Alabama" }, { code: "AK", name: "Alaska" },
+    { code: "AZ", name: "Arizona" }, { code: "AR", name: "Arkansas" },
+    { code: "CA", name: "California" }, { code: "CO", name: "Colorado" },
+    { code: "CT", name: "Connecticut" }, { code: "DE", name: "Delaware" },
+    { code: "FL", name: "Florida" }, { code: "GA", name: "Georgia" },
+    { code: "HI", name: "Hawaii" }, { code: "ID", name: "Idaho" },
+    { code: "IL", name: "Illinois" }, { code: "IN", name: "Indiana" },
+    { code: "IA", name: "Iowa" }, { code: "KS", name: "Kansas" },
+    { code: "KY", name: "Kentucky" }, { code: "LA", name: "Louisiana" },
+    { code: "ME", name: "Maine" }, { code: "MD", name: "Maryland" },
+    { code: "MA", name: "Massachusetts" }, { code: "MI", name: "Michigan" },
+    { code: "MN", name: "Minnesota" }, { code: "MS", name: "Mississippi" },
+    { code: "MO", name: "Missouri" }, { code: "MT", name: "Montana" },
+    { code: "NE", name: "Nebraska" }, { code: "NV", name: "Nevada" },
+    { code: "NH", name: "New Hampshire" }, { code: "NJ", name: "New Jersey" },
+    { code: "NM", name: "New Mexico" }, { code: "NY", name: "New York" },
+    { code: "NC", name: "North Carolina" }, { code: "ND", name: "North Dakota" },
+    { code: "OH", name: "Ohio" }, { code: "OK", name: "Oklahoma" },
+    { code: "OR", name: "Oregon" }, { code: "PA", name: "Pennsylvania" },
+    { code: "RI", name: "Rhode Island" }, { code: "SC", name: "South Carolina" },
+    { code: "SD", name: "South Dakota" }, { code: "TN", name: "Tennessee" },
+    { code: "TX", name: "Texas" }, { code: "UT", name: "Utah" },
+    { code: "VT", name: "Vermont" }, { code: "VA", name: "Virginia" },
+    { code: "WA", name: "Washington" }, { code: "WV", name: "West Virginia" },
+    { code: "WI", name: "Wisconsin" }, { code: "WY", name: "Wyoming" },
+    { code: "DC", name: "District of Columbia" },
+  ];
 
   // Pre-fill coupon from exit intent cookie
   useEffect(() => {
@@ -158,6 +217,7 @@ function CheckoutContent() {
 
   async function handleCheckout() {
     if (items.length === 0) return;
+    if (!canCheckout) { setError("Please fill in all required shipping fields."); return; }
     setLoading(true);
     setError("");
     try {
@@ -180,6 +240,21 @@ function CheckoutContent() {
           // Loyalty points redemption
           pointsToRedeem: usePoints ? pointsToRedeem : 0,
           pointsDiscount: usePoints ? pointsDiscount : 0,
+          // Sales tax + shipping
+          shippingState,
+          taxAmount,
+          shippingCost,
+          shippingMethod: freeShipping ? "free" : selectedShipping,
+          // Full shipping address (locked — not re-collected on Stripe page)
+          shippingAddress: {
+            name: `${firstName.trim()} ${lastName.trim()}`,
+            line1: addressLine1.trim(),
+            line2: addressLine2.trim() || null,
+            city: city.trim(),
+            state: shippingState,
+            zip: zipCode.trim(),
+            country: "US",
+          },
         }),
       });
 
@@ -450,70 +525,213 @@ function CheckoutContent() {
           </div>
         )}
 
-        {/* Totals */}
-        <div
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--gold-border)",
-            borderRadius: "12px",
-            padding: "1.5rem",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-            <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>Subtotal</span>
-            <span style={{ fontSize: "0.875rem" }}>{formatPrice(subtotal)}</span>
+        {/* ── Shipping Destination ── */}
+        <div style={{ background: "var(--surface)", border: `1px solid ${!shippingState ? "rgba(245,158,11,0.4)" : "var(--gold-border)"}`, borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+            <MapPin size={15} style={{ color: "var(--gold)" }} />
+            <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>Shipping Destination</span>
+            {!shippingState && <span style={{ marginLeft: "auto", fontSize: "0.72rem", color: "#f59e0b", fontWeight: 600 }}>Required</span>}
           </div>
-          {appliedCoupon && discount > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-              <span style={{ color: "#10b981", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                <Tag size={13} /> Coupon ({appliedCoupon.code})
-              </span>
-              <span style={{ fontSize: "0.875rem", color: "#10b981", fontWeight: 600 }}>
-                &minus;{formatPrice(discount)}
-              </span>
-            </div>
+          <select
+            value={shippingState}
+            onChange={(e) => setShippingState(e.target.value)}
+            className="input-dark"
+            style={{ width: "100%" }}
+          >
+            <option value="">— Select your state —</option>
+            {US_STATES.map((s) => (
+              <option key={s.code} value={s.code}>{s.name} ({s.code})</option>
+            ))}
+          </select>
+          {shippingState === "TX" && (
+            <p style={{ color: "#f59e0b", fontSize: "0.72rem", margin: "0.4rem 0 0", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+              🏛️ Texas sales tax (8.25%) will be applied
+            </p>
           )}
-          {appliedCredit > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-              <span style={{ color: "#10b981", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                <Gift size={13} /> Store Credit
-              </span>
-              <span style={{ fontSize: "0.875rem", color: "#10b981", fontWeight: 600 }}>
-                &minus;{formatPrice(appliedCredit)}
-              </span>
+        </div>
+
+        {/* ── Shipping Address ── */}
+        {shippingState && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.85rem" }}>
+              <MapPin size={15} style={{ color: "var(--gold)" }} />
+              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>Shipping Address</span>
             </div>
-          )}
-          {pointsDiscount > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-              <span style={{ color: "var(--gold)", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                <Star size={13} /> Loyalty Points ({pointsToRedeem.toLocaleString()} pts)
-              </span>
-              <span style={{ fontSize: "0.875rem", color: "var(--gold)", fontWeight: 600 }}>
-                &minus;{formatPrice(pointsDiscount)}
-              </span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
+              <input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First name *"
+                className="input-dark"
+                style={{ width: "100%" }}
+              />
+              <input
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last name *"
+                className="input-dark"
+                style={{ width: "100%" }}
+              />
             </div>
-          )}
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-            <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>Shipping</span>
-            <span style={{ fontSize: "0.875rem", color: "#10b981" }}>
-              {finalTotal >= 75 ? "Free" : "Calculated at checkout"}
-            </span>
+            <input
+              value={addressLine1}
+              onChange={(e) => setAddressLine1(e.target.value)}
+              placeholder="Address line 1 *"
+              className="input-dark"
+              style={{ width: "100%", marginBottom: "0.5rem" }}
+            />
+            <input
+              value={addressLine2}
+              onChange={(e) => setAddressLine2(e.target.value)}
+              placeholder="Address line 2 (optional)"
+              className="input-dark"
+              style={{ width: "100%", marginBottom: "0.5rem" }}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
+              <input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="City *"
+                className="input-dark"
+                style={{ width: "100%" }}
+              />
+              <input
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                placeholder="ZIP code *"
+                className="input-dark"
+                style={{ width: "100%" }}
+                maxLength={5}
+              />
+            </div>
+            {/* State is already selected — show as read-only badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 0.75rem", background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: "8px", fontSize: "0.8rem" }}>
+              <Check size={13} style={{ color: "var(--gold)" }} />
+              <span style={{ color: "var(--muted)" }}>State:</span>
+              <span style={{ fontWeight: 600 }}>{US_STATES.find(s => s.code === shippingState)?.name} ({shippingState})</span>
+              <span style={{ marginLeft: "auto", fontSize: "0.72rem", color: "var(--muted)" }}>Selected above</span>
+            </div>
           </div>
-          <div style={{ borderTop: "1px solid var(--gold-border)", paddingTop: "0.75rem", marginTop: "0.75rem", display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontWeight: 700 }}>Total</span>
-            <div style={{ textAlign: "right" }}>
-              {(discount > 0 || appliedCredit > 0 || pointsDiscount > 0) && (
-                <span style={{ display: "block", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "line-through" }}>
-                  {formatPrice(subtotal)}
+        )}
+
+        {/* ── Shipping Method ── */}
+        {shippingState && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+              <Truck size={15} style={{ color: "var(--gold)" }} />
+              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>Shipping Method</span>
+            </div>
+            {freeShipping ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: "8px" }}>
+                <Check size={15} style={{ color: "#10b981" }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0, color: "#10b981" }}>Free Standard Shipping</p>
+                  <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "2px 0 0" }}>5–10 business days · Orders $75+</p>
+                </div>
+                <span style={{ fontWeight: 700, color: "#10b981" }}>FREE</span>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {[
+                  { value: "standard" as const, label: "Standard Shipping", desc: "5–10 business days", price: 9.99 },
+                  { value: "express" as const, label: "Express Shipping",  desc: "2–4 business days",  price: 14.99 },
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "0.75rem",
+                      padding: "0.75rem 1rem", borderRadius: "8px", cursor: "pointer",
+                      background: selectedShipping === opt.value ? "rgba(201,168,76,0.08)" : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${selectedShipping === opt.value ? "var(--gold-border)" : "rgba(255,255,255,0.06)"}`,
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="shipping"
+                      value={opt.value}
+                      checked={selectedShipping === opt.value}
+                      onChange={() => setSelectedShipping(opt.value)}
+                      style={{ accentColor: "var(--gold)" }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0 }}>{opt.label}</p>
+                      <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "2px 0 0" }}>{opt.desc}</p>
+                    </div>
+                    <span style={{ fontWeight: 700, color: "var(--gold)", fontFamily: "var(--font-playfair)" }}>${opt.price.toFixed(2)}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Order Summary ── */}
+        {shippingState && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.5rem", marginBottom: "1.5rem" }}>
+            <p style={{ fontWeight: 600, fontSize: "0.875rem", margin: "0 0 1rem", color: "var(--gold)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Order Summary</p>
+
+            {/* Items */}
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.6rem" }}>
+              <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>Items ({items.length})</span>
+              <span style={{ fontSize: "0.875rem" }}>{formatPrice(subtotal)}</span>
+            </div>
+
+            {/* Discounts */}
+            {appliedCoupon && discount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.6rem" }}>
+                <span style={{ color: "#10b981", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                  <Tag size={12} /> Coupon ({appliedCoupon.code})
                 </span>
-              )}
-              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.25rem", fontWeight: 700, color: "var(--gold)" }}>
+                <span style={{ fontSize: "0.875rem", color: "#10b981", fontWeight: 600 }}>−{formatPrice(discount)}</span>
+              </div>
+            )}
+            {appliedCredit > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.6rem" }}>
+                <span style={{ color: "#10b981", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                  <Gift size={12} /> Store Credit
+                </span>
+                <span style={{ fontSize: "0.875rem", color: "#10b981", fontWeight: 600 }}>−{formatPrice(appliedCredit)}</span>
+              </div>
+            )}
+            {pointsDiscount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.6rem" }}>
+                <span style={{ color: "var(--gold)", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                  <Star size={12} /> Points ({pointsToRedeem.toLocaleString()} pts)
+                </span>
+                <span style={{ fontSize: "0.875rem", color: "var(--gold)", fontWeight: 600 }}>−{formatPrice(pointsDiscount)}</span>
+              </div>
+            )}
+
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", margin: "0.75rem 0" }} />
+
+            {/* Tax */}
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.6rem" }}>
+              <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+                Sales Tax {shippingState === "TX" ? "(TX 8.25%)" : `(${shippingState} — $0.00)`}
+              </span>
+              <span style={{ fontSize: "0.875rem" }}>{shippingState === "TX" ? formatPrice(taxAmount) : "$0.00"}</span>
+            </div>
+
+            {/* Shipping */}
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.6rem" }}>
+              <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+                Shipping {freeShipping ? "(Standard)" : selectedShipping === "express" ? "(Express)" : "(Standard)"}
+              </span>
+              <span style={{ fontSize: "0.875rem", color: freeShipping ? "#10b981" : "var(--text)", fontWeight: freeShipping ? 600 : 400 }}>
+                {freeShipping ? "FREE" : formatPrice(shippingCost)}
+              </span>
+            </div>
+
+            {/* Total */}
+            <div style={{ borderTop: "1px solid var(--gold-border)", paddingTop: "0.75rem", marginTop: "0.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 700 }}>Total</span>
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.3rem", fontWeight: 700, color: "var(--gold)" }}>
                 {formatPrice(finalTotal)}
               </span>
             </div>
           </div>
-        </div>
+        )}
 
         {/* WhatsApp Order Updates */}
         <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
@@ -558,21 +776,31 @@ function CheckoutContent() {
 
         <button
           onClick={handleCheckout}
-          disabled={loading}
+          disabled={loading || !canCheckout}
           className="btn-gold"
-          style={{ width: "100%", justifyContent: "center", fontSize: "1rem", padding: "1rem" }}
+          style={{ width: "100%", justifyContent: "center", fontSize: "1rem", padding: "1rem", opacity: !canCheckout ? 0.6 : 1 }}
         >
           {loading ? (
             <>
               <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
               Redirecting to Stripe...
             </>
+          ) : !shippingState ? (
+            <>
+              <MapPin size={16} />
+              Select your state to continue
+            </>
+          ) : !canCheckout ? (
+            <>
+              <MapPin size={16} />
+              Enter shipping address to continue
+            </>
           ) : (
             <>
               <Lock size={16} />
               {(appliedCoupon || appliedCredit > 0 || pointsDiscount > 0)
                 ? `Pay ${formatPrice(finalTotal)} — Secure Checkout`
-                : "Secure Checkout"}
+                : `Pay ${formatPrice(finalTotal)} — Secure Checkout`}
             </>
           )}
         </button>

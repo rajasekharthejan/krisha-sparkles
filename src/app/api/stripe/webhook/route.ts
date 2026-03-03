@@ -54,16 +54,36 @@ export async function POST(req: NextRequest) {
       const shippingAddr = sessionAny.shipping_details?.address
         ?? sessionAny.shipping?.address
         ?? sessionAny.collected_information?.shipping_details?.address;
-      const shipping_address = shippingAddr
-        ? {
-            line1: shippingAddr.line1 || "",
-            line2: shippingAddr.line2 || "",
-            city: shippingAddr.city || "",
-            state: shippingAddr.state || "",
-            postal_code: shippingAddr.postal_code || "",
-            country: shippingAddr.country || "",
-          }
-        : null;
+
+      // Primary: address from Stripe session (if shipping_address_collection was used)
+      // Fallback: address stored in metadata (when we collect address on our own page)
+      let shipping_address: {
+        line1: string; line2: string; city: string;
+        state: string; postal_code: string; country: string;
+      } | null = null;
+
+      if (shippingAddr) {
+        shipping_address = {
+          line1: shippingAddr.line1 || "",
+          line2: shippingAddr.line2 || "",
+          city: shippingAddr.city || "",
+          state: shippingAddr.state || "",
+          postal_code: shippingAddr.postal_code || "",
+          country: shippingAddr.country || "",
+        };
+      } else if (metadata?.shipping_address) {
+        try {
+          const parsed = JSON.parse(metadata.shipping_address);
+          shipping_address = {
+            line1: parsed.line1 || "",
+            line2: parsed.line2 || "",
+            city: parsed.city || "",
+            state: parsed.state || "",
+            postal_code: parsed.postal_code || "",
+            country: parsed.country || "US",
+          };
+        } catch { /* ignore parse error */ }
+      }
 
       const subtotal = (session.amount_subtotal || 0) / 100;
       const total = (session.amount_total || 0) / 100;
@@ -104,8 +124,11 @@ export async function POST(req: NextRequest) {
 
       if (orderError) throw orderError;
 
-      // Create order items
-      const orderItems = lineItems.data.map((li, idx) => ({
+      // Create order items — only the actual products (itemsJson.length entries).
+      // Line items may also include tax and shipping rows added after the products,
+      // so we slice to the number of products to avoid storing those as order items.
+      const productLineItems = lineItems.data.slice(0, itemsJson.length);
+      const orderItems = productLineItems.map((li, idx) => ({
         order_id: order.id,
         product_id: itemsJson[idx]?.productId || null,
         product_name: li.description || "",

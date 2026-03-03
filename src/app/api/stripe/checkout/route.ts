@@ -16,7 +16,14 @@ function getStripe() {
 export async function POST(req: NextRequest) {
   const stripe = getStripe();
   try {
-    const { items, couponCode, discountAmount, notifyWhatsApp, whatsAppPhone, appliedCredit, pointsToRedeem, pointsDiscount } = await req.json();
+    const {
+      items, couponCode, discountAmount, notifyWhatsApp, whatsAppPhone,
+      appliedCredit, pointsToRedeem, pointsDiscount,
+      shippingState, taxAmount,
+      // Customer-selected shipping — added as line item, not collected on Stripe page
+      shippingCost, shippingMethod,
+      shippingAddress,
+    } = await req.json();
 
     // Get logged-in user if any (optional — guest checkout still works)
     let userId: string | null = null;
@@ -107,41 +114,66 @@ export async function POST(req: NextRequest) {
       quantity: item.quantity,
     }));
 
+    // Add Texas sales tax as a line item if shipping to TX
+    const resolvedTax = shippingState === "TX" && taxAmount > 0 ? Number(taxAmount) : 0;
+    if (resolvedTax > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: { name: "Texas Sales Tax (8.25%)" },
+          unit_amount: Math.round(resolvedTax * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    // Add shipping cost as a line item (customer already chose method on our page)
+    const resolvedShippingCost = shippingCost && Number(shippingCost) > 0 ? Number(shippingCost) : 0;
+    if (resolvedShippingCost > 0) {
+      const shippingLabel = shippingMethod === "express"
+        ? "Express Shipping (2–4 business days)"
+        : "Standard Shipping (5–10 business days)";
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: { name: shippingLabel },
+          unit_amount: Math.round(resolvedShippingCost * 100),
+        },
+        quantity: 1,
+      });
+    }
+
     // If there's a validated discount, add it as a coupon line item (negative)
     // Note: Stripe Checkout doesn't support negative line items directly,
     // so we create an ad-hoc Stripe coupon instead
+    // Shipping address collected on our page — passed to Stripe as PI shipping data
+    // This means Stripe does NOT re-collect the address (state is locked, tax is final)
+    const resolvedShippingAddress = shippingAddress && shippingAddress.line1
+      ? {
+          name: shippingAddress.name || "",
+          address: {
+            line1: shippingAddress.line1,
+            line2: shippingAddress.line2 || undefined,
+            city: shippingAddress.city,
+            state: shippingAddress.state,
+            postal_code: shippingAddress.zip,
+            country: "US",
+          },
+        }
+      : undefined;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sessionParams: Record<string, any> = {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      shipping_address_collection: {
-        allowed_countries: ["US"],
-      },
-      shipping_options: [
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: { amount: 0, currency: "usd" },
-            display_name: "Free shipping",
-            delivery_estimate: {
-              minimum: { unit: "business_day", value: 5 },
-              maximum: { unit: "business_day", value: 10 },
-            },
-          },
+      // Shipping address is collected on our checkout page — not re-asked on Stripe
+      // payment_intent_data.shipping stores it on the PI for records and fraud signals
+      ...(resolvedShippingAddress ? {
+        payment_intent_data: {
+          shipping: resolvedShippingAddress,
         },
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: { amount: 999, currency: "usd" },
-            display_name: "Express shipping",
-            delivery_estimate: {
-              minimum: { unit: "business_day", value: 2 },
-              maximum: { unit: "business_day", value: 4 },
-            },
-          },
-        },
-      ],
+      } : {}),
       success_url: `${(process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com").trim()}/order-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${(process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com").trim()}/checkout?cancelled=true`,
       customer_email: userEmail || undefined,
@@ -167,6 +199,22 @@ export async function POST(req: NextRequest) {
         // Loyalty points redemption metadata — webhook uses this to deduct from points_balance
         points_to_redeem: pointsToRedeem ? String(pointsToRedeem) : "",
         points_discount: pointsDiscount ? String(pointsDiscount) : "",
+        shipping_state: shippingState || "",
+        tax_amount: resolvedTax > 0 ? String(resolvedTax) : "",
+        shipping_cost: resolvedShippingCost > 0 ? String(resolvedShippingCost) : "",
+        shipping_method: shippingMethod || "free",
+        // Full shipping address stored in metadata — webhook reads this for order record
+        shipping_address: resolvedShippingAddress
+          ? JSON.stringify({
+              name: resolvedShippingAddress.name,
+              line1: resolvedShippingAddress.address.line1,
+              line2: resolvedShippingAddress.address.line2 || "",
+              city: resolvedShippingAddress.address.city,
+              state: resolvedShippingAddress.address.state,
+              postal_code: resolvedShippingAddress.address.postal_code,
+              country: "US",
+            })
+          : "",
       },
     };
 
