@@ -28,9 +28,9 @@ async function requireAdmin(): Promise<boolean> {
     );
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
-    const admin = getSupabaseAdmin();
-    const { data } = await admin.from("user_profiles").select("role").eq("id", user.id).single();
-    return data?.role === "admin";
+    // Match proxy.ts — trust anyone with a valid session who passed the gate cookie check
+    const adminEmail = (process.env.ADMIN_EMAIL || "admin@krishasparkles.com").trim();
+    return user.email === adminEmail;
   } catch {
     return false;
   }
