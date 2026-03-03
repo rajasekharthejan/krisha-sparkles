@@ -18,6 +18,10 @@ function OrderSuccessContent() {
       clearCart();
       setCleared(true);
 
+      // Clear the checkout address cache now that the order is complete.
+      // Next visit to /checkout will start fresh (or re-load from profile API).
+      try { localStorage.removeItem("ks_checkout_address"); } catch {}
+
       // Consent-gated Purchase event — no-op on iOS WKWebView (Apple 5.1.2)
       trackEvent("Purchase", {
         currency: "USD",

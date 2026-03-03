@@ -154,25 +154,48 @@ function CheckoutContent() {
       })
       .catch(() => {}); // keep defaults on network error
 
-    // Fetch & auto-populate saved address for logged-in users
-    fetch("/api/user/address")
-      .then(r => r.json())
-      .then(d => {
-        if (d.address) {
-          const a = d.address;
-          setSavedAddress(a);
-          // Auto-populate all fields
+    // Restore address from localStorage first (survives Stripe redirect + Back button)
+    // When the user clicks Back from Stripe, React state is cleared — localStorage keeps it alive
+    let localAddressFound = false;
+    try {
+      const savedLocal = localStorage.getItem("ks_checkout_address");
+      if (savedLocal) {
+        const a = JSON.parse(savedLocal);
+        if (a.shippingState) {
+          setShippingState(a.shippingState);
           setFirstName(a.firstName || "");
           setLastName(a.lastName || "");
           setAddressLine1(a.addressLine1 || "");
           setAddressLine2(a.addressLine2 || "");
           setCity(a.city || "");
           setZipCode(a.zipCode || "");
-          if (a.state) setShippingState(a.state);
-          setSavedAddressUsed(true);
+          localAddressFound = true;
         }
-      })
-      .catch(() => {});
+      }
+    } catch {}
+
+    // Fetch & auto-populate saved address for logged-in users
+    // (only if localStorage had no cached address — avoids overwriting Back-button restore)
+    if (!localAddressFound) {
+      fetch("/api/user/address")
+        .then(r => r.json())
+        .then(d => {
+          if (d.address) {
+            const a = d.address;
+            setSavedAddress(a);
+            // Auto-populate all fields
+            setFirstName(a.firstName || "");
+            setLastName(a.lastName || "");
+            setAddressLine1(a.addressLine1 || "");
+            setAddressLine2(a.addressLine2 || "");
+            setCity(a.city || "");
+            setZipCode(a.zipCode || "");
+            if (a.state) setShippingState(a.state);
+            setSavedAddressUsed(true);
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   async function applyCoupon() {
@@ -316,6 +339,20 @@ function CheckoutContent() {
             zipCode: zipCode.trim(),
           }),
         }).catch(() => {}); // fire-and-forget — never block checkout
+
+        // Persist address in localStorage so the form survives the Stripe redirect.
+        // When user hits Back from Stripe, React state is wiped — this restores it.
+        try {
+          localStorage.setItem("ks_checkout_address", JSON.stringify({
+            shippingState,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            addressLine1: addressLine1.trim(),
+            addressLine2: addressLine2.trim(),
+            city: city.trim(),
+            zipCode: zipCode.trim(),
+          }));
+        } catch {}
 
         // Consent-gated: fires Meta Pixel + TikTok + GTM only if user accepted cookies
         // Apple 5.1.2: no-op on iOS WKWebView (consent auto-declined)
