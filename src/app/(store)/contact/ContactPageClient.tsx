@@ -156,7 +156,7 @@ export default function ContactPageClient() {
             <p style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem" }}>Quick Answers</p>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               <Link href="/faq" style={{ color: "var(--gold)", textDecoration: "none", fontSize: "0.875rem" }}>→ Browse our FAQ</Link>
-              <Link href="/support" style={{ color: "var(--gold)", textDecoration: "none", fontSize: "0.875rem" }}>→ Shipping & Returns Policy</Link>
+              <Link href="/support" style={{ color: "var(--gold)", textDecoration: "none", fontSize: "0.875rem" }}>→ Shipping Policy</Link>
               <Link href="/account/orders" style={{ color: "var(--gold)", textDecoration: "none", fontSize: "0.875rem" }}>→ Track your order</Link>
             </div>
           </div>

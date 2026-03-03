@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Package, MapPin, CreditCard, Truck, ExternalLink, CheckCircle2, Circle, Clock, MapPinned } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import RefundRequestButton from "@/components/store/RefundRequestButton";
 
 const STATUS_COLOR: Record<string, string> = {
   pending: "#f59e0b", paid: "#10b981",
@@ -300,13 +299,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             </div>
           );
         })()}
-
-        {/* Refund Button */}
-        {(order.status === "paid" || order.status === "shipped" || order.status === "delivered") && (
-          <div style={{ marginTop: "1rem" }}>
-            <RefundRequestButton orderId={order.id} userEmail={order.email} userId={user.id} />
-          </div>
-        )}
 
         <div style={{ marginTop: "2rem", textAlign: "center" }}>
           <Link href="/shop" className="btn-gold-outline" style={{ display: "inline-block", fontSize: "0.875rem" }}>

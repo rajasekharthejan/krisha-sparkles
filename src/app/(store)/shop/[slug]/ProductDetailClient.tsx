@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { formatPrice } from "@/lib/utils";
-import { ShoppingBag, Heart, ChevronLeft, ChevronRight, Check, Share2, Truck, RefreshCw, Shield, Star, Send, Loader2, X, Ruler, Camera } from "lucide-react";
+import { ShoppingBag, Heart, ChevronLeft, ChevronRight, Check, Share2, Truck, Shield, Star, Send, Loader2, X, Ruler, Camera, MessageCircle } from "lucide-react";
 import { toggleGuestWishlist, isInGuestWishlist } from "@/lib/wishlistUtils";
 import type { Product, Review } from "@/types";
 import ProductCard from "@/components/store/ProductCard";
@@ -549,7 +549,6 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
             >
               {[
                 { icon: <Truck size={15} />, text: "Free shipping on orders over $75" },
-                { icon: <RefreshCw size={15} />, text: "7-day easy return policy" },
                 { icon: <Shield size={15} />, text: "Secure payment via Stripe" },
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -557,6 +556,12 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                   <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{item.text}</span>
                 </div>
               ))}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <span style={{ color: "var(--gold)" }}><MessageCircle size={15} /></span>
+                <Link href="/contact" style={{ fontSize: "0.8rem", color: "var(--muted)", textDecoration: "none" }}>
+                  Questions? Contact us
+                </Link>
+              </div>
             {/* Size Guide */}
             {["dresses", "bangles-bracelets"].includes(product.category?.slug ?? "") && (
               <button

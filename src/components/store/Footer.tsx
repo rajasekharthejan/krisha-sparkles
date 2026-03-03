@@ -134,7 +134,6 @@ export default function Footer() {
               { label: "Contact Us", href: "/contact" },
               { label: "Support", href: "/support" },
               { label: "Shipping Policy", href: "/support#shipping" },
-              { label: "Return Policy", href: "/support#returns" },
               { label: "Privacy Policy", href: "/privacy-policy" },
             ].map((link) => (
               <Link

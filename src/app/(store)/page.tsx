@@ -20,7 +20,7 @@ import type { Product } from "@/types";
 import InstagramFeed from "@/components/store/InstagramFeed";
 import TikTokFeed from "@/components/store/TikTokFeed";
 import Image from "next/image";
-import { ArrowRight, Star, Shield, Truck, RefreshCw, Gift } from "lucide-react";
+import { ArrowRight, Star, Shield, Truck, MessageCircle, Gift } from "lucide-react";
 
 interface BundlePreview {
   id: string;
@@ -254,7 +254,7 @@ export default async function HomePage() {
         >
           {[
             { icon: <Truck size={20} />, title: "Free Shipping", sub: "On orders over $75" },
-            { icon: <RefreshCw size={20} />, title: "Easy Returns", sub: "7-day return policy" },
+            { icon: <MessageCircle size={20} />, title: "Dedicated Support", sub: "We're here via email or chat" },
             { icon: <Shield size={20} />, title: "Secure Checkout", sub: "SSL encrypted payments" },
             { icon: <Star size={20} />, title: "Premium Quality", sub: "Handpicked collections" },
           ].map((f, i) => (

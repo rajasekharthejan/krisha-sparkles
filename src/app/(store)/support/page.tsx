@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Instagram, Mail, MessageCircle, Clock, Package, RotateCcw, HelpCircle } from "lucide-react";
+import { Instagram, Mail, MessageCircle, Clock, Package, HelpCircle } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -11,10 +11,6 @@ const FAQ = [
   {
     q: "How long does shipping take?",
     a: "Standard shipping takes 5–8 business days within the USA. Expedited options are available at checkout.",
-  },
-  {
-    q: "Can I return or exchange an item?",
-    a: "Yes! We accept returns within 14 days of delivery for unused items in original packaging. Contact us to initiate a return.",
   },
   {
     q: "My order hasn't arrived — what do I do?",
@@ -94,7 +90,6 @@ export default function SupportPage() {
         {/* Quick Links */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem", marginBottom: "3.5rem" }}>
           <QuickLink icon={<Package size={16} />} label="Track My Order" href="mailto:hello@shopkrisha.com?subject=Order%20Tracking" />
-          <QuickLink icon={<RotateCcw size={16} />} label="Start a Return" href="mailto:hello@shopkrisha.com?subject=Return%20Request" />
           <QuickLink icon={<MessageCircle size={16} />} label="Order Question" href="mailto:hello@shopkrisha.com?subject=Order%20Question" />
         </div>
 

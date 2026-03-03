@@ -23,16 +23,6 @@ const FAQ_SECTIONS = [
     ],
   },
   {
-    title: "↩️ Returns & Refunds",
-    items: [
-      { q: "What is your return policy?", a: "We accept returns within 14 days of delivery for unworn, undamaged items in original packaging. Sale items and custom orders are final sale." },
-      { q: "How do I start a return?", a: "Email hello@shopkrisha.com with your order number and reason for return. We'll send you a prepaid return label within 1 business day." },
-      { q: "When will I receive my refund?", a: "Once we receive and inspect the returned item, refunds are processed within 3–5 business days to your original payment method." },
-      { q: "What if my item arrived damaged?", a: "We're so sorry! Please email us within 48 hours of delivery with photos of the damage. We'll send a replacement or full refund at no cost to you." },
-      { q: "Can I exchange instead of returning?", a: "Yes! Mention in your return request that you'd like an exchange, and we'll reserve the replacement item for you." },
-    ],
-  },
-  {
     title: "💎 Products",
     items: [
       { q: "What materials are your jewelry pieces made of?", a: "Our imitation jewelry is crafted with high-quality brass or zinc alloy bases with gold plating (14K–18K equivalent finish), cubic zirconia stones, and synthetic gemstones. They are not solid gold or silver." },
