@@ -59,7 +59,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
           <div>
             <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.6rem", fontWeight: 700, margin: "0 0 0.25rem" }}>
-              Order #{order.id.slice(0, 8).toUpperCase()}
+              Order #{order.id.slice(-8).toUpperCase()}
             </h1>
             <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
               Placed on {new Date(order.created_at).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
@@ -142,10 +142,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               <CreditCard size={16} style={{ color: "var(--gold)" }} />
               <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", margin: 0 }}>Payment</h3>
             </div>
-            <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: "0 0 0.25rem" }}>Paid via Stripe</p>
-            <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: 0, wordBreak: "break-all" }}>
-              Session: {order.stripe_session_id?.slice(0, 24)}...
-            </p>
+            <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>Paid via Stripe</p>
           </div>
         </div>
 

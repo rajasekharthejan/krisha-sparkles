@@ -60,7 +60,7 @@ export default async function OrdersPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
                   <div>
                     <p style={{ fontWeight: 600, fontSize: "0.9rem", margin: "0 0 0.2rem" }}>
-                      Order #{order.id.slice(0, 8).toUpperCase()}
+                      Order #{order.id.slice(-8).toUpperCase()}
                     </p>
                     <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>
                       {new Date(order.created_at).toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric" })}
