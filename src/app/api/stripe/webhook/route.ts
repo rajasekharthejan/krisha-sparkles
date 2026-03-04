@@ -3,15 +3,8 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendOrderConfirmation, sendAdminOrderNotification } from "@/lib/email";
 import { sendWhatsAppOrderConfirmation, notifyAdminNewOrder } from "@/lib/whatsapp-notify";
-
-// Lazy Stripe init — avoids module-level evaluation at Next.js build time
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
-    httpClient: Stripe.createFetchHttpClient(),
-    maxNetworkRetries: 0,
-  });
-}
+import { getStripe } from "@/lib/stripe";
+import { getStripeWebhookSecret, getStripeWebhookSecretFallback } from "@/lib/paymentMode";
 
 function getSupabaseAdmin() {
   return createClient(
@@ -21,7 +14,7 @@ function getSupabaseAdmin() {
 }
 
 export async function POST(req: NextRequest) {
-  const stripe = getStripe();
+  const stripe = await getStripe();
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
 
@@ -29,16 +22,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No signature" }, { status: 400 });
   }
 
+  // Mode-aware webhook verification with dual-secret fallback
+  // If admin switches mode while a webhook is in-flight, try the other secret
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
-  } catch (err) {
-    console.error("Webhook signature verification failed:", err);
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    const primarySecret = await getStripeWebhookSecret();
+    event = stripe.webhooks.constructEvent(body, sig, primarySecret);
+  } catch {
+    try {
+      const fallbackSecret = await getStripeWebhookSecretFallback();
+      if (fallbackSecret) {
+        event = stripe.webhooks.constructEvent(body, sig, fallbackSecret);
+      } else {
+        return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+      }
+    } catch {
+      console.error("Webhook signature verification failed (both secrets)");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    }
   }
 
   if (event.type === "checkout.session.completed") {

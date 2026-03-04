@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Settings, Truck, DollarSign, Package, Save, Loader2,
   CheckCircle, AlertCircle, RefreshCw, Palette, Check,
+  CreditCard, ShieldCheck, AlertTriangle,
 } from "lucide-react";
 
 const THEMES = [
@@ -59,14 +60,21 @@ export default function AdminSettingsPage() {
   const [activeTheme, setActiveTheme] = useState<ThemeKey>("dark");
   const [themeSaving, setThemeSaving] = useState(false);
   const [themeSuccess, setThemeSuccess] = useState(false);
+  // Payment Mode
+  const [paymentMode, setPaymentMode] = useState<"test" | "live">("test");
+  const [envStatus, setEnvStatus] = useState<Record<string, boolean>>({});
+  const [modeSaving, setModeSaving] = useState(false);
+  const [modeSuccess, setModeSuccess] = useState(false);
+  const [confirmLive, setConfirmLive] = useState(false);
 
   async function loadSettings() {
     setLoading(true);
     setError("");
     try {
-      const [shippingRes, themeRes] = await Promise.all([
+      const [shippingRes, themeRes, modeRes] = await Promise.all([
         fetch("/api/admin/settings/shipping"),
         fetch("/api/admin/settings/theme"),
+        fetch("/api/admin/settings/mode"),
       ]);
       const shippingData = await shippingRes.json();
       if (!shippingRes.ok) throw new Error(shippingData.error || "Failed to load");
@@ -82,6 +90,11 @@ export default function AdminSettingsPage() {
       if (themeRes.ok) {
         const themeData = await themeRes.json();
         setActiveTheme((themeData.theme || "dark") as ThemeKey);
+      }
+      if (modeRes.ok) {
+        const modeData = await modeRes.json();
+        setPaymentMode(modeData.mode || "test");
+        setEnvStatus(modeData.envStatus || {});
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load settings");
@@ -109,6 +122,33 @@ export default function AdminSettingsPage() {
       setError(e instanceof Error ? e.message : "Could not save theme");
     }
     setThemeSaving(false);
+  }
+
+  async function handleModeSwitch(targetMode: "test" | "live") {
+    if (targetMode === "live" && !confirmLive) {
+      setConfirmLive(true);
+      return;
+    }
+    setConfirmLive(false);
+    setModeSaving(true);
+    setModeSuccess(false);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/settings/mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: targetMode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Switch failed");
+      setPaymentMode(targetMode);
+      setEnvStatus(data.envStatus || envStatus);
+      setModeSuccess(true);
+      setTimeout(() => setModeSuccess(false), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not switch payment mode");
+    }
+    setModeSaving(false);
   }
 
   async function handleSaveShipping(e: React.FormEvent) {
@@ -296,6 +336,158 @@ export default function AdminSettingsPage() {
         <p style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.85rem" }}>
           💡 Theme applies to the customer-facing store instantly. Admin panel always stays dark.
           {themeSaving && <span style={{ marginLeft: "0.5rem" }}><Loader2 size={12} style={{ display: "inline", animation: "spin 1s linear infinite" }} /> Saving...</span>}
+        </p>
+      </div>
+
+      {/* ── Payment Mode Toggle ──────────────────────────────────────────── */}
+      <div style={card}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1.25rem" }}>
+          <CreditCard size={16} style={{ color: "var(--gold)" }} />
+          <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>
+            Payment Mode
+          </h2>
+          {modeSuccess && (
+            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.3rem", color: "#10b981", fontSize: "0.8rem" }}>
+              <CheckCircle size={13} /> Mode switched successfully!
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "1rem" }}>
+          {/* Test Mode Button */}
+          <button
+            onClick={() => { setConfirmLive(false); handleModeSwitch("test"); }}
+            disabled={modeSaving || paymentMode === "test"}
+            style={{
+              padding: "1.25rem",
+              borderRadius: "12px",
+              border: `2px solid ${paymentMode === "test" ? "#f59e0b" : "rgba(255,255,255,0.1)"}`,
+              background: paymentMode === "test" ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.01)",
+              cursor: paymentMode === "test" ? "default" : "pointer",
+              textAlign: "left",
+              position: "relative",
+              transition: "all 0.2s",
+            }}
+          >
+            {paymentMode === "test" && (
+              <div style={{
+                position: "absolute", top: "0.6rem", right: "0.6rem",
+                width: "22px", height: "22px", borderRadius: "50%",
+                background: "#f59e0b",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Check size={12} style={{ color: "#0a0a0a" }} />
+              </div>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+              <AlertTriangle size={16} style={{ color: "#f59e0b" }} />
+              <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text)" }}>Test Mode</span>
+            </div>
+            <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+              Uses test API keys for Stripe &amp; Shippo. No real payments or shipments.
+            </p>
+          </button>
+
+          {/* Live Mode Button */}
+          <button
+            onClick={() => handleModeSwitch("live")}
+            disabled={modeSaving || paymentMode === "live"}
+            style={{
+              padding: "1.25rem",
+              borderRadius: "12px",
+              border: `2px solid ${paymentMode === "live" ? "#10b981" : "rgba(255,255,255,0.1)"}`,
+              background: paymentMode === "live" ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.01)",
+              cursor: paymentMode === "live" ? "default" : "pointer",
+              textAlign: "left",
+              position: "relative",
+              transition: "all 0.2s",
+            }}
+          >
+            {paymentMode === "live" && (
+              <div style={{
+                position: "absolute", top: "0.6rem", right: "0.6rem",
+                width: "22px", height: "22px", borderRadius: "50%",
+                background: "#10b981",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Check size={12} style={{ color: "#0a0a0a" }} />
+              </div>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+              <ShieldCheck size={16} style={{ color: "#10b981" }} />
+              <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text)" }}>Live Mode</span>
+            </div>
+            <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+              Uses real API keys. Real payments &amp; shipments will be processed.
+            </p>
+          </button>
+        </div>
+
+        {/* Confirmation dialog for switching to live */}
+        {confirmLive && (
+          <div style={{
+            padding: "1rem 1.25rem",
+            background: "rgba(239,68,68,0.06)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: "10px",
+            marginBottom: "1rem",
+          }}>
+            <p style={{ fontWeight: 700, fontSize: "0.85rem", color: "#ef4444", margin: "0 0 0.5rem" }}>
+              Are you sure you want to switch to LIVE mode?
+            </p>
+            <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 0.75rem" }}>
+              Real payments will be charged to real credit cards. Only switch when you are ready to accept orders.
+            </p>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                onClick={() => handleModeSwitch("live")}
+                disabled={modeSaving}
+                className="btn-gold"
+                style={{ padding: "0.5rem 1.25rem", fontSize: "0.8rem" }}
+              >
+                {modeSaving ? "Switching..." : "Yes, switch to LIVE"}
+              </button>
+              <button
+                onClick={() => setConfirmLive(false)}
+                style={{
+                  padding: "0.5rem 1.25rem",
+                  fontSize: "0.8rem",
+                  background: "none",
+                  border: "1px solid var(--gold-border)",
+                  borderRadius: "8px",
+                  color: "var(--muted)",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Env var status */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--muted)" }}>
+            {envStatus.stripeTest ? <CheckCircle size={11} style={{ color: "#10b981" }} /> : <AlertCircle size={11} style={{ color: "#ef4444" }} />}
+            Stripe Test Keys
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--muted)" }}>
+            {envStatus.stripeLive ? <CheckCircle size={11} style={{ color: "#10b981" }} /> : <AlertCircle size={11} style={{ color: "#6b7280" }} />}
+            Stripe Live Keys
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--muted)" }}>
+            {envStatus.shippoTest ? <CheckCircle size={11} style={{ color: "#10b981" }} /> : <AlertCircle size={11} style={{ color: "#ef4444" }} />}
+            Shippo Test Key
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--muted)" }}>
+            {envStatus.shippoLive ? <CheckCircle size={11} style={{ color: "#10b981" }} /> : <AlertCircle size={11} style={{ color: "#6b7280" }} />}
+            Shippo Live Key
+          </div>
+        </div>
+
+        <p style={{ fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.75rem" }}>
+          {modeSaving && <><Loader2 size={11} style={{ display: "inline", animation: "spin 1s linear infinite" }} /> Switching mode...</>}
+          {!modeSaving && <>Add <code style={{ fontSize: "0.68rem", color: "var(--gold)" }}>_LIVE</code> suffixed env vars in Vercel to enable live mode.</>}
         </p>
       </div>
 

@@ -1,25 +1,18 @@
 import Stripe from "stripe";
+import { getStripeSecretKey } from "./paymentMode";
 
-let _stripe: Stripe | null = null;
-
-export function getStripe(): Stripe {
-  if (!_stripe) {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error("Missing STRIPE_SECRET_KEY environment variable");
-    }
-    // Use Node.js native HTTP client to avoid conflicts with Next.js's patched fetch
-    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2026-01-28.clover",
-      typescript: true,
-      httpClient: Stripe.createNodeHttpClient(),
-    });
-  }
-  return _stripe;
+/**
+ * Mode-aware Stripe factory.
+ * Creates a fresh Stripe instance using the active mode's secret key.
+ * The Stripe constructor is lightweight (no network call) so this is fine
+ * to call per-request. The underlying getPaymentMode() is cached per-request
+ * via React cache() so only one DB read happens.
+ */
+export async function getStripe(): Promise<Stripe> {
+  const key = await getStripeSecretKey();
+  return new Stripe(key, {
+    apiVersion: "2026-01-28.clover",
+    typescript: true,
+    httpClient: Stripe.createNodeHttpClient(),
+  });
 }
-
-// For convenience in route handlers
-export const stripe = new Proxy({} as Stripe, {
-  get(_, prop) {
-    return (getStripe() as unknown as Record<string | symbol, unknown>)[prop];
-  },
-});

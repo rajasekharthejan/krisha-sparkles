@@ -2,12 +2,12 @@
  * Shippo REST API helper — no SDK, pure fetch.
  * Docs: https://docs.goshippo.com/shippoapi/public-api/
  */
+import { getShippoApiKey } from "./paymentMode";
 
 const SHIPPO_BASE = "https://api.goshippo.com";
 
-function headers() {
-  const key = process.env.SHIPPO_API_KEY;
-  if (!key) throw new Error("SHIPPO_API_KEY is not set");
+async function headers() {
+  const key = await getShippoApiKey();
   return {
     Authorization: `ShippoToken ${key}`,
     "Content-Type": "application/json",
@@ -93,7 +93,7 @@ export async function createShipment(
 
   const res = await fetch(`${SHIPPO_BASE}/shipments/`, {
     method: "POST",
-    headers: headers(),
+    headers: await headers(),
     body: JSON.stringify(body),
   });
 
@@ -167,7 +167,7 @@ export async function getTrackingStatus(
 ): Promise<ShippoTrackingStatus> {
   const res = await fetch(
     `${SHIPPO_BASE}/tracks/${carrier}/${trackingNumber}`,
-    { headers: headers() }
+    { headers: await headers() }
   );
   if (!res.ok) {
     return { status: "UNKNOWN", status_details: "Could not fetch status", status_date: null, tracking_history: [] };
@@ -209,7 +209,7 @@ export async function purchaseLabel(rateId: string): Promise<ShippoTransaction> 
 
   const res = await fetch(`${SHIPPO_BASE}/transactions/`, {
     method: "POST",
-    headers: headers(),
+    headers: await headers(),
     body: JSON.stringify(body),
   });
 

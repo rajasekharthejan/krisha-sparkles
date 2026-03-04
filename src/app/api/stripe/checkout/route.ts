@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-
-// Lazy Stripe init — avoids module-level evaluation at Next.js build time
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
-    httpClient: Stripe.createFetchHttpClient(),
-    maxNetworkRetries: 0,
-  });
-}
+import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
-  const stripe = getStripe();
+  const stripe = await getStripe();
   try {
     const {
       items, couponCode, discountAmount, notifyWhatsApp, whatsAppPhone,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -96,6 +97,14 @@ function NavLink({ href, label, icon, isActive }: { href: string; label: string;
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [paymentMode, setPaymentMode] = useState<"test" | "live" | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/settings/mode")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.mode) setPaymentMode(data.mode); })
+      .catch(() => {});
+  }, []);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -185,10 +194,26 @@ export default function AdminSidebar() {
           <LogOut size={15} /> Sign Out
         </button>
 
-        {/* Version */}
-        <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.15)", textAlign: "center", padding: "0.4rem 0 0", letterSpacing: "0.05em" }}>
-          v7.34 · Krisha Sparkles Admin
-        </p>
+        {/* Version + Mode badge */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", padding: "0.4rem 0 0" }}>
+          <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.15)", letterSpacing: "0.05em", margin: 0 }}>
+            v7.35
+          </p>
+          {paymentMode && (
+            <span style={{
+              fontSize: "0.55rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              padding: "1px 6px",
+              borderRadius: "4px",
+              background: paymentMode === "test" ? "rgba(245,158,11,0.12)" : "rgba(16,185,129,0.12)",
+              color: paymentMode === "test" ? "#f59e0b" : "#10b981",
+              border: `1px solid ${paymentMode === "test" ? "rgba(245,158,11,0.25)" : "rgba(16,185,129,0.25)"}`,
+            }}>
+              {paymentMode === "test" ? "TEST" : "LIVE"}
+            </span>
+          )}
+        </div>
       </div>
     </aside>
   );

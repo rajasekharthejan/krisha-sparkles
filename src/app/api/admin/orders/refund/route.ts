@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { sendRefundStatusEmail } from "@/lib/email";
 
 async function verifyAdmin() {
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Issue the Stripe refund (full amount)
+  const stripe = await getStripe();
   let stripeRefund;
   try {
     stripeRefund = await stripe.refunds.create({
