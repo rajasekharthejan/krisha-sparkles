@@ -187,7 +187,7 @@ export default function AdminSidebar() {
 
         {/* Version */}
         <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.15)", textAlign: "center", padding: "0.4rem 0 0", letterSpacing: "0.05em" }}>
-          v7.32 · Krisha Sparkles Admin
+          v7.34 · Krisha Sparkles Admin
         </p>
       </div>
     </aside>

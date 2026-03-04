@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 const VALID_SUBJECTS = ["order_issue", "return_request", "product_question", "general", "other"];
 
@@ -13,6 +14,13 @@ function isValidEmail(email: unknown): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 3 messages per minute per IP
+  const ip = getClientIp(req);
+  const rl = rateLimit(`contact:${ip}`, 3, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
   const { name, email, subject, message } = await req.json();
 
   if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });

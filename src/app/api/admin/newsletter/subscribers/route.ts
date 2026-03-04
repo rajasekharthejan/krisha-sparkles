@@ -2,11 +2,25 @@
  * GET  /api/admin/newsletter/subscribers?page=1&limit=50
  * PATCH /api/admin/newsletter/subscribers  { id, active }
  *
- * Admin-only. Manage newsletter subscriber list.
+ * SECURITY: Admin-only. Requires cookie-based session + admin email check.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+async function verifyAdmin() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@krishasparkles.com").trim();
+  return user?.email === adminEmail ? user : null;
+}
 
 function getAdminClient() {
   return createClient(
@@ -16,6 +30,11 @@ function getAdminClient() {
 }
 
 export async function GET(req: NextRequest) {
+  const user = await verifyAdmin();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
   const limit = Math.min(100, parseInt(searchParams.get("limit") || "50", 10));
@@ -48,6 +67,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const user = await verifyAdmin();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id, active } = await req.json();
   if (!id || typeof active !== "boolean") {
     return NextResponse.json({ error: "id and active required" }, { status: 400 });

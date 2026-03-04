@@ -19,12 +19,11 @@ import { sendDripDay3, sendDripDay7 } from "@/lib/email";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
+  // SECURITY: Fail-closed — reject if CRON_SECRET is missing or doesn't match
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("Authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const auth = req.headers.get("authorization");
+  if (!secret || auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const supabase = createClient(

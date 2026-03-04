@@ -1,6 +1,6 @@
 {
   "name": "krisha-sparkles",
-  "version": "7.32.0",
+  "version": "7.34.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -20,6 +20,8 @@
     "@supabase/supabase-js": "^2.97.0",
     "@types/papaparse": "^5.5.2",
     "@types/web-push": "^3.6.4",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.3",
     "@vercel/analytics": "^1.6.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.3",

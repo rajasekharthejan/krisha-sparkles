@@ -4,14 +4,33 @@
  * Returns the count of pending (notified=false) back-in-stock requests
  * grouped by product_id. Used by the admin inventory page to show waitlist sizes.
  *
- * Admin-only: requires valid admin session (checked via admin gate).
+ * SECURITY: Requires admin session (cookie-based auth + admin email check).
  * Returns: { counts: Record<product_id, count> }
  */
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+async function verifyAdmin() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@krishasparkles.com").trim();
+  return user?.email === adminEmail ? user : null;
+}
 
 export async function GET() {
+  const user = await verifyAdmin();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -1,6 +1,6 @@
 const WA_TOKEN = process.env.WHATSAPP_BUSINESS_TOKEN;
 const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-const WA_API_BASE = "https://graph.facebook.com/v17.0";
+const WA_API_BASE = "https://graph.facebook.com/v22.0";
 
 // Admin numbers to notify on every new order
 const ADMIN_WA_NUMBERS = [
@@ -133,5 +133,66 @@ export async function sendWhatsAppShippingUpdate(phone: string, orderRef: string
     });
   } catch (err) {
     console.error("WhatsApp shipping update failed:", err);
+  }
+}
+
+// ── Customer: Out for Delivery ──────────────────────────────────────────────
+export async function sendWhatsAppOutForDelivery(phone: string, orderRef: string): Promise<void> {
+  if (!WA_TOKEN || !WA_PHONE_ID) return;
+  try {
+    await sendWAMessage(
+      phone,
+      `🚚 *Out for Delivery — Krisha Sparkles*\n\n` +
+      `Great news! Your order *#${orderRef}* is out for delivery today! 🎉\n\n` +
+      `Keep an eye out — your beautiful jewelry will be at your door soon.\n\n` +
+      `📍 Track your order:\nhttps://shopkrisha.com/account/orders`
+    );
+  } catch (err) {
+    console.error("WhatsApp out-for-delivery failed:", err);
+  }
+}
+
+// ── Customer: Delivered ─────────────────────────────────────────────────────
+export async function sendWhatsAppDelivered(phone: string, orderRef: string): Promise<void> {
+  if (!WA_TOKEN || !WA_PHONE_ID) return;
+  try {
+    await sendWAMessage(
+      phone,
+      `✅ *Order Delivered — Krisha Sparkles*\n\n` +
+      `Your order *#${orderRef}* has been delivered! 🎊\n\n` +
+      `We hope you love your jewelry! ✨\n\n` +
+      `💬 We'd love to hear from you — leave a review and share your sparkle:\nhttps://shopkrisha.com/account/orders\n\n` +
+      `Questions or issues? Reply to this message anytime.`
+    );
+  } catch (err) {
+    console.error("WhatsApp delivered notification failed:", err);
+  }
+}
+
+// ── Customer: Refund Update ─────────────────────────────────────────────────
+export async function sendWhatsAppRefundUpdate(
+  phone: string,
+  orderRef: string,
+  status: "approved" | "denied",
+  adminNotes?: string | null
+): Promise<void> {
+  if (!WA_TOKEN || !WA_PHONE_ID) return;
+  try {
+    const isApproved = status === "approved";
+    const emoji = isApproved ? "💚" : "⚠️";
+    const statusText = isApproved ? "Approved" : "Denied";
+    const details = isApproved
+      ? `Your refund has been approved and will be processed within 5–10 business days back to your original payment method.`
+      : `Unfortunately, your refund request has been denied.${adminNotes ? `\n\n📝 Reason: ${adminNotes}` : ""}`;
+
+    await sendWAMessage(
+      phone,
+      `${emoji} *Refund ${statusText} — Krisha Sparkles*\n\n` +
+      `Order *#${orderRef}*\n\n` +
+      `${details}\n\n` +
+      `Questions? Reply to this message or email hello@shopkrisha.com`
+    );
+  } catch (err) {
+    console.error("WhatsApp refund update failed:", err);
   }
 }

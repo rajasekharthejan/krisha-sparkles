@@ -16,10 +16,10 @@ import { createClient } from "@supabase/supabase-js";
 import { sendBackInStockEmail } from "@/lib/email";
 
 export async function GET(req: NextRequest) {
-  // Auth guard — require CRON_SECRET bearer token
+  // SECURITY: Fail-closed auth — reject if CRON_SECRET is missing or doesn't match
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
 
       notifiedCount++;
     } catch (emailErr) {
-      console.error(`Failed to send back-in-stock email to ${request.email}:`, emailErr);
+      console.error(`Failed to send back-in-stock email for request ${request.id.slice(-8)}:`, emailErr);
       failedIds.push(request.id);
     }
   }

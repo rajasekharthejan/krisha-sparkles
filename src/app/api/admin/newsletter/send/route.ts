@@ -15,6 +15,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { Resend } from "resend";
 import { buildUnsubscribeUrl } from "@/app/api/unsubscribe/route";
 
@@ -25,26 +27,29 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function verifyAdmin() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@krishasparkles.com").trim();
+  return user?.email === adminEmail ? user : null;
+}
+
 export async function POST(req: NextRequest) {
-  // Admin gate — check for admin session cookie via service role
+  // SECURITY: Cookie-based admin session auth (matches proxy's 3-layer security)
+  const user = await verifyAdmin();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-
-  // Simple admin auth: check Authorization header (Bearer = admin session token)
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const token = authHeader.slice(7);
-  const { data: { user }, error: authError } = await createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ).auth.getUser(token);
-  if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const body = await req.json();
   const { subject, preview_text, html_body, segment = "all" } = body;

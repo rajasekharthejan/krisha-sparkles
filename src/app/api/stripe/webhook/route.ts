@@ -91,6 +91,18 @@ export async function POST(req: NextRequest) {
 
       const supabaseAdmin = getSupabaseAdmin();
 
+      // SECURITY: Idempotency guard — prevent duplicate orders on webhook retries
+      const { data: existingOrder } = await supabaseAdmin
+        .from("orders")
+        .select("id")
+        .eq("stripe_session_id", session.id)
+        .maybeSingle();
+
+      if (existingOrder) {
+        console.log(`Idempotency: Order already exists for session ${session.id.slice(-8)}, skipping`);
+        return NextResponse.json({ received: true });
+      }
+
       // Extract user_id from metadata (empty string = guest)
       const userId = metadata?.user_id || null;
 
@@ -157,63 +169,84 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Increment coupon usage count if a coupon was applied.
-      // Auto-deactivate the coupon when max_uses is reached (whichever comes first:
-      // expiry date is checked at validate time; max_uses limit is enforced here).
+      // SECURITY: Atomic coupon increment — prevents race condition with concurrent orders
       const couponId = metadata?.coupon_id;
       if (couponId) {
         try {
-          const { data: coupon } = await supabaseAdmin
-            .from("coupons")
-            .select("uses_count, max_uses")
-            .eq("id", couponId)
-            .single();
-          if (coupon) {
-            const newCount = coupon.uses_count + 1;
-            // Auto-deactivate when max_uses limit is reached
-            const hitLimit = coupon.max_uses !== null && newCount >= coupon.max_uses;
-            await supabaseAdmin
-              .from("coupons")
-              .update({
-                uses_count: newCount,
-                ...(hitLimit ? { active: false } : {}),
-              })
-              .eq("id", couponId);
-            if (hitLimit) {
-              console.log(`Coupon ${couponId} auto-deactivated — usage limit (${coupon.max_uses}) reached`);
-            }
+          // Try atomic increment first (RPC function)
+          const { data: atomicOk } = await supabaseAdmin.rpc("increment_coupon_atomic", {
+            p_coupon_id: couponId,
+          });
+          if (atomicOk === false) {
+            console.warn(`Coupon ${couponId.slice(-8)} — atomic increment failed (limit reached or not found)`);
           }
         } catch {
-          console.error("Failed to increment coupon usage");
+          // Fallback: non-atomic increment if RPC doesn't exist yet
+          try {
+            const { data: coupon } = await supabaseAdmin
+              .from("coupons")
+              .select("uses_count, max_uses")
+              .eq("id", couponId)
+              .single();
+            if (coupon) {
+              const newCount = coupon.uses_count + 1;
+              const hitLimit = coupon.max_uses !== null && newCount >= coupon.max_uses;
+              await supabaseAdmin
+                .from("coupons")
+                .update({
+                  uses_count: newCount,
+                  ...(hitLimit ? { active: false } : {}),
+                })
+                .eq("id", couponId);
+            }
+          } catch {
+            console.error("Failed to increment coupon usage");
+          }
         }
       }
 
-      console.log(`Order ${order.id} created for ${session.customer_details?.email}`);
+      console.log(`Order ${order.id.slice(-8)} created successfully`);
 
-      // Deduct redeemed loyalty points (must happen BEFORE awarding new points)
+      // SECURITY: Atomic points deduction — prevents race condition with concurrent checkouts
       const pointsToRedeem = metadata?.points_to_redeem ? parseInt(metadata.points_to_redeem, 10) : 0;
       if (userId && pointsToRedeem > 0) {
         try {
-          // Direct update: subtract redeemed points from user_profiles.points_balance
-          const { data: profileData } = await supabaseAdmin
-            .from("user_profiles")
-            .select("points_balance")
-            .eq("id", userId)
-            .single();
-          if (profileData) {
-            const newBalance = Math.max(0, (profileData.points_balance || 0) - pointsToRedeem);
-            await supabaseAdmin
-              .from("user_profiles")
-              .update({ points_balance: newBalance })
-              .eq("id", userId);
-            // Also record points_redeemed on the order for history
+          // Try atomic deduction first (RPC function)
+          const { data: deductOk } = await supabaseAdmin.rpc("deduct_points_atomic", {
+            p_user_id: userId,
+            p_amount: pointsToRedeem,
+          });
+          if (deductOk === false) {
+            console.warn(`Points deduction failed for user ${userId.slice(-8)} — insufficient balance`);
+          } else {
+            // Record points_redeemed on the order for history
             await supabaseAdmin
               .from("orders")
               .update({ points_redeemed: pointsToRedeem })
               .eq("id", order.id);
           }
         } catch {
-          console.error("Failed to deduct loyalty points");
+          // Fallback: non-atomic deduction if RPC doesn't exist yet
+          try {
+            const { data: profileData } = await supabaseAdmin
+              .from("user_profiles")
+              .select("points_balance")
+              .eq("id", userId)
+              .single();
+            if (profileData) {
+              const newBalance = Math.max(0, (profileData.points_balance || 0) - pointsToRedeem);
+              await supabaseAdmin
+                .from("user_profiles")
+                .update({ points_balance: newBalance })
+                .eq("id", userId);
+              await supabaseAdmin
+                .from("orders")
+                .update({ points_redeemed: pointsToRedeem })
+                .eq("id", order.id);
+            }
+          } catch {
+            console.error("Failed to deduct loyalty points");
+          }
         }
       }
 

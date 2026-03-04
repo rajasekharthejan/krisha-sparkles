@@ -23,7 +23,8 @@ async function verifyAdmin() {
     }
   );
   const { data: { user } } = await supabase.auth.getUser();
-  return user;
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@krishasparkles.com").trim();
+  return user?.email === adminEmail ? user : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -96,19 +97,19 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Product update error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
     }
     return NextResponse.json({ success: true, product: data });
   } else {
     // CREATE new product — ensure unique slug
-    let finalSlug = slug;
+    let finalSlug = slug || `product-${Date.now()}`;
     const { data: existing } = await supabase
       .from("products")
       .select("id")
-      .eq("slug", slug)
+      .eq("slug", finalSlug)
       .single();
     if (existing) {
-      finalSlug = `${slug}-${Date.now()}`;
+      finalSlug = `${finalSlug}-${Date.now()}`;
     }
 
     const { data, error } = await supabase
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Product create error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
     }
     return NextResponse.json({ success: true, product: data });
   }

@@ -16,8 +16,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 5 subscriptions per minute per IP
+  const ip = getClientIp(req);
+  const rl = rateLimit(`back-in-stock:${ip}`, 5, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
   try {
     const { product_id, email } = await req.json();
 

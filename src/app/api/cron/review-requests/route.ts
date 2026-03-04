@@ -3,8 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 import { sendReviewRequestEmail } from "@/lib/email";
 
 export async function GET(req: NextRequest) {
+  // SECURITY: Fail-closed — reject if CRON_SECRET is missing or doesn't match
+  const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -38,7 +40,7 @@ export async function GET(req: NextRequest) {
       await admin.from("orders").update({ review_requested: true }).eq("id", order.id);
       sent++;
     } catch {
-      console.error(`Failed review request for order ${order.id}`);
+      console.error(`Failed review request for order ${order.id.slice(-8)}`);
     }
   }
 

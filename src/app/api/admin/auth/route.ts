@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { rateLimitAsync, getClientIp } from "@/lib/rateLimit";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,8 +17,8 @@ const supabaseAdmin = createClient(
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
-  // ── Rate limit: 5 attempts / 15 min per IP ──────────────────
-  const rl = rateLimit(`admin-login:${ip}`, 5, 15 * 60_000);
+  // ── Rate limit: 5 attempts / 15 min per IP (distributed via Upstash Redis) ──
+  const rl = await rateLimitAsync(`admin-login:${ip}`, 5, 15 * 60_000);
   if (!rl.allowed) {
     const minutes = Math.ceil(rl.retryAfterMs / 60_000);
     await logAttempt(ip, "", false, "Rate limited");

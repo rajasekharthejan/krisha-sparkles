@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getTrackingStatus, detectCarrier } from "@/lib/shippo";
+import { sendWhatsAppOutForDelivery, sendWhatsAppDelivered } from "@/lib/whatsapp-notify";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,23 +63,24 @@ function mapShippoStatus(
 }
 
 export async function GET(req: NextRequest) {
-  // Verify CRON_SECRET
+  // SECURITY: Fail-closed — reject if CRON_SECRET is missing or doesn't match
+  const cronSecret = process.env.CRON_SECRET;
   const auth = req.headers.get("authorization") || "";
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // Fetch all active orders with tracking (last 60 days)
   const { data: orders, error } = await supabaseAdmin
     .from("orders")
-    .select("id, status, tracking_number, tracking_url, shipped_at")
+    .select("id, status, tracking_number, tracking_url, shipped_at, notify_whatsapp, phone")
     .in("status", ACTIVE_STATUSES)
     .not("tracking_number", "is", null)
     .gte("shipped_at", new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString());
 
   if (error) {
     console.error("[tracking-sync] DB fetch error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
   }
 
   if (!orders || orders.length === 0) {
@@ -124,7 +126,17 @@ export async function GET(req: NextRequest) {
         results.errors++;
       } else {
         results.updated++;
-        console.log(`[tracking-sync] ${order.id}: ${order.status} → ${newStatus} (${tracking.status}/${subCode || "-"})`);
+        console.log(`[tracking-sync] ${order.id.slice(-8)}: ${order.status} → ${newStatus}`);
+
+        // Send WhatsApp notification for delivery milestones (non-blocking)
+        if (order.notify_whatsapp && order.phone) {
+          const orderRef = order.id.slice(-8).toUpperCase();
+          if (newStatus === "out_for_delivery") {
+            sendWhatsAppOutForDelivery(order.phone, orderRef).catch(() => {});
+          } else if (newStatus === "delivered") {
+            sendWhatsAppDelivered(order.phone, orderRef).catch(() => {});
+          }
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

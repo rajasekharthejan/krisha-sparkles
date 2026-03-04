@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 5 coupon validations per minute per IP
+  const ip = getClientIp(req);
+  const rl = rateLimit(`validate-coupon:${ip}`, 5, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ valid: false, error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const { code, orderTotal } = await req.json();
 
   if (!code) {

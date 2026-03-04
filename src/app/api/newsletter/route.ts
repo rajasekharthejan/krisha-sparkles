@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendWelcomeEmail } from "@/lib/email";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 /** Regex-free email validation — immune to ReDoS */
 function isValidEmail(email: unknown): boolean {
@@ -30,6 +31,13 @@ function generateWelcomeCouponCode(): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 5 subscriptions per minute per IP
+  const ip = getClientIp(req);
+  const rl = rateLimit(`newsletter:${ip}`, 5, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
   const body = await req.json();
   const { email, name, phone } = body;
 
@@ -57,10 +65,9 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (phoneExists) {
-      // Phone already used — block regardless of email
+      // SECURITY: Same success shape to prevent phone enumeration
       return NextResponse.json(
-        { error: "A welcome coupon has already been generated for this phone number." },
-        { status: 409 }
+        { success: true, message: "If this email is not already subscribed, you'll receive a welcome coupon shortly!" }
       );
     }
   }
@@ -88,11 +95,12 @@ export async function POST(req: NextRequest) {
         message: "Welcome back! Your unique 10% off code has been sent to your email.",
       });
     }
-    // Already active — don't issue a second coupon to this email
-    return NextResponse.json(
-      { error: "This email is already subscribed. Each email can only receive one welcome coupon." },
-      { status: 409 }
-    );
+    // SECURITY: Return same success shape to prevent email enumeration.
+    // Don't reveal that the email already exists — attacker can't tell the difference.
+    return NextResponse.json({
+      success: true,
+      message: "If this email is not already subscribed, you'll receive a welcome coupon shortly!",
+    });
   }
 
   // ── New subscriber — generate unique coupon ───────────────────────────────

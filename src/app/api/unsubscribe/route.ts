@@ -1,20 +1,19 @@
 /**
- * GET /api/unsubscribe?email=user@example.com&token=<hmac>
+ * GET /api/unsubscribe?email=user@example.com&token=<hmac>&t=<timestamp>
  *
  * One-click unsubscribe endpoint — CAN-SPAM / RFC 8058 compliant.
- * Token is HMAC-SHA256(email, UNSUBSCRIBE_SECRET) encoded as hex.
- * If UNSUBSCRIBE_SECRET is not set, falls back to a constant derived
- * from SUPABASE_SERVICE_ROLE_KEY (still safe — never exposed to browser).
+ * Token is HMAC-SHA256(email + "|" + timestamp, UNSUBSCRIBE_SECRET) encoded as hex.
+ * Tokens expire after 90 days for security.
  *
- * Flow:
- *  1. Verify HMAC token (prevents arbitrary unsubscribes)
- *  2. Set newsletter_subscribers.active = false
- *  3. Return branded HTML confirmation page
+ * For backward compatibility, tokens without timestamp are also accepted
+ * (legacy format: HMAC of just the email).
  */
 
 import { createHmac } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+
+const TOKEN_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 
 function getSecret(): string {
   return (
@@ -24,17 +23,29 @@ function getSecret(): string {
   );
 }
 
-export function buildUnsubscribeToken(email: string): string {
+/**
+ * Build a time-limited unsubscribe token.
+ * Includes timestamp in HMAC input so tokens expire.
+ */
+export function buildUnsubscribeToken(email: string, timestamp?: number): string {
+  const ts = timestamp ?? Date.now();
+  return createHmac("sha256", getSecret())
+    .update(`${email.toLowerCase().trim()}|${ts}`)
+    .digest("hex");
+}
+
+/** Legacy token (no timestamp) — for backward compatibility */
+function buildLegacyToken(email: string): string {
   return createHmac("sha256", getSecret())
     .update(email.toLowerCase().trim())
     .digest("hex");
 }
 
 export function buildUnsubscribeUrl(email: string): string {
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
-  const token = buildUnsubscribeToken(email);
-  return `${base}/api/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
+  const ts = Date.now();
+  const token = buildUnsubscribeToken(email, ts);
+  return `${base}/api/unsubscribe?email=${encodeURIComponent(email)}&token=${token}&t=${ts}`;
 }
 
 function escapeHtml(s: string): string {
@@ -81,6 +92,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const email = searchParams.get("email")?.toLowerCase().trim();
   const token = searchParams.get("token");
+  const timestampStr = searchParams.get("t");
 
   if (!email || !token) {
     return new NextResponse(confirmationHtml("", false), {
@@ -89,9 +101,32 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Verify HMAC token
-  const expected = buildUnsubscribeToken(email);
-  if (token !== expected) {
+  // Verify HMAC token — support both timestamped (new) and legacy (old) formats
+  let valid = false;
+
+  if (timestampStr) {
+    // New format: token includes timestamp
+    const ts = parseInt(timestampStr, 10);
+    if (!isNaN(ts)) {
+      // Check expiry — reject tokens older than 90 days
+      if (Date.now() - ts > TOKEN_MAX_AGE_MS) {
+        return new NextResponse(confirmationHtml(email, false), {
+          status: 403,
+          headers: { "Content-Type": "text/html" },
+        });
+      }
+      const expected = buildUnsubscribeToken(email, ts);
+      valid = token === expected;
+    }
+  }
+
+  if (!valid) {
+    // Fallback: try legacy token (no timestamp)
+    const legacyExpected = buildLegacyToken(email);
+    valid = token === legacyExpected;
+  }
+
+  if (!valid) {
     return new NextResponse(confirmationHtml(email, false), {
       status: 403,
       headers: { "Content-Type": "text/html" },

@@ -16,8 +16,34 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+async function verifyAdmin() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@krishasparkles.com").trim();
+  return user?.email === adminEmail ? user : null;
+}
 
 export async function POST(req: NextRequest) {
+  // SECURITY: Double-lock — require both admin session AND CRON_SECRET header
+  const user = await verifyAdmin();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = req.headers.get("x-cron-secret");
+  if (!cronSecret || authHeader !== cronSecret) {
+    return NextResponse.json({ error: "Forbidden — missing security token" }, { status: 403 });
+  }
+
   // Require a confirmation token in the body
   const body = await req.json().catch(() => ({}));
   if (body.confirm !== "RESET_ALL_DATA") {
