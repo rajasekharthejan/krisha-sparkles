@@ -11,6 +11,7 @@ import {
   RotateCcw, Mail, MessageCircle, Instagram, Layout,
   BookOpen, Gift, BarChart3, Boxes, Music2, Users, RefreshCw, Settings,
 } from "lucide-react";
+import { APP_VERSION } from "@/lib/utils";
 
 const GROUPS = [
   {
@@ -197,7 +198,7 @@ export default function AdminSidebar() {
         {/* Version + Mode badge */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", padding: "0.4rem 0 0" }}>
           <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.15)", letterSpacing: "0.05em", margin: 0 }}>
-            v7.36
+            {APP_VERSION}
           </p>
           {paymentMode && (
             <span style={{

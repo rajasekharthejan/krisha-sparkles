@@ -33,6 +33,9 @@ export function truncate(str: string, length: number): string {
   return str.length > length ? str.slice(0, length) + "…" : str;
 }
 
+/** Single source of truth for the app version — used in admin sidebar + store footer */
+export const APP_VERSION = "v7.36";
+
 export const CATEGORIES = [
   { name: "Necklaces", slug: "necklaces", icon: "💎" },
   { name: "Earrings", slug: "earrings", icon: "✨" },
