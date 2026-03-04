@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { sendWhatsAppOutForDelivery, sendWhatsAppDelivered } from "@/lib/whatsapp-notify";
+import {
+  sendWhatsAppShippingUpdate,
+  sendWhatsAppLabelCreated,
+  sendWhatsAppInTransit,
+  sendWhatsAppOutForDelivery,
+  sendWhatsAppDelivered,
+  sendWhatsAppCancelled,
+} from "@/lib/whatsapp-notify";
 
 // SECURITY: Whitelist of valid order statuses — prevents arbitrary DB values
 const VALID_STATUSES = [
@@ -12,7 +19,10 @@ const VALID_STATUSES = [
 ];
 
 // Statuses that trigger WhatsApp notifications (if customer opted in)
-const WA_NOTIFY_STATUSES = ["out_for_delivery", "delivered"];
+const WA_NOTIFY_STATUSES = [
+  "shipped", "label_created", "in_transit",
+  "out_for_delivery", "delivered", "cancelled",
+];
 
 async function verifyAdmin() {
   const cookieStore = await cookies();
@@ -59,21 +69,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to update order status" }, { status: 500 });
   }
 
-  // Send WhatsApp notification for delivery milestones (non-blocking)
+  // Send WhatsApp notification for order status changes (non-blocking)
   if (WA_NOTIFY_STATUSES.includes(status)) {
     try {
       const { data: order } = await supabase
         .from("orders")
-        .select("id, notify_whatsapp, phone")
+        .select("id, notify_whatsapp, phone, tracking_number")
         .eq("id", order_id)
         .single();
 
       if (order?.notify_whatsapp && order.phone) {
         const orderRef = order.id.slice(-8).toUpperCase();
-        if (status === "out_for_delivery") {
-          sendWhatsAppOutForDelivery(order.phone, orderRef).catch(() => {});
-        } else if (status === "delivered") {
-          sendWhatsAppDelivered(order.phone, orderRef).catch(() => {});
+        switch (status) {
+          case "shipped":
+            if (order.tracking_number) {
+              sendWhatsAppShippingUpdate(order.phone, orderRef, order.tracking_number).catch(() => {});
+            }
+            break;
+          case "label_created":
+            sendWhatsAppLabelCreated(order.phone, orderRef).catch(() => {});
+            break;
+          case "in_transit":
+            sendWhatsAppInTransit(order.phone, orderRef).catch(() => {});
+            break;
+          case "out_for_delivery":
+            sendWhatsAppOutForDelivery(order.phone, orderRef).catch(() => {});
+            break;
+          case "delivered":
+            sendWhatsAppDelivered(order.phone, orderRef).catch(() => {});
+            break;
+          case "cancelled":
+            sendWhatsAppCancelled(order.phone, orderRef).catch(() => {});
+            break;
         }
       }
     } catch {

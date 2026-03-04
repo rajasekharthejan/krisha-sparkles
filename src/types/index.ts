@@ -50,7 +50,7 @@ export interface Order {
   subtotal: number;
   tax: number;
   total: number;
-  status: "pending" | "paid" | "shipped" | "delivered" | "cancelled";
+  status: "pending" | "paid" | "shipped" | "label_created" | "in_transit" | "out_for_delivery" | "delivered" | "cancelled" | "returned";
   shipping_address?: ShippingAddress;
   notes?: string;
   user_id?: string;
@@ -59,6 +59,8 @@ export interface Order {
   label_url?: string;
   shipped_at?: string;
   delivered_at?: string;
+  phone?: string;
+  notify_whatsapp?: boolean;
   created_at: string;
   order_items?: OrderItem[];
 }

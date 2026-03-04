@@ -169,6 +169,53 @@ export async function sendWhatsAppDelivered(phone: string, orderRef: string): Pr
   }
 }
 
+// ── Customer: Label Created ─────────────────────────────────────────────────
+export async function sendWhatsAppLabelCreated(phone: string, orderRef: string): Promise<void> {
+  if (!WA_TOKEN || !WA_PHONE_ID) return;
+  try {
+    await sendWAMessage(
+      phone,
+      `📋 *Shipping Label Created — Krisha Sparkles*\n\n` +
+      `Your order *#${orderRef}* is being prepared for shipping! We've created the shipping label.\n\n` +
+      `You'll receive a tracking update once your package is picked up by the carrier.\n\n` +
+      `📍 Track your order:\nhttps://shopkrisha.com/account/orders`
+    );
+  } catch (err) {
+    console.error("WhatsApp label-created notification failed:", err);
+  }
+}
+
+// ── Customer: In Transit ────────────────────────────────────────────────────
+export async function sendWhatsAppInTransit(phone: string, orderRef: string): Promise<void> {
+  if (!WA_TOKEN || !WA_PHONE_ID) return;
+  try {
+    await sendWAMessage(
+      phone,
+      `🚚 *Package In Transit — Krisha Sparkles*\n\n` +
+      `Your order *#${orderRef}* is on the move! It's been picked up by the carrier and is heading your way.\n\n` +
+      `📍 Track your order:\nhttps://shopkrisha.com/account/orders`
+    );
+  } catch (err) {
+    console.error("WhatsApp in-transit notification failed:", err);
+  }
+}
+
+// ── Customer: Order Cancelled ───────────────────────────────────────────────
+export async function sendWhatsAppCancelled(phone: string, orderRef: string): Promise<void> {
+  if (!WA_TOKEN || !WA_PHONE_ID) return;
+  try {
+    await sendWAMessage(
+      phone,
+      `❌ *Order Cancelled — Krisha Sparkles*\n\n` +
+      `Your order *#${orderRef}* has been cancelled.\n\n` +
+      `If a refund is applicable, it will be processed within 5–10 business days back to your original payment method.\n\n` +
+      `Questions? Reply to this message or email hello@shopkrisha.com`
+    );
+  } catch (err) {
+    console.error("WhatsApp cancellation notification failed:", err);
+  }
+}
+
 // ── Customer: Refund Update ─────────────────────────────────────────────────
 export async function sendWhatsAppRefundUpdate(
   phone: string,

@@ -20,7 +20,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getTrackingStatus, detectCarrier } from "@/lib/shippo";
-import { sendWhatsAppOutForDelivery, sendWhatsAppDelivered } from "@/lib/whatsapp-notify";
+import {
+  sendWhatsAppLabelCreated,
+  sendWhatsAppInTransit,
+  sendWhatsAppOutForDelivery,
+  sendWhatsAppDelivered,
+} from "@/lib/whatsapp-notify";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -128,13 +133,22 @@ export async function GET(req: NextRequest) {
         results.updated++;
         console.log(`[tracking-sync] ${order.id.slice(-8)}: ${order.status} → ${newStatus}`);
 
-        // Send WhatsApp notification for delivery milestones (non-blocking)
+        // Send WhatsApp notification for status changes (non-blocking)
         if (order.notify_whatsapp && order.phone) {
           const orderRef = order.id.slice(-8).toUpperCase();
-          if (newStatus === "out_for_delivery") {
-            sendWhatsAppOutForDelivery(order.phone, orderRef).catch(() => {});
-          } else if (newStatus === "delivered") {
-            sendWhatsAppDelivered(order.phone, orderRef).catch(() => {});
+          switch (newStatus) {
+            case "label_created":
+              sendWhatsAppLabelCreated(order.phone, orderRef).catch(() => {});
+              break;
+            case "in_transit":
+              sendWhatsAppInTransit(order.phone, orderRef).catch(() => {});
+              break;
+            case "out_for_delivery":
+              sendWhatsAppOutForDelivery(order.phone, orderRef).catch(() => {});
+              break;
+            case "delivered":
+              sendWhatsAppDelivered(order.phone, orderRef).catch(() => {});
+              break;
           }
         }
       }

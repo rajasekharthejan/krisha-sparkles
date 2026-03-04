@@ -49,9 +49,9 @@ function CheckoutContent() {
   const [city, setCity] = useState("");
   const [zipCode, setZipCode] = useState("");
   const [selectedShipping, setSelectedShipping] = useState<"free" | "standard" | "express">("standard");
-  // WhatsApp
+  // Phone (part of address) + WhatsApp opt-in
+  const [phone, setPhone] = useState("");
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
-  const [whatsAppPhone, setWhatsAppPhone] = useState("");
 
   // Saved address
   const [savedAddress, setSavedAddress] = useState<null | {
@@ -82,7 +82,8 @@ function CheckoutContent() {
     lastName.trim() &&
     addressLine1.trim() &&
     city.trim() &&
-    zipCode.trim()
+    zipCode.trim() &&
+    phone.trim()
   );
 
   const US_STATES = [
@@ -169,6 +170,7 @@ function CheckoutContent() {
           setAddressLine2(a.addressLine2 || "");
           setCity(a.city || "");
           setZipCode(a.zipCode || "");
+          if (a.phone) setPhone(a.phone);
           localAddressFound = true;
         }
       }
@@ -193,6 +195,8 @@ function CheckoutContent() {
             if (a.state) setShippingState(a.state);
             setSavedAddressUsed(true);
           }
+          // Pre-fill phone from profile
+          if (d.phone) setPhone(d.phone);
         })
         .catch(() => {});
     }
@@ -300,7 +304,7 @@ function CheckoutContent() {
           discountAmount: discount,
           appliedCredit,
           notifyWhatsApp,
-          whatsAppPhone,
+          whatsAppPhone: phone.trim(),
           // Loyalty points redemption
           pointsToRedeem: usePoints ? pointsToRedeem : 0,
           pointsDiscount: usePoints ? pointsDiscount : 0,
@@ -337,6 +341,7 @@ function CheckoutContent() {
             city: city.trim(),
             state: shippingState,
             zipCode: zipCode.trim(),
+            phone: phone.trim(),
           }),
         }).catch(() => {}); // fire-and-forget — never block checkout
 
@@ -351,6 +356,7 @@ function CheckoutContent() {
             addressLine2: addressLine2.trim(),
             city: city.trim(),
             zipCode: zipCode.trim(),
+            phone: phone.trim(),
           }));
         } catch {}
 
@@ -710,12 +716,24 @@ function CheckoutContent() {
               />
             </div>
             {/* State is already selected — show as read-only badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 0.75rem", background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: "8px", fontSize: "0.8rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 0.75rem", background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: "8px", fontSize: "0.8rem", marginBottom: "0.5rem" }}>
               <Check size={13} style={{ color: "var(--gold)" }} />
               <span style={{ color: "var(--muted)" }}>State:</span>
               <span style={{ fontWeight: 600 }}>{US_STATES.find(s => s.code === shippingState)?.name} ({shippingState})</span>
               <span style={{ marginLeft: "auto", fontSize: "0.72rem", color: "var(--muted)" }}>Selected above</span>
             </div>
+            {/* Phone number — required for delivery coordination & WhatsApp */}
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone number * (e.g. +1 555 123 4567)"
+              className="input-dark"
+              style={{ width: "100%" }}
+            />
+            <p style={{ color: "var(--muted)", fontSize: "0.68rem", marginTop: "0.3rem" }}>
+              Required for delivery coordination &amp; order updates
+            </p>
           </div>
         )}
 
@@ -848,22 +866,12 @@ function CheckoutContent() {
               style={{ width: "16px", height: "16px", accentColor: "var(--gold)", cursor: "pointer" }}
             />
             <div>
-              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>📱 Get order updates on WhatsApp</span>
-              <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "2px 0 0" }}>Receive order confirmation &amp; shipping updates</p>
+              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>📱 Send order updates via WhatsApp</span>
+              <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "2px 0 0" }}>
+                Receive order confirmation, shipping &amp; delivery updates{phone.trim() ? ` on ${phone.trim()}` : ""}
+              </p>
             </div>
           </label>
-          {notifyWhatsApp && (
-            <div style={{ marginTop: "0.85rem" }}>
-              <input
-                type="tel"
-                value={whatsAppPhone}
-                onChange={(e) => setWhatsAppPhone(e.target.value)}
-                placeholder="Your WhatsApp number (e.g. +1 555 123 4567)"
-                className="input-dark"
-                style={{ width: "100%" }}
-              />
-            </div>
-          )}
         </div>
 
         {error && (

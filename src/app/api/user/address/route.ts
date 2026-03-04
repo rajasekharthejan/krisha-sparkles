@@ -29,11 +29,14 @@ export async function GET() {
   const supabase = getAdminClient();
   const { data } = await supabase
     .from("user_profiles")
-    .select("default_address")
+    .select("default_address, phone")
     .eq("id", user.id)
     .single();
 
-  return NextResponse.json({ address: data?.default_address || null });
+  return NextResponse.json({
+    address: data?.default_address || null,
+    phone: data?.phone || null,
+  });
 }
 
 // POST — save/update default address for current user
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
   const body = await req.json();
-  const { firstName, lastName, addressLine1, addressLine2, city, state, zipCode } = body;
+  const { firstName, lastName, addressLine1, addressLine2, city, state, zipCode, phone } = body;
 
   if (!firstName || !lastName || !addressLine1 || !city || !state || !zipCode) {
     return NextResponse.json({ error: "Missing required address fields" }, { status: 400 });
@@ -59,9 +62,20 @@ export async function POST(req: NextRequest) {
   };
 
   const supabase = getAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const upsertPayload: Record<string, any> = {
+    id: user.id,
+    default_address: address,
+    updated_at: new Date().toISOString(),
+  };
+  // Save phone to profile if provided
+  if (phone && phone.trim()) {
+    upsertPayload.phone = phone.trim();
+  }
+
   const { error } = await supabase
     .from("user_profiles")
-    .upsert({ id: user.id, default_address: address, updated_at: new Date().toISOString() }, { onConflict: "id" });
+    .upsert(upsertPayload, { onConflict: "id" });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });

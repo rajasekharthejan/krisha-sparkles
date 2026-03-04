@@ -197,7 +197,7 @@ export default function AdminSidebar() {
         {/* Version + Mode badge */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", padding: "0.4rem 0 0" }}>
           <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.15)", letterSpacing: "0.05em", margin: 0 }}>
-            v7.35
+            v7.36
           </p>
           {paymentMode && (
             <span style={{

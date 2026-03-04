@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getStripe } from "@/lib/stripe";
 import { sendRefundStatusEmail } from "@/lib/email";
+import { sendWhatsAppRefundUpdate } from "@/lib/whatsapp-notify";
 
 async function verifyAdmin() {
   const cookieStore = await cookies();
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
   // Fetch the order
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select("id, email, name, total, status, stripe_payment_intent_id")
+    .select("id, email, name, total, status, stripe_payment_intent_id, notify_whatsapp, phone")
     .eq("id", order_id)
     .single();
 
@@ -92,12 +93,23 @@ export async function POST(req: NextRequest) {
   }
 
   // Send confirmation email to customer (non-blocking)
+  const refundMessage = `Your full refund of $${order.total.toFixed(2)} has been processed. It will appear on your card within 3–5 business days.`;
   sendRefundStatusEmail({
     email: order.email,
     orderId: order.id,
     status: "approved",
-    adminNotes: `Your full refund of $${order.total.toFixed(2)} has been processed. It will appear on your card within 3–5 business days.`,
+    adminNotes: refundMessage,
   }).catch(() => {});
+
+  // Send WhatsApp refund notification (non-blocking)
+  if (order.notify_whatsapp && order.phone) {
+    sendWhatsAppRefundUpdate(
+      order.phone,
+      order.id.slice(-8).toUpperCase(),
+      "approved",
+      refundMessage,
+    ).catch(() => {});
+  }
 
   return NextResponse.json({
     success: true,

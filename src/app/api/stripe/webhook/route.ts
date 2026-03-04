@@ -131,6 +131,9 @@ export async function POST(req: NextRequest) {
           utm_campaign: metadata?.utm_campaign || null,
           utm_content: metadata?.utm_content || null,
           referral_code: metadata?.referral_code || null,
+          // WhatsApp preferences — included in initial insert (not a separate update)
+          phone: metadata?.phone || null,
+          notify_whatsapp: metadata?.notify_whatsapp === "true",
         })
         .select()
         .single();
@@ -292,23 +295,13 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Save WhatsApp preferences on order and send notification
+      // Send WhatsApp order confirmation (phone/notify_whatsapp already saved in initial insert above)
       if (metadata?.notify_whatsapp === "true" && metadata?.phone) {
-        try {
-          await supabaseAdmin.from("orders").update({
-            notify_whatsapp: true,
-            phone: metadata.phone,
-          }).eq("id", order.id);
-          
-          // Send WhatsApp order confirmation (non-blocking)
-          sendWhatsAppOrderConfirmation(
-            metadata.phone,
-            order.id.slice(-8).toUpperCase(),
-            total
-          ).catch(() => console.error("WhatsApp notification failed"));
-        } catch {
-          console.error("Failed to save WhatsApp preferences");
-        }
+        sendWhatsAppOrderConfirmation(
+          metadata.phone,
+          order.id.slice(-8).toUpperCase(),
+          total
+        ).catch(() => console.error("WhatsApp notification failed"));
       }
 
       // Await all emails before returning — fire-and-forget gets killed on Vercel serverless
