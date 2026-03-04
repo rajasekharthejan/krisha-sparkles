@@ -77,7 +77,7 @@ export default function ExitIntentPopup() {
         document.removeEventListener("mouseleave", handleMouseLeave);
         window.removeEventListener("scroll", handleScroll);
       };
-    });
+    }).catch(() => {});
 
     return () => {
       const cleanup = (window as unknown as Record<string, () => void>).__exitPopupCleanup;

@@ -70,7 +70,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.cdninstagram.com https://*.fbcdn.net https://*.stripe.com https://maps.googleapis.com https://maps.gstatic.com",
               "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com",
-              "connect-src 'self' https://*.supabase.co https://*.supabase.in https://api.stripe.com https://maps.googleapis.com https://www.google-analytics.com https://api.goshippo.com https://wa.me",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.in wss://*.supabase.in https://api.stripe.com https://maps.googleapis.com https://www.google-analytics.com https://api.goshippo.com https://wa.me",
               "frame-src https://js.stripe.com https://hooks.stripe.com",
               "object-src 'none'",
               "base-uri 'self'",

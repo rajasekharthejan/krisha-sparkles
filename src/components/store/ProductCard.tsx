@@ -34,13 +34,15 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   useEffect(() => {
     if (user) {
       const supabase = createClient();
-      supabase
-        .from("wishlists")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("product_id", product.id)
-        .single()
-        .then(({ data }) => setWished(!!data));
+      Promise.resolve(
+        supabase
+          .from("wishlists")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("product_id", product.id)
+          .maybeSingle()
+      ).then(({ data }) => setWished(!!data))
+        .catch(() => {});
     } else {
       setWished(isInGuestWishlist(product.id));
     }

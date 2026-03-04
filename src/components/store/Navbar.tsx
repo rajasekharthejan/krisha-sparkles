@@ -43,7 +43,7 @@ export default function Navbar() {
 
     supabase.auth.getSession().then(({ data }) => {
       setUser((data.session?.user ?? null) as SupabaseUser | null);
-    });
+    }).catch(() => {});
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser((session?.user ?? null) as SupabaseUser | null);
@@ -59,14 +59,15 @@ export default function Navbar() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
-    supabase
-      .from("user_profiles")
-      .select("points_balance")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setPointsBalance(data.points_balance ?? 0);
-      });
+    Promise.resolve(
+      supabase
+        .from("user_profiles")
+        .select("points_balance")
+        .eq("id", user.id)
+        .maybeSingle()
+    ).then(({ data }) => {
+      if (data) setPointsBalance(data.points_balance ?? 0);
+    }).catch(() => {});
   }, [user]);
 
   useEffect(() => {

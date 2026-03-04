@@ -16,13 +16,13 @@ export default function SocialProofToast() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .rpc("get_recent_purchases")
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setPurchases(data);
-        }
-      });
+    Promise.resolve(
+      supabase.rpc("get_recent_purchases")
+    ).then(({ data }) => {
+      if (data && data.length > 0) {
+        setPurchases(data);
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {

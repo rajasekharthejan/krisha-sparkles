@@ -92,7 +92,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
             .select("id")
             .eq("user_id", user.id)
             .eq("product_id", data.id)
-            .single();
+            .maybeSingle();
           setWished(!!wl);
           // Check if user already reviewed
           const { data: myReview } = await supabase
@@ -100,7 +100,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
             .select("id")
             .eq("product_id", data.id)
             .eq("user_id", user.id)
-            .single();
+            .maybeSingle();
           setHasReviewed(!!myReview);
         } else {
           setWished(isInGuestWishlist(data.id));
