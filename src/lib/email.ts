@@ -404,20 +404,19 @@ export async function sendShippingNotification(params: {
       <p style="color:#888;margin:0;font-size:14px;">Hi ${name}, your order #${orderId.slice(-8).toUpperCase()} has shipped!</p>
     </div>
 
-    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:20px;margin-bottom:24px;">
+    ${trackingNumber ? `<div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:20px;margin-bottom:24px;">
       <p style="font-size:13px;font-weight:700;color:#c9a84c;margin:0 0 12px;text-transform:uppercase;letter-spacing:0.08em;">Tracking Information</p>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
           <p style="font-size:12px;color:#888;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.06em;">Tracking Number</p>
           <p style="font-family:monospace;font-size:16px;font-weight:700;color:#f5f5f5;margin:0;letter-spacing:0.05em;">${trackingNumber}</p>
         </div>
-        ${
-          trackingUrl
-            ? `<a href="${trackingUrl}" style="display:inline-block;padding:10px 20px;background:#c9a84c;color:#0a0a0a;text-decoration:none;border-radius:8px;font-weight:700;font-size:13px;">Track Package →</a>`
-            : ""
-        }
+        ${trackingUrl ? `<a href="${trackingUrl}" style="display:inline-block;padding:10px 20px;background:#c9a84c;color:#0a0a0a;text-decoration:none;border-radius:8px;font-weight:700;font-size:13px;">Track Package →</a>` : ""}
       </div>
-    </div>
+    </div>` : `<div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:20px;margin-bottom:24px;">
+      <p style="font-size:13px;font-weight:700;color:#c9a84c;margin:0 0 12px;text-transform:uppercase;letter-spacing:0.08em;">Shipping Update</p>
+      <p style="color:#888;font-size:14px;line-height:1.7;margin:0;">Your order has been shipped! Tracking information will be updated soon. Check your account for the latest status.</p>
+    </div>`}
 
     <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:20px;margin-bottom:24px;">
       <p style="color:#888;font-size:14px;line-height:1.7;margin:0;">
@@ -599,12 +598,12 @@ export async function sendAbandonedCart24hr(params: {
 
 // ── Welcome Email (Day 0 drip) ─────────────────────────────────────────────
 // Sent immediately when a new subscriber signs up.
-// couponCode is the unique generated code (e.g. WLCM-4K2M-R7NX) — 15% off, single-use.
+// couponCode is the unique generated code (e.g. WLCM-4K2M-R7NX) — 10% off, single-use.
 
 export async function sendWelcomeEmail({
   email,
   name,
-  couponCode = "WELCOME15",
+  couponCode = "WELCOME10",
 }: {
   email: string;
   name?: string | null;
@@ -615,7 +614,7 @@ export async function sendWelcomeEmail({
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
   const greeting = name ? `Hi ${name}!` : "Hi there!";
-  const subject  = `Welcome to Krisha Sparkles ✨ Here's 15% off`;
+  const subject  = `Welcome to Krisha Sparkles ✨ Here's 10% off`;
 
   const { data: d7, error: e7 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
@@ -646,13 +645,13 @@ export async function sendWelcomeEmail({
         Indian imitation jewelry in the USA.
       </p>
       <p style="color:#aaa;font-size:15px;line-height:1.7;margin:0 0 24px;">
-        As a welcome gift, here's <strong style="color:#c9a84c;">15% off</strong> your first order.
+        As a welcome gift, here's <strong style="color:#c9a84c;">10% off</strong> your first order.
         This is your <strong style="color:#f5f5f5;">unique, personal code</strong> — it can only be used once:
       </p>
       <div style="background:#0a0a0a;border:2px dashed rgba(201,168,76,0.5);border-radius:8px;padding:16px 28px;display:inline-block;margin-bottom:8px;">
         <p style="font-family:monospace;font-size:26px;font-weight:700;color:#c9a84c;margin:0;letter-spacing:0.14em;">${couponCode}</p>
       </div>
-      <p style="color:#666;font-size:12px;margin:0 0 24px;">Single-use · Expires in 30 days · 15% off any order</p>
+      <p style="color:#666;font-size:12px;margin:0 0 24px;">Single-use · Expires in 30 days · 10% off any order</p>
       <a href="${siteUrl}/shop" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:16px;">
         Start Shopping →
       </a>

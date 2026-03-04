@@ -201,7 +201,8 @@ export default function Footer() {
         <div style={{ borderTop: "1px solid rgba(201,168,76,0.1)", paddingTop: "2rem" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem", textAlign: "center" }}>
             <p style={{ fontSize: "0.8rem", color: "var(--subtle)" }}>
-              © {new Date().getFullYear()} Krisha Sparkles LLC. All rights reserved.
+              © {new Date().getFullYear()} Krisha Sparkles LLC. All rights reserved.{" "}
+              <span style={{ opacity: 0.5, fontSize: "0.7rem" }}>v7.32</span>
             </p>
             <p style={{ fontSize: "0.75rem", color: "var(--subtle)", display: "flex", alignItems: "center", gap: "0.25rem" }}>
               Made with <Heart size={12} style={{ color: "var(--gold)", fill: "var(--gold)" }} /> for the love of jewelry

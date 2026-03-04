@@ -1,19 +1,33 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trackEvent } from "@/lib/trackEvent";
 
 const DEFAULT_MESSAGE = "Hi! I'm interested in your jewelry at Krisha Sparkles.";
+const DISMISSED_KEY = "ks_wa_dismissed";
 
 export default function WhatsAppButton() {
   const pathname = usePathname();
   const [showTooltip, setShowTooltip] = useState(false);
+  const [dismissed, setDismissed] = useState(true); // Start hidden to avoid flash
 
   const number = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
 
-  // Hide on admin routes and when no number is configured
-  if (pathname?.startsWith("/admin") || !number) return null;
+  useEffect(() => {
+    const wasDismissed = sessionStorage.getItem(DISMISSED_KEY);
+    setDismissed(!!wasDismissed);
+  }, []);
+
+  // Hide on admin routes, when no number is configured, or when dismissed
+  if (pathname?.startsWith("/admin") || !number || dismissed) return null;
+
+  function handleDismiss(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    sessionStorage.setItem(DISMISSED_KEY, "1");
+    setDismissed(true);
+  }
 
   const href = `https://wa.me/${number}?text=${encodeURIComponent(DEFAULT_MESSAGE)}`;
 
@@ -58,6 +72,42 @@ export default function WhatsAppButton() {
           />
         </div>
       )}
+
+      {/* Dismiss button */}
+      <button
+        onClick={handleDismiss}
+        aria-label="Dismiss WhatsApp button"
+        style={{
+          position: "absolute",
+          top: "-6px",
+          right: "-6px",
+          width: "22px",
+          height: "22px",
+          borderRadius: "50%",
+          background: "#222",
+          border: "1px solid #444",
+          color: "#999",
+          fontSize: "12px",
+          lineHeight: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          zIndex: 2,
+          padding: 0,
+          transition: "all 0.2s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "#333";
+          e.currentTarget.style.color = "#fff";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "#222";
+          e.currentTarget.style.color = "#999";
+        }}
+      >
+        ✕
+      </button>
 
       {/* Pulse ring */}
       <span

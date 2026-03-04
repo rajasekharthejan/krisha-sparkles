@@ -1,12 +1,7 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
-
-const GOOGLE_CLIENT_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ??
-  "392749034350-2rul3jqdu59240tg2l595enhqejcqoev.apps.googleusercontent.com";
 
 interface OAuthButtonsProps {
   redirectTo?: string;
@@ -14,113 +9,24 @@ interface OAuthButtonsProps {
 
 export default function OAuthButtons({ redirectTo = "/account" }: OAuthButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<"google" | "apple" | null>(null);
-  const router = useRouter();
-  const redirectRef = useRef(redirectTo);
-  redirectRef.current = redirectTo;
 
-  // Sign in to Supabase with Google ID token
-  const signInWithGoogleToken = useCallback(
-    async (idToken: string) => {
-      setLoadingProvider("google");
-      try {
-        const supabase = createBrowserClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-        const { error } = await supabase.auth.signInWithIdToken({
-          provider: "google",
-          token: idToken,
-        });
-        if (error) {
-          console.error("Google sign-in error:", error.message);
-          setLoadingProvider(null);
-          return;
-        }
-        router.push(redirectRef.current);
-      } catch (err) {
-        console.error("Google sign-in failed:", err);
-        setLoadingProvider(null);
-      }
-    },
-    [router]
-  );
-
-  // Listen for postMessage from the Google callback popup
-  useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin) return;
-      if (event.data?.type === "GOOGLE_ID_TOKEN" && event.data.id_token) {
-        signInWithGoogleToken(event.data.id_token);
-      }
-    }
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [signInWithGoogleToken]);
-
-  // Handle mobile fallback: if redirected back from google-callback with token in sessionStorage
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("google_callback") === "1") {
-      const token = sessionStorage.getItem("google_id_token");
-      if (token) {
-        sessionStorage.removeItem("google_id_token");
-        signInWithGoogleToken(token);
-      }
-    }
-  }, [signInWithGoogleToken]);
-
-  // Open Google OAuth2 popup (implicit flow — returns id_token in URL fragment)
+  // Google: custom code flow via /api/auth/google — stays on shopkrisha.com the whole time
   function handleGoogleClick() {
     if (loadingProvider) return;
     setLoadingProvider("google");
-
-    const nonce = crypto.randomUUID();
-    const redirectUri = `${window.location.origin}/auth/google-callback`;
-    const params = new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      redirect_uri: redirectUri,
-      response_type: "id_token",
-      scope: "openid email profile",
-      nonce,
-      prompt: "select_account",
-    });
-
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-
-    // Open popup centered on screen
-    const w = 500, h = 600;
-    const left = window.screenX + (window.outerWidth - w) / 2;
-    const top = window.screenY + (window.outerHeight - h) / 2;
-    const popup = window.open(
-      url,
-      "google-signin",
-      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`
-    );
-
-    // If popup blocked, fall back to redirect in same tab
-    if (!popup || popup.closed) {
-      window.location.href = url;
-      return;
-    }
-
-    // Poll to detect if user closed the popup without completing
-    const timer = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(timer);
-        setLoadingProvider(null);
-      }
-    }, 500);
+    window.location.href = `/api/auth/google?next=${encodeURIComponent(redirectTo)}`;
   }
 
-  // Apple uses Supabase redirect flow (unchanged)
-  async function handleOAuthRedirect(provider: "google" | "apple") {
-    setLoadingProvider(provider);
+  // Apple: Supabase redirect flow
+  async function handleAppleClick() {
+    if (loadingProvider) return;
+    setLoadingProvider("apple");
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
     await supabase.auth.signInWithOAuth({
-      provider,
+      provider: "apple",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
       },
@@ -146,7 +52,7 @@ export default function OAuthButtons({ redirectTo = "/account" }: OAuthButtonsPr
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-      {/* Google — manual OAuth2 popup (shows shopkrisha.com, not supabase.co) */}
+      {/* Google — custom code flow, no supabase.co URL visible */}
       <button
         type="button"
         onClick={handleGoogleClick}
@@ -168,10 +74,10 @@ export default function OAuthButtons({ redirectTo = "/account" }: OAuthButtonsPr
         Continue with Google
       </button>
 
-      {/* Apple — uses redirect flow */}
+      {/* Apple — Supabase redirect flow */}
       <button
         type="button"
-        onClick={() => handleOAuthRedirect("apple")}
+        onClick={handleAppleClick}
         disabled={loadingProvider !== null}
         style={btnBase}
         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.22)"; }}

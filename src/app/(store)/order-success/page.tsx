@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { trackEvent } from "@/lib/trackEvent";
-import { CheckCircle, Package, ArrowRight, Instagram } from "lucide-react";
+import { CheckCircle, ArrowRight, Instagram } from "lucide-react";
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const { clearCart } = useCartStore();
   const [cleared, setCleared] = useState(false);
+  const [orderRef, setOrderRef] = useState<string | null>(null);
 
   useEffect(() => {
     if (!cleared) {
@@ -30,6 +31,19 @@ function OrderSuccessContent() {
       });
     }
   }, [clearCart, cleared, sessionId]);
+
+  // Fetch the real order ID from the database using the Stripe session ID
+  useEffect(() => {
+    if (!sessionId) return;
+    fetch(`/api/orders/by-session?session_id=${encodeURIComponent(sessionId)}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.order_ref) {
+          setOrderRef(data.order_ref);
+        }
+      })
+      .catch(() => {});
+  }, [sessionId]);
 
   return (
     <div
@@ -109,8 +123,8 @@ function OrderSuccessContent() {
             }}
           >
             <p style={{ fontSize: "0.75rem", color: "var(--muted)", marginBottom: "2px" }}>Order Reference</p>
-            <p style={{ fontSize: "0.8rem", color: "var(--gold)", fontFamily: "monospace" }}>
-              {sessionId.slice(0, 30)}...
+            <p style={{ fontSize: "0.95rem", color: "var(--gold)", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.05em" }}>
+              {orderRef ? `#${orderRef}` : "Loading..."}
             </p>
           </div>
         )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { X, Sparkles, Mail, Phone } from "lucide-react";
+import { createBrowserClient } from "@supabase/ssr";
 
 const SHOWN_KEY = "ks_exit_shown";
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -29,43 +30,58 @@ export default function ExitIntentPopup() {
     const lastShown = localStorage.getItem(SHOWN_KEY);
     if (lastShown && Date.now() - parseInt(lastShown) < SEVEN_DAYS) return;
 
-    // Desktop: mouse leaves top of viewport
-    function handleMouseLeave(e: MouseEvent) {
-      if (e.clientY < 5) {
-        setVisible(true);
-        localStorage.setItem(SHOWN_KEY, Date.now().toString());
+    // Don't show the popup for logged-in users
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) return; // User is logged in — skip popup
+
+      // Desktop: mouse leaves top of viewport
+      function handleMouseLeave(e: MouseEvent) {
+        if (e.clientY < 5) {
+          setVisible(true);
+          localStorage.setItem(SHOWN_KEY, Date.now().toString());
+          document.removeEventListener("mouseleave", handleMouseLeave);
+        }
+      }
+
+      // Mobile: scroll up >200px after scrolling down >500px
+      function handleScroll() {
+        const currentY = window.scrollY;
+        if (currentY > maxScrollY.current) {
+          maxScrollY.current = currentY;
+        }
+        const scrolledDownEnough = maxScrollY.current > 500;
+        const scrolledUpEnough = maxScrollY.current - currentY > 200;
+        if (scrolledDownEnough && scrolledUpEnough && !mobileTriggered.current) {
+          mobileTriggered.current = true;
+          setVisible(true);
+          localStorage.setItem(SHOWN_KEY, Date.now().toString());
+          window.removeEventListener("scroll", handleScroll);
+        }
+        lastScrollY.current = currentY;
+      }
+
+      // Only attach desktop listener on non-touch devices
+      const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+      if (isTouchDevice) {
+        window.addEventListener("scroll", handleScroll, { passive: true });
+      } else {
+        document.addEventListener("mouseleave", handleMouseLeave);
+      }
+
+      // Store cleanup functions
+      (window as unknown as Record<string, () => void>).__exitPopupCleanup = () => {
         document.removeEventListener("mouseleave", handleMouseLeave);
-      }
-    }
-
-    // Mobile: scroll up >200px after scrolling down >500px
-    function handleScroll() {
-      const currentY = window.scrollY;
-      if (currentY > maxScrollY.current) {
-        maxScrollY.current = currentY;
-      }
-      const scrolledDownEnough = maxScrollY.current > 500;
-      const scrolledUpEnough = maxScrollY.current - currentY > 200;
-      if (scrolledDownEnough && scrolledUpEnough && !mobileTriggered.current) {
-        mobileTriggered.current = true;
-        setVisible(true);
-        localStorage.setItem(SHOWN_KEY, Date.now().toString());
         window.removeEventListener("scroll", handleScroll);
-      }
-      lastScrollY.current = currentY;
-    }
-
-    // Only attach desktop listener on non-touch devices
-    const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
-    if (isTouchDevice) {
-      window.addEventListener("scroll", handleScroll, { passive: true });
-    } else {
-      document.addEventListener("mouseleave", handleMouseLeave);
-    }
+      };
+    });
 
     return () => {
-      document.removeEventListener("mouseleave", handleMouseLeave);
-      window.removeEventListener("scroll", handleScroll);
+      const cleanup = (window as unknown as Record<string, () => void>).__exitPopupCleanup;
+      if (cleanup) cleanup();
     };
   }, []);
 
@@ -189,10 +205,10 @@ export default function ExitIntentPopup() {
                   lineHeight: 1.2,
                 }}
               >
-                Wait &mdash; Here&apos;s 15% Off!
+                Wait &mdash; Here&apos;s 10% Off!
               </h2>
               <p style={{ color: "var(--muted)", fontSize: "0.875rem", lineHeight: 1.6 }}>
-                Enter your email &amp; phone to receive a <strong style={{ color: "var(--gold)" }}>unique 15% off code</strong> — yours alone, single-use.
+                Enter your email &amp; phone to receive a <strong style={{ color: "var(--gold)" }}>unique 10% off code</strong> — yours alone, single-use.
               </p>
             </div>
 
@@ -259,7 +275,7 @@ export default function ExitIntentPopup() {
                 {loading ? (
                   <span style={{ width: "16px", height: "16px", border: "2px solid currentColor", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
                 ) : null}
-                {loading ? "Generating your code..." : "Claim My 15% Off ✦"}
+                {loading ? "Generating your code..." : "Claim My 10% Off ✦"}
               </button>
 
               <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--subtle)", margin: 0 }}>
@@ -283,7 +299,7 @@ export default function ExitIntentPopup() {
               You&apos;re In!
             </h3>
             <p style={{ color: "var(--muted)", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "0.75rem" }}>
-              Your unique 15% off code has been <strong style={{ color: "var(--text)" }}>sent to your email</strong> and auto-applied at checkout:
+              Your unique 10% off code has been <strong style={{ color: "var(--text)" }}>sent to your email</strong> and auto-applied at checkout:
             </p>
             {couponCode && (
               <div style={{

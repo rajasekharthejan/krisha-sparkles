@@ -18,7 +18,7 @@ import FeaturedSlider from "@/components/store/FeaturedSlider";
 import MarqueeTicker from "@/components/store/MarqueeTicker";
 import type { Product } from "@/types";
 import InstagramFeed from "@/components/store/InstagramFeed";
-import TikTokFeed from "@/components/store/TikTokFeed";
+// import TikTokFeed from "@/components/store/TikTokFeed"; // Hidden for now
 import Image from "next/image";
 import { ArrowRight, Star, Shield, Truck, MessageCircle, Gift } from "lucide-react";
 
@@ -539,40 +539,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── TikTok Feed Section ──────────────────────── */}
-      <section style={{ padding: "5rem 1.5rem", background: "var(--surface)", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "linear-gradient(rgba(201,168,76,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.025) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-        <div style={{ maxWidth: "1280px", margin: "0 auto", position: "relative" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", alignItems: "center" }} className="tiktok-grid">
-            <div>
-              <span className="badge-gold">@krishasparkles</span>
-              <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "clamp(1.75rem, 4vw, 2.5rem)", fontWeight: 700, margin: "1rem 0 0.75rem", lineHeight: 1.2 }}>
-                Watch Us on<br />
-                <span className="gold-shimmer-text">TikTok</span>
-              </h2>
-              <div className="gold-divider-left" />
-              <p style={{ color: "var(--muted)", margin: "1.25rem 0 2rem", lineHeight: 1.8, fontSize: "0.9rem" }}>
-                See our jewelry in action — styling tips, unboxings, and behind-the-scenes content on TikTok. Follow us for daily inspiration.
-              </p>
-              <a
-                href="https://www.tiktok.com/@krishasparkles"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-gold"
-                style={{ borderRadius: "6px" }}
-              >
-                Follow on TikTok
-              </a>
-            </div>
-            <TikTokFeed />
-          </div>
-        </div>
-        <style>{`
-          @media (max-width: 640px) {
-            .tiktok-grid { grid-template-columns: 1fr !important; }
-          }
-        `}</style>
-      </section>
+      {/* TikTok Feed Section — hidden for now */}
 
       <NewsletterSection />
     </div>

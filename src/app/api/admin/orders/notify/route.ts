@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       email: order.email,
       name: order.name,
       orderId: order.id,
-      trackingNumber: order.tracking_number || "N/A",
+      trackingNumber: order.tracking_number || "",
       trackingUrl: order.tracking_url,
     });
     return NextResponse.json({ success: true, message: "Shipping update email sent" });
