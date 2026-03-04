@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
               order.id.slice(-8).toUpperCase(),
               status as "approved" | "denied",
               admin_notes?.trim() || null,
+              order.id,
             ).catch(() => {});
           }
         } catch { /* WhatsApp failure is non-blocking */ }

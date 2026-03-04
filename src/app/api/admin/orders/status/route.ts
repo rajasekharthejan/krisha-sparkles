@@ -83,23 +83,23 @@ export async function POST(req: NextRequest) {
         switch (status) {
           case "shipped":
             if (order.tracking_number) {
-              sendWhatsAppShippingUpdate(order.phone, orderRef, order.tracking_number).catch(() => {});
+              sendWhatsAppShippingUpdate(order.phone, orderRef, order.tracking_number, order.id).catch(() => {});
             }
             break;
           case "label_created":
-            sendWhatsAppLabelCreated(order.phone, orderRef).catch(() => {});
+            sendWhatsAppLabelCreated(order.phone, orderRef, order.id).catch(() => {});
             break;
           case "in_transit":
-            sendWhatsAppInTransit(order.phone, orderRef).catch(() => {});
+            sendWhatsAppInTransit(order.phone, orderRef, order.id).catch(() => {});
             break;
           case "out_for_delivery":
-            sendWhatsAppOutForDelivery(order.phone, orderRef).catch(() => {});
+            sendWhatsAppOutForDelivery(order.phone, orderRef, order.id).catch(() => {});
             break;
           case "delivered":
-            sendWhatsAppDelivered(order.phone, orderRef).catch(() => {});
+            sendWhatsAppDelivered(order.phone, orderRef, order.id).catch(() => {});
             break;
           case "cancelled":
-            sendWhatsAppCancelled(order.phone, orderRef).catch(() => {});
+            sendWhatsAppCancelled(order.phone, orderRef, order.id).catch(() => {});
             break;
         }
       }

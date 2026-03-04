@@ -45,8 +45,9 @@ const GROUPS = [
     items: [
       { href: "/admin/promotions",  label: "Promotions",     icon: <Tag size={16} /> },
       { href: "/admin/newsletter",  label: "Email Marketing", icon: <Mail size={16} /> },
-      { href: "/admin/emails",      label: "Email Log",      icon: <Mail size={16} /> },
-      { href: "/admin/affiliates",  label: "Affiliates",     icon: <TrendingUp size={16} /> },
+      { href: "/admin/emails",        label: "Email Log",      icon: <Mail size={16} /> },
+      { href: "/admin/whatsapp-log", label: "WhatsApp Log",   icon: <MessageCircle size={16} /> },
+      { href: "/admin/affiliates",   label: "Affiliates",     icon: <TrendingUp size={16} /> },
       { href: "/admin/referrals",   label: "Referrals",      icon: <Gift size={16} /> },
     ],
   },

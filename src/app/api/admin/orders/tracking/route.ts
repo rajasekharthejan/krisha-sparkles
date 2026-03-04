@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
       sendWhatsAppShippingUpdate(
         data.phone,
         data.id.slice(-8).toUpperCase(),
-        tracking_number.trim()
+        tracking_number.trim(),
+        data.id
       ).catch(() => console.error("WhatsApp shipping update failed"));
     }
   }

@@ -138,16 +138,16 @@ export async function GET(req: NextRequest) {
           const orderRef = order.id.slice(-8).toUpperCase();
           switch (newStatus) {
             case "label_created":
-              sendWhatsAppLabelCreated(order.phone, orderRef).catch(() => {});
+              sendWhatsAppLabelCreated(order.phone, orderRef, order.id).catch(() => {});
               break;
             case "in_transit":
-              sendWhatsAppInTransit(order.phone, orderRef).catch(() => {});
+              sendWhatsAppInTransit(order.phone, orderRef, order.id).catch(() => {});
               break;
             case "out_for_delivery":
-              sendWhatsAppOutForDelivery(order.phone, orderRef).catch(() => {});
+              sendWhatsAppOutForDelivery(order.phone, orderRef, order.id).catch(() => {});
               break;
             case "delivered":
-              sendWhatsAppDelivered(order.phone, orderRef).catch(() => {});
+              sendWhatsAppDelivered(order.phone, orderRef, order.id).catch(() => {});
               break;
           }
         }

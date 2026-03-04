@@ -300,7 +300,8 @@ export async function POST(req: NextRequest) {
         sendWhatsAppOrderConfirmation(
           metadata.phone,
           order.id.slice(-8).toUpperCase(),
-          total
+          total,
+          order.id
         ).catch(() => console.error("WhatsApp notification failed"));
       }
 
@@ -321,6 +322,7 @@ export async function POST(req: NextRequest) {
           items: orderItems.map((oi) => ({ product_name: oi.product_name, quantity: oi.quantity, price: oi.price })),
           shippingCity: shipping_address?.city,
           shippingState: shipping_address?.state,
+          orderId: order.id,
         }).catch((e) =>
           console.error("Failed to send admin WhatsApp notification:", e)
         ),
