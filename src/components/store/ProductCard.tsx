@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag, Heart, Check } from "lucide-react";
+import { ShoppingBag, Heart, Check, Eye } from "lucide-react";
 import { useState, useEffect } from "react";
+import QuickViewModal from "@/components/store/QuickViewModal";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { formatPrice } from "@/lib/utils";
@@ -21,6 +22,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const [wished, setWished] = useState(false);
   const [wishLoading, setWishLoading] = useState(false);
   const [added, setAdded] = useState(false);
+  const [showQuickView, setShowQuickView] = useState(false);
   const { addItem, openCart } = useCartStore();
   const { user } = useAuthStore();
 
@@ -176,6 +178,32 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             )}
           </div>
 
+          {/* Quick View */}
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowQuickView(true); }}
+            title="Quick View"
+            style={{
+              position: "absolute",
+              top: "10px",
+              right: "50px",
+              width: "34px",
+              height: "34px",
+              borderRadius: "50%",
+              background: "rgba(10,10,10,0.65)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(201,168,76,0.3)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s ease",
+              opacity: 0,
+            }}
+            className="quick-view-btn"
+          >
+            <Eye size={14} style={{ color: "var(--muted)" }} />
+          </button>
+
           {/* Wishlist */}
           <button
             onClick={handleWish}
@@ -311,6 +339,22 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           )}
         </div>
       </Link>
+
+      {/* Quick View Modal */}
+      {showQuickView && (
+        <QuickViewModal product={product} onClose={() => setShowQuickView(false)} />
+      )}
+
+      {/* Show quick view button on card hover */}
+      <style>{`
+        .product-card:hover .quick-view-btn {
+          opacity: 1 !important;
+        }
+        .quick-view-btn:hover {
+          background: rgba(201,168,76,0.2) !important;
+          border-color: var(--gold) !important;
+        }
+      `}</style>
     </div>
   );
 }

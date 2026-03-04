@@ -26,6 +26,11 @@ export interface Product {
   featured: boolean;
   active: boolean;
   variants?: ProductVariant[];
+  tags?: string[];
+  material?: string;
+  color?: string;
+  occasion?: string;
+  style?: string;
   created_at: string;
   updated_at: string;
 }

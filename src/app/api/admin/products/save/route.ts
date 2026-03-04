@@ -44,6 +44,11 @@ export async function POST(req: NextRequest) {
     featured,
     active,
     variants,
+    tags,
+    material,
+    color,
+    occasion,
+    style,
   } = body;
 
   if (!name || !price) {
@@ -83,6 +88,11 @@ export async function POST(req: NextRequest) {
     featured: featured || false,
     active: active ?? true,
     variants: Array.isArray(variants) ? variants : [],
+    tags: Array.isArray(tags) ? tags : [],
+    material: material?.trim() || null,
+    color: color?.trim() || null,
+    occasion: occasion?.trim() || null,
+    style: style?.trim() || null,
     updated_at: new Date().toISOString(),
   };
 

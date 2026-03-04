@@ -4,20 +4,141 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ProductCard from "@/components/store/ProductCard";
 import { Search, SlidersHorizontal, X, ChevronDown } from "lucide-react";
-import { CATEGORIES } from "@/lib/utils";
+import { CATEGORIES, MATERIALS, COLORS, OCCASIONS, STYLES } from "@/lib/utils";
 import type { Product } from "@/types";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
+
+// ── Pill component for filter options ─────────────────────────────────────────
+function FilterPill({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "0.3rem 0.75rem",
+        borderRadius: "9999px",
+        border: "1px solid",
+        borderColor: active ? "var(--gold)" : "rgba(201,168,76,0.15)",
+        background: active ? "var(--gold-muted)" : "transparent",
+        color: active ? "var(--gold)" : "var(--muted)",
+        fontSize: "0.75rem",
+        fontWeight: 500,
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ── Color swatch component ────────────────────────────────────────────────────
+const COLOR_MAP: Record<string, string> = {
+  Gold: "#c9a84c",
+  Silver: "#c0c0c0",
+  "Rose Gold": "#e8a090",
+  Multi: "linear-gradient(135deg, #c9a84c 0%, #e8a090 33%, #c0c0c0 66%, #10b981 100%)",
+  Green: "#10b981",
+  Red: "#ef4444",
+  White: "#f5f5f5",
+  Pink: "#ec4899",
+};
+
+function ColorSwatch({
+  color,
+  active,
+  onClick,
+}: {
+  color: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const bg = COLOR_MAP[color] || "#888";
+  const isGradient = bg.startsWith("linear");
+  return (
+    <button
+      onClick={onClick}
+      title={color}
+      style={{
+        width: "28px",
+        height: "28px",
+        borderRadius: "50%",
+        border: active ? "2px solid var(--gold)" : "2px solid transparent",
+        outline: active ? "2px solid var(--gold)" : "none",
+        outlineOffset: "2px",
+        background: isGradient ? bg : bg,
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+        position: "relative",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          bottom: "-16px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          fontSize: "0.6rem",
+          color: active ? "var(--gold)" : "var(--muted)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {color}
+      </span>
+    </button>
+  );
+}
 
 function ShopContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
+
+  // ── Advanced filter state ──────────────────────────────────────────────────
+  const [selectedMaterial, setSelectedMaterial] = useState(searchParams.get("material") || "");
+  const [selectedColor, setSelectedColor] = useState(searchParams.get("color") || "");
+  const [selectedOccasion, setSelectedOccasion] = useState(searchParams.get("occasion") || "");
+  const [selectedStyle, setSelectedStyle] = useState(searchParams.get("style") || "");
+
+  // Count active filters (excluding category which is always visible)
+  const activeFilterCount = [selectedMaterial, selectedColor, selectedOccasion, selectedStyle].filter(Boolean).length
+    + (priceRange[0] > 0 || priceRange[1] < 500 ? 1 : 0);
+
+  // Auto-open filters if URL has advanced filter params
+  useEffect(() => {
+    if (selectedMaterial || selectedColor || selectedOccasion || selectedStyle) {
+      setShowFilters(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Sync filters to URL ────────────────────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedCategory) params.set("category", selectedCategory);
+    if (selectedMaterial) params.set("material", selectedMaterial);
+    if (selectedColor) params.set("color", selectedColor);
+    if (selectedOccasion) params.set("occasion", selectedOccasion);
+    if (selectedStyle) params.set("style", selectedStyle);
+    if (search) params.set("search", search);
+    if (sortBy !== "newest") params.set("sort", sortBy);
+    const qs = params.toString();
+    router.replace(`/shop${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [selectedCategory, selectedMaterial, selectedColor, selectedOccasion, selectedStyle, search, sortBy, router]);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -33,6 +154,18 @@ function ShopContent() {
     if (search) {
       query = query.ilike("name", `%${search}%`);
     }
+    if (selectedMaterial) {
+      query = query.eq("material", selectedMaterial);
+    }
+    if (selectedColor) {
+      query = query.eq("color", selectedColor);
+    }
+    if (selectedOccasion) {
+      query = query.eq("occasion", selectedOccasion);
+    }
+    if (selectedStyle) {
+      query = query.eq("style", selectedStyle);
+    }
     query = query.gte("price", priceRange[0]).lte("price", priceRange[1]);
 
     if (sortBy === "newest") query = query.order("created_at", { ascending: false });
@@ -43,12 +176,23 @@ function ShopContent() {
     const { data } = await query;
     setProducts((data as Product[]) || []);
     setLoading(false);
-  }, [selectedCategory, search, sortBy, priceRange]);
+  }, [selectedCategory, search, sortBy, priceRange, selectedMaterial, selectedColor, selectedOccasion, selectedStyle]);
 
   useEffect(() => {
     const timer = setTimeout(fetchProducts, 300);
     return () => clearTimeout(timer);
   }, [fetchProducts]);
+
+  const clearAllFilters = () => {
+    setSearch("");
+    setSelectedCategory("");
+    setSelectedMaterial("");
+    setSelectedColor("");
+    setSelectedOccasion("");
+    setSelectedStyle("");
+    setSortBy("newest");
+    setPriceRange([0, 500]);
+  };
 
   return (
     <div style={{ paddingTop: "80px", minHeight: "100vh", background: "var(--bg)" }}>
@@ -86,7 +230,7 @@ function ShopContent() {
           style={{
             display: "flex",
             gap: "1rem",
-            marginBottom: "2rem",
+            marginBottom: "1.5rem",
             flexWrap: "wrap",
             alignItems: "center",
           }}
@@ -161,10 +305,31 @@ function ShopContent() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={showFilters ? "btn-gold" : "btn-gold-outline"}
-            style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}
+            style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.5rem", position: "relative" }}
           >
             <SlidersHorizontal size={16} />
             Filters
+            {activeFilterCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: "-6px",
+                  right: "-6px",
+                  background: "var(--gold)",
+                  color: "#000",
+                  borderRadius: "50%",
+                  width: "18px",
+                  height: "18px",
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -173,7 +338,7 @@ function ShopContent() {
           style={{
             display: "flex",
             gap: "0.5rem",
-            marginBottom: "2rem",
+            marginBottom: "1.5rem",
             flexWrap: "wrap",
           }}
         >
@@ -219,6 +384,234 @@ function ShopContent() {
           ))}
         </div>
 
+        {/* ══ Advanced Filters Panel ══════════════════════════════════════════════ */}
+        {showFilters && (
+          <div
+            className="glass"
+            style={{
+              padding: "1.5rem",
+              borderRadius: "12px",
+              marginBottom: "2rem",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "1.5rem",
+              animation: "fadeInDown 0.25s ease",
+            }}
+          >
+            {/* Price Range */}
+            <div>
+              <p style={{ fontSize: "0.75rem", color: "var(--gold)", fontWeight: 600, marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Price Range
+              </p>
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <input
+                  type="number"
+                  min="0"
+                  max={priceRange[1]}
+                  value={priceRange[0]}
+                  onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                  className="input-dark"
+                  style={{ width: "80px", fontSize: "0.8rem", padding: "0.4rem 0.5rem" }}
+                  placeholder="Min"
+                />
+                <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>—</span>
+                <input
+                  type="number"
+                  min={priceRange[0]}
+                  max="1000"
+                  value={priceRange[1]}
+                  onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                  className="input-dark"
+                  style={{ width: "80px", fontSize: "0.8rem", padding: "0.4rem 0.5rem" }}
+                  placeholder="Max"
+                />
+              </div>
+            </div>
+
+            {/* Material */}
+            <div>
+              <p style={{ fontSize: "0.75rem", color: "var(--gold)", fontWeight: 600, marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Material
+              </p>
+              <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                {MATERIALS.map((m) => (
+                  <FilterPill
+                    key={m}
+                    label={m}
+                    active={selectedMaterial === m}
+                    onClick={() => setSelectedMaterial(selectedMaterial === m ? "" : m)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Color */}
+            <div>
+              <p style={{ fontSize: "0.75rem", color: "var(--gold)", fontWeight: 600, marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Color
+              </p>
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", paddingBottom: "18px" }}>
+                {COLORS.map((c) => (
+                  <ColorSwatch
+                    key={c}
+                    color={c}
+                    active={selectedColor === c}
+                    onClick={() => setSelectedColor(selectedColor === c ? "" : c)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Occasion */}
+            <div>
+              <p style={{ fontSize: "0.75rem", color: "var(--gold)", fontWeight: 600, marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Occasion
+              </p>
+              <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                {OCCASIONS.map((o) => (
+                  <FilterPill
+                    key={o}
+                    label={o}
+                    active={selectedOccasion === o}
+                    onClick={() => setSelectedOccasion(selectedOccasion === o ? "" : o)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Style */}
+            <div>
+              <p style={{ fontSize: "0.75rem", color: "var(--gold)", fontWeight: 600, marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Style
+              </p>
+              <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                {STYLES.map((s) => (
+                  <FilterPill
+                    key={s}
+                    label={s}
+                    active={selectedStyle === s}
+                    onClick={() => setSelectedStyle(selectedStyle === s ? "" : s)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Clear All */}
+            {activeFilterCount > 0 && (
+              <div style={{ display: "flex", alignItems: "flex-end" }}>
+                <button
+                  onClick={clearAllFilters}
+                  style={{
+                    padding: "0.4rem 1rem",
+                    borderRadius: "8px",
+                    background: "rgba(239,68,68,0.1)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    color: "#ef4444",
+                    fontSize: "0.8rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <X size={12} style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }} />
+                  Clear All Filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Active Filter Tags */}
+        {activeFilterCount > 0 && !showFilters && (
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
+            {selectedMaterial && (
+              <span
+                onClick={() => setSelectedMaterial("")}
+                style={{
+                  padding: "0.25rem 0.75rem",
+                  borderRadius: "9999px",
+                  background: "var(--gold-muted)",
+                  color: "var(--gold)",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                }}
+              >
+                {selectedMaterial} <X size={10} />
+              </span>
+            )}
+            {selectedColor && (
+              <span
+                onClick={() => setSelectedColor("")}
+                style={{
+                  padding: "0.25rem 0.75rem",
+                  borderRadius: "9999px",
+                  background: "var(--gold-muted)",
+                  color: "var(--gold)",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                }}
+              >
+                {selectedColor} <X size={10} />
+              </span>
+            )}
+            {selectedOccasion && (
+              <span
+                onClick={() => setSelectedOccasion("")}
+                style={{
+                  padding: "0.25rem 0.75rem",
+                  borderRadius: "9999px",
+                  background: "var(--gold-muted)",
+                  color: "var(--gold)",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                }}
+              >
+                {selectedOccasion} <X size={10} />
+              </span>
+            )}
+            {selectedStyle && (
+              <span
+                onClick={() => setSelectedStyle("")}
+                style={{
+                  padding: "0.25rem 0.75rem",
+                  borderRadius: "9999px",
+                  background: "var(--gold-muted)",
+                  color: "var(--gold)",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                }}
+              >
+                {selectedStyle} <X size={10} />
+              </span>
+            )}
+            <span
+              onClick={clearAllFilters}
+              style={{
+                padding: "0.25rem 0.75rem",
+                borderRadius: "9999px",
+                background: "rgba(239,68,68,0.1)",
+                color: "#ef4444",
+                fontSize: "0.75rem",
+                cursor: "pointer",
+              }}
+            >
+              Clear All
+            </span>
+          </div>
+        )}
+
         {/* Products Grid */}
         {loading ? (
           <div
@@ -261,11 +654,7 @@ function ShopContent() {
               Try adjusting your filters or search term
             </p>
             <button
-              onClick={() => {
-                setSearch("");
-                setSelectedCategory("");
-                setSortBy("newest");
-              }}
+              onClick={clearAllFilters}
               className="btn-gold-outline"
             >
               Clear Filters

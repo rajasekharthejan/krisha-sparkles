@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -17,6 +17,8 @@ import ReviewImageLightbox from "@/components/store/ReviewImageLightbox";
 import BackInStockButton from "@/components/store/BackInStockButton";
 import { trackEvent } from "@/lib/trackEvent";
 import ProductRecommendations from "@/components/store/ProductRecommendations";
+import RecentlyViewed, { addToRecentlyViewed } from "@/components/store/RecentlyViewed";
+import StickyMobileCart from "@/components/store/StickyMobileCart";
 import { openCrisp } from "@/components/store/CrispChat";
 
 export default function ProductDetailClient({ slug: initialSlug }: { slug?: string }) {
@@ -43,6 +45,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
   const [reviewImageUploading, setReviewImageUploading] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const addToCartBtnRef = useRef<HTMLButtonElement>(null);
   const { addItem, openCart } = useCartStore();
   const { user } = useAuthStore();
 
@@ -58,6 +61,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
 
       if (data) {
         setProduct(data as Product);
+        addToRecentlyViewed(data.id);
 
         // Consent-gated ViewContent — no-op on iOS WKWebView (Apple 5.1.2)
         trackEvent("ViewContent", {
@@ -505,6 +509,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 />
               ) : (
                 <button
+                  ref={addToCartBtnRef}
                   onClick={handleAddToCart}
                   className="btn-gold"
                   style={{ flex: 1, justifyContent: "center", minWidth: "140px" }}
@@ -977,6 +982,22 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
 
       {/* F6: AI Style Recommender — "You May Also Love" */}
       <ProductRecommendations productId={product.id} />
+
+      {/* Recently Viewed */}
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 1.5rem" }}>
+        <RecentlyViewed excludeId={product.id} />
+      </div>
+
+      {/* Sticky Mobile Add to Cart */}
+      <StickyMobileCart
+        productId={product.id}
+        productName={product.name}
+        productPrice={product.price}
+        productImage={product.images?.[0] || ""}
+        productSlug={product.slug}
+        inStock={product.stock_quantity > 0}
+        addToCartRef={addToCartBtnRef}
+      />
 
       {/* F11: "Ask a Question" floating button for Crisp live chat */}
       <button

@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { CATEGORIES } from "@/lib/utils";
+import { CATEGORIES, MATERIALS, COLORS, OCCASIONS, STYLES } from "@/lib/utils";
 import { Upload, X, Plus, Loader2, Trash2 } from "lucide-react";
 import type { Product, ProductVariant } from "@/types";
 
@@ -31,6 +31,11 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
     stock_quantity: product?.stock_quantity?.toString() || "0",
     featured: product?.featured || false,
     active: product?.active ?? true,
+    material: product?.material || "",
+    color: product?.color || "",
+    occasion: product?.occasion || "",
+    style: product?.style || "",
+    tags: product?.tags?.join(", ") || "",
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
@@ -101,6 +106,11 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
           featured: form.featured,
           active: form.active,
           variants: variants.filter((v) => v.name.trim() && v.options.length > 0),
+          material: form.material || null,
+          color: form.color || null,
+          occasion: form.occasion || null,
+          style: form.style || null,
+          tags: form.tags ? form.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
         }),
       });
 
@@ -369,6 +379,65 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Product Metadata */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "12px", padding: "1.5rem" }}>
+            <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem", color: "var(--gold)" }}>
+              Product Metadata
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div>
+                <label style={labelStyle}>Material</label>
+                <select name="material" value={form.material} onChange={handleChange} style={inputStyle} className="input-dark">
+                  <option value="">Select material</option>
+                  {MATERIALS.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Color</label>
+                <select name="color" value={form.color} onChange={handleChange} style={inputStyle} className="input-dark">
+                  <option value="">Select color</option>
+                  {COLORS.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Occasion</label>
+                <select name="occasion" value={form.occasion} onChange={handleChange} style={inputStyle} className="input-dark">
+                  <option value="">Select occasion</option>
+                  {OCCASIONS.map((o) => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Style</label>
+                <select name="style" value={form.style} onChange={handleChange} style={inputStyle} className="input-dark">
+                  <option value="">Select style</option>
+                  {STYLES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div style={{ marginTop: "1rem" }}>
+              <label style={labelStyle}>Tags</label>
+              <input
+                name="tags"
+                value={form.tags}
+                onChange={handleChange}
+                placeholder="bridal, kundan, wedding, gold (comma separated)"
+                style={inputStyle}
+                className="input-dark"
+              />
+              <p style={{ fontSize: "0.7rem", color: "var(--subtle)", marginTop: "0.35rem" }}>
+                Comma-separated tags for search and filtering
+              </p>
+            </div>
           </div>
         </div>
 

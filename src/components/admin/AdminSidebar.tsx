@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Warehouse,
   LogOut, ExternalLink, Upload, TrendingUp, Tag, Star,
   RotateCcw, Mail, MessageCircle, Instagram, Layout,
-  BookOpen, Gift, BarChart3, Boxes, Music2, Users, RefreshCw, Settings,
+  BookOpen, Gift, BarChart3, Boxes, Music2, Users, RefreshCw, Settings, Sparkles,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/utils";
 
@@ -54,6 +54,7 @@ const GROUPS = [
   {
     label: "Content",
     items: [
+      { href: "/admin/hero",        label: "Hero",        icon: <Sparkles size={16} /> },
       { href: "/admin/blog",        label: "Blog",        icon: <BookOpen size={16} /> },
       { href: "/admin/collections", label: "Collections", icon: <Layout size={16} /> },
       { href: "/admin/instagram",   label: "Instagram",   icon: <Instagram size={16} /> },

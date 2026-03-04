@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -11,11 +13,12 @@ export const metadata: Metadata = {
     images: [{ url: "https://shopkrisha.com/logo.png", width: 800, height: 800 }],
   },
 };
-import ProductCard from "@/components/store/ProductCard";
 import CategoryGrid from "@/components/store/CategoryGrid";
 import NewsletterSection from "@/components/store/NewsletterSection";
 import FeaturedSlider from "@/components/store/FeaturedSlider";
 import MarqueeTicker from "@/components/store/MarqueeTicker";
+import HeroSection from "@/components/store/HeroSection";
+import type { HeroProps } from "@/components/store/HeroSection";
 import type { Product } from "@/types";
 import InstagramFeed from "@/components/store/InstagramFeed";
 // import TikTokFeed from "@/components/store/TikTokFeed"; // Hidden for now
@@ -63,174 +66,62 @@ async function getTopBundles(): Promise<BundlePreview[]> {
   }
 }
 
+const HERO_DEFAULTS: HeroProps = {
+  layout: "celestial",
+  heading: "Adorned in *Gold*, Crafted with *Love*",
+  subtext: "Discover our exclusive collection of imitation jewelry & ethnic wear — inspired by Indian tradition, designed for the modern woman.",
+  badge: "Handpicked Imitation Jewelry",
+  ctaPrimaryText: "Shop Collection",
+  ctaPrimaryUrl: "/shop",
+  ctaSecondaryText: "Instagram",
+  ctaSecondaryUrl: "https://www.instagram.com/krisha_sparkles/",
+};
+
+const VALID_LAYOUTS = ["celestial", "split", "minimal", "diagonal", "framed"];
+
+async function getHeroSettings(): Promise<HeroProps> {
+  noStore();
+  try {
+    const supabase = createSupabaseAdmin(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data } = await supabase
+      .from("store_settings")
+      .select("key, value")
+      .in("key", [
+        "hero_layout", "hero_heading", "hero_subtext", "hero_badge",
+        "hero_cta_primary_text", "hero_cta_primary_url",
+        "hero_cta_secondary_text", "hero_cta_secondary_url",
+      ]);
+    const map: Record<string, string> = {};
+    for (const row of data || []) map[row.key] = row.value;
+    return {
+      layout: (VALID_LAYOUTS.includes(map.hero_layout) ? map.hero_layout : "celestial") as HeroProps["layout"],
+      heading: map.hero_heading || HERO_DEFAULTS.heading,
+      subtext: map.hero_subtext || HERO_DEFAULTS.subtext,
+      badge: map.hero_badge || HERO_DEFAULTS.badge,
+      ctaPrimaryText: map.hero_cta_primary_text || HERO_DEFAULTS.ctaPrimaryText,
+      ctaPrimaryUrl: map.hero_cta_primary_url || HERO_DEFAULTS.ctaPrimaryUrl,
+      ctaSecondaryText: map.hero_cta_secondary_text || HERO_DEFAULTS.ctaSecondaryText,
+      ctaSecondaryUrl: map.hero_cta_secondary_url || HERO_DEFAULTS.ctaSecondaryUrl,
+    };
+  } catch {
+    return HERO_DEFAULTS;
+  }
+}
+
 export default async function HomePage() {
-  const [featured, bundles] = await Promise.all([
+  const [featured, bundles, heroSettings] = await Promise.all([
     getFeaturedProducts(),
     getTopBundles(),
+    getHeroSettings(),
   ]);
 
   return (
     <div>
-      {/* ── Hero ──────────────────────────────────────── */}
-      <section
-        style={{
-          position: "relative",
-          height: "100vh",
-          minHeight: "600px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          background: "radial-gradient(ellipse at 50% 40%, #1a0f05 0%, #0a0a0a 60%)",
-        }}
-      >
-        {/* Animated Background */}
-        <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
-          <div
-            style={{
-              position: "absolute", top: "15%", left: "8%",
-              width: "500px", height: "500px",
-              background: "radial-gradient(circle, rgba(201,168,76,0.13) 0%, transparent 70%)",
-              borderRadius: "50%",
-              animation: "float 7s ease-in-out infinite",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute", bottom: "15%", right: "8%",
-              width: "350px", height: "350px",
-              background: "radial-gradient(circle, rgba(201,168,76,0.09) 0%, transparent 70%)",
-              borderRadius: "50%",
-              animation: "float 9s ease-in-out infinite",
-              animationDelay: "-4s",
-            }}
-          />
-          {/* Gold line grid */}
-          <div
-            style={{
-              position: "absolute", inset: 0,
-              backgroundImage:
-                "linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px)",
-              backgroundSize: "60px 60px",
-            }}
-          />
-          {/* Floating particles */}
-          {[...Array(24)].map((_, i) => (
-            <div
-              key={i}
-              style={{
-                position: "absolute",
-                left: `${5 + (i * 4) % 90}%`,
-                top: `${8 + (i * 7) % 82}%`,
-                width: i % 3 === 0 ? "3px" : "2px",
-                height: i % 3 === 0 ? "3px" : "2px",
-                background: i % 4 === 0 ? "var(--gold-light)" : "var(--gold)",
-                borderRadius: "50%",
-                opacity: 0.25 + (i % 5) * 0.12,
-                animation: `float ${3 + (i % 4)}s ease-in-out infinite`,
-                animationDelay: `${(i * 0.35) % 4}s`,
-                boxShadow: "0 0 6px var(--gold)",
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Content */}
-        <div
-          style={{
-            position: "relative",
-            zIndex: 10,
-            textAlign: "center",
-            padding: "0 1.5rem",
-            maxWidth: "820px",
-          }}
-        >
-          <div
-            className="badge-gold"
-            style={{
-              marginBottom: "1.5rem",
-              display: "inline-flex",
-              animation: "slideUp 0.6s ease 0.2s both",
-            }}
-          >
-            ✦ Handpicked Imitation Jewelry
-          </div>
-
-          <h1
-            style={{
-              fontFamily: "var(--font-playfair)",
-              fontSize: "clamp(2.75rem, 9vw, 5.5rem)",
-              fontWeight: 700,
-              lineHeight: 1.08,
-              marginBottom: "1.5rem",
-              animation: "slideUp 0.7s ease 0.35s both",
-            }}
-          >
-            Adorned in{" "}
-            <span className="gold-shimmer-text">Gold</span>,
-            <br />
-            Crafted with{" "}
-            <span className="gold-shimmer-text">Love</span>
-          </h1>
-
-          <p
-            style={{
-              fontSize: "clamp(1rem, 2.2vw, 1.2rem)",
-              color: "var(--muted)",
-              maxWidth: "520px",
-              margin: "0 auto 2.5rem",
-              lineHeight: 1.8,
-              animation: "slideUp 0.6s ease 0.55s both",
-            }}
-          >
-            Discover our exclusive collection of imitation jewelry &amp; ethnic wear — inspired by Indian tradition, designed for the modern woman.
-          </p>
-
-          <div
-            style={{
-              display: "flex",
-              gap: "1rem",
-              justifyContent: "center",
-              flexWrap: "wrap",
-              animation: "slideUp 0.6s ease 0.7s both",
-            }}
-          >
-            <Link href="/shop" className="btn-gold" style={{ fontSize: "0.875rem", borderRadius: "6px" }}>
-              Shop Collection <ArrowRight size={16} />
-            </Link>
-            <a
-              href="https://www.instagram.com/krisha_sparkles/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-gold-outline"
-              style={{ fontSize: "0.875rem", borderRadius: "6px" }}
-            >
-              Instagram
-            </a>
-          </div>
-        </div>
-
-        {/* Scroll indicator */}
-        <div
-          style={{
-            position: "absolute", bottom: "2rem", left: "50%",
-            transform: "translateX(-50%)",
-            display: "flex", flexDirection: "column",
-            alignItems: "center", gap: "0.5rem",
-            animation: "float 2.5s ease-in-out infinite",
-          }}
-        >
-          <div
-            style={{
-              width: "1px", height: "50px",
-              background: "linear-gradient(to bottom, var(--gold), transparent)",
-            }}
-          />
-          <span style={{ fontSize: "0.6rem", letterSpacing: "0.25em", color: "var(--muted)", textTransform: "uppercase" }}>
-            Scroll
-          </span>
-        </div>
-      </section>
+      {/* ── Hero (admin-configurable) ────────────────── */}
+      <HeroSection {...heroSettings} />
 
       {/* ── Marquee Ticker ────────────────────────────── */}
       <MarqueeTicker />

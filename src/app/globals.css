@@ -395,6 +395,52 @@ h1, h2, h3, h4, h5 {
   to { transform: scale(4); opacity: 0; }
 }
 
+/* ─── Hero Layout Variants ───────────────────────────────── */
+.hero-diagonal-stripe {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(165deg, transparent 35%, rgba(201,168,76,0.07) 35%, rgba(201,168,76,0.07) 65%, transparent 65%);
+  pointer-events: none;
+}
+.hero-frame-outer {
+  border: 1px solid rgba(201,168,76,0.4);
+  padding: 8px;
+  position: relative;
+}
+.hero-frame-inner {
+  border: 1px solid rgba(201,168,76,0.2);
+  padding: 3rem 2rem;
+}
+.hero-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+}
+.hero-corner::before,
+.hero-corner::after {
+  content: '';
+  position: absolute;
+  background: var(--gold);
+}
+.hero-corner::before { width: 24px; height: 1px; }
+.hero-corner::after { width: 1px; height: 24px; }
+.hero-corner-tl { top: -4px; left: -4px; }
+.hero-corner-tl::before { top: 0; left: 0; }
+.hero-corner-tl::after { top: 0; left: 0; }
+.hero-corner-tr { top: -4px; right: -4px; }
+.hero-corner-tr::before { top: 0; right: 0; }
+.hero-corner-tr::after { top: 0; right: 0; }
+.hero-corner-bl { bottom: -4px; left: -4px; }
+.hero-corner-bl::before { bottom: 0; left: 0; }
+.hero-corner-bl::after { bottom: 0; left: 0; }
+.hero-corner-br { bottom: -4px; right: -4px; }
+.hero-corner-br::before { bottom: 0; right: 0; }
+.hero-corner-br::after { bottom: 0; right: 0; }
+@media (max-width: 768px) {
+  .hero-split-grid { grid-template-columns: 1fr !important; text-align: center !important; }
+  .hero-split-grid .hero-split-text { align-items: center !important; }
+}
+
 /* ─── Marquee ────────────────────────────────────────────── */
 .marquee-track {
   display: inline-flex;

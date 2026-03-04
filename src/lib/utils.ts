@@ -34,7 +34,13 @@ export function truncate(str: string, length: number): string {
 }
 
 /** Single source of truth for the app version — used in admin sidebar + store footer */
-export const APP_VERSION = "v7.37";
+export const APP_VERSION = "v7.39";
+
+// ── Product metadata filter options ──────────────────────────────────────────
+export const MATERIALS = ["Gold Plated", "Silver Plated", "Kundan", "Meenakari", "Pearl", "Oxidized", "Temple"];
+export const COLORS = ["Gold", "Silver", "Rose Gold", "Multi", "Green", "Red", "White", "Pink"];
+export const OCCASIONS = ["Wedding", "Party", "Daily Wear", "Festival", "Bridal", "Casual", "Office"];
+export const STYLES = ["Traditional", "Modern", "Fusion", "Statement", "Minimalist", "Boho", "Classic"];
 
 export const CATEGORIES = [
   { name: "Necklaces", slug: "necklaces", icon: "💎" },
