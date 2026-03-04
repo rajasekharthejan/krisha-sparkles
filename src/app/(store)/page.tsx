@@ -318,6 +318,76 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ── Shop by Occasion ───────────────────────────── */}
+      <section style={{ padding: "5rem 1.5rem 4rem", background: "var(--surface)" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+            <span className="badge-gold">Perfect For Every Event</span>
+            <h2
+              style={{
+                fontFamily: "var(--font-playfair)",
+                fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+                fontWeight: 700,
+                marginTop: "1rem",
+                marginBottom: "0.5rem",
+              }}
+            >
+              Shop by Occasion
+            </h2>
+            <div className="gold-divider" />
+            <p style={{ color: "var(--muted)", marginTop: "0.75rem", fontSize: "0.9rem" }}>
+              Find the perfect jewelry for every moment
+            </p>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              gap: "1.25rem",
+            }}
+          >
+            {[
+              { name: "Wedding", icon: "💍", desc: "Bridal & ceremonial sets", gradient: "linear-gradient(135deg, #1a0f05, #2a1a0a)" },
+              { name: "Party", icon: "🥂", desc: "Glamorous statement pieces", gradient: "linear-gradient(135deg, #0f0a1a, #1a102a)" },
+              { name: "Daily Wear", icon: "☀️", desc: "Elegant everyday jewelry", gradient: "linear-gradient(135deg, #0a1a0f, #0f2a1a)" },
+              { name: "Festival", icon: "🪔", desc: "Traditional festive jewelry", gradient: "linear-gradient(135deg, #1a1005, #2a1a08)" },
+              { name: "Bridal", icon: "👰", desc: "Complete bridal collections", gradient: "linear-gradient(135deg, #1a0510, #2a0a1a)" },
+            ].map((occasion, i) => (
+              <Link
+                key={occasion.name}
+                href={`/shop?occasion=${occasion.name}`}
+                style={{ textDecoration: "none" }}
+              >
+                <div
+                  className="occasion-card"
+                  style={{
+                    background: occasion.gradient,
+                    border: "1px solid var(--gold-border)",
+                    borderRadius: "14px",
+                    padding: "2rem 1.5rem",
+                    textAlign: "center",
+                    transition: "all 0.3s ease",
+                    cursor: "pointer",
+                    animation: "scaleIn 0.4s ease both",
+                    animationDelay: `${i * 0.08}s`,
+                  }}
+                >
+                  <span style={{ fontSize: "2.5rem", display: "block", marginBottom: "0.75rem" }}>
+                    {occasion.icon}
+                  </span>
+                  <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", fontWeight: 700, color: "var(--text)", marginBottom: "0.35rem" }}>
+                    {occasion.name}
+                  </h3>
+                  <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: 0 }}>
+                    {occasion.desc}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Featured Products ─────────────────────────── */}
       <section style={{ padding: "5rem 1.5rem 4rem", background: "var(--surface)" }}>
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
@@ -465,6 +535,15 @@ export default async function HomePage() {
           @media (max-width: 640px) {
             .instagram-grid { grid-template-columns: 1fr !important; }
           }
+          .occasion-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--gold) !important;
+            box-shadow: 0 12px 40px rgba(201,168,76,0.15);
+          }
+          .bundle-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+          }
         `}</style>
       </section>
 
@@ -496,9 +575,8 @@ export default async function HomePage() {
                 return (
                   <Link key={bundle.id} href={`/bundles/${bundle.slug}`} style={{ textDecoration: "none" }}>
                     <div
+                      className="bundle-card"
                       style={{ background: "var(--surface)", border: "1px solid var(--gold-border)", borderRadius: "16px", overflow: "hidden", transition: "transform 0.2s, box-shadow 0.2s" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 40px rgba(0,0,0,0.3)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
                     >
                       <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden", background: "radial-gradient(ellipse, rgba(201,168,76,0.12), var(--elevated))", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {bundle.image ? (
