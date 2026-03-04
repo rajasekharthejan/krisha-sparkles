@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Settings, Truck, DollarSign, Package, Save, Loader2,
   CheckCircle, AlertCircle, RefreshCw, Palette, Check,
-  CreditCard, ShieldCheck, AlertTriangle,
+  CreditCard, ShieldCheck, AlertTriangle, MessageCircle,
 } from "lucide-react";
 
 const THEMES = [
@@ -66,15 +66,20 @@ export default function AdminSettingsPage() {
   const [modeSaving, setModeSaving] = useState(false);
   const [modeSuccess, setModeSuccess] = useState(false);
   const [confirmLive, setConfirmLive] = useState(false);
+  // WhatsApp
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
+  const [waSaving, setWaSaving] = useState(false);
+  const [waSuccess, setWaSuccess] = useState(false);
 
   async function loadSettings() {
     setLoading(true);
     setError("");
     try {
-      const [shippingRes, themeRes, modeRes] = await Promise.all([
+      const [shippingRes, themeRes, modeRes, waRes] = await Promise.all([
         fetch("/api/admin/settings/shipping"),
         fetch("/api/admin/settings/theme"),
         fetch("/api/admin/settings/mode"),
+        fetch("/api/admin/settings/whatsapp"),
       ]);
       const shippingData = await shippingRes.json();
       if (!shippingRes.ok) throw new Error(shippingData.error || "Failed to load");
@@ -95,6 +100,10 @@ export default function AdminSettingsPage() {
         const modeData = await modeRes.json();
         setPaymentMode(modeData.mode || "test");
         setEnvStatus(modeData.envStatus || {});
+      }
+      if (waRes.ok) {
+        const waData = await waRes.json();
+        setWhatsappEnabled(waData.enabled ?? false);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load settings");
@@ -149,6 +158,28 @@ export default function AdminSettingsPage() {
       setError(e instanceof Error ? e.message : "Could not switch payment mode");
     }
     setModeSaving(false);
+  }
+
+  async function handleWhatsAppToggle() {
+    setWaSaving(true);
+    setWaSuccess(false);
+    setError("");
+    const newVal = !whatsappEnabled;
+    try {
+      const res = await fetch("/api/admin/settings/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: newVal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save");
+      setWhatsappEnabled(newVal);
+      setWaSuccess(true);
+      setTimeout(() => setWaSuccess(false), 3000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save WhatsApp setting");
+    }
+    setWaSaving(false);
   }
 
   async function handleSaveShipping(e: React.FormEvent) {
@@ -488,6 +519,68 @@ export default function AdminSettingsPage() {
         <p style={{ fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.75rem" }}>
           {modeSaving && <><Loader2 size={11} style={{ display: "inline", animation: "spin 1s linear infinite" }} /> Switching mode...</>}
           {!modeSaving && <>Add <code style={{ fontSize: "0.68rem", color: "var(--gold)" }}>_LIVE</code> suffixed env vars in Vercel to enable live mode.</>}
+        </p>
+      </div>
+
+      {/* ── WhatsApp Notifications Toggle ─────────────────────────────────── */}
+      <div style={card}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1rem" }}>
+          <MessageCircle size={16} style={{ color: "#25d366" }} />
+          <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>
+            WhatsApp Notifications
+          </h2>
+          {waSuccess && (
+            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.3rem", color: "#10b981", fontSize: "0.8rem" }}>
+              <CheckCircle size={13} /> Saved!
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.25rem", borderRadius: "10px", background: whatsappEnabled ? "rgba(37,211,102,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${whatsappEnabled ? "rgba(37,211,102,0.25)" : "rgba(255,255,255,0.08)"}`, transition: "all 0.2s" }}>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: "0.9rem", margin: "0 0 4px", color: "var(--text)" }}>
+              {whatsappEnabled ? "WhatsApp is ON" : "WhatsApp is OFF"}
+            </p>
+            <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: 0 }}>
+              {whatsappEnabled
+                ? "Order confirmations, shipping updates & admin alerts are being sent via WhatsApp."
+                : "All WhatsApp messages are paused. No messages will be sent to customers or admins."}
+            </p>
+          </div>
+          <button
+            onClick={handleWhatsAppToggle}
+            disabled={waSaving}
+            style={{
+              position: "relative",
+              width: "52px",
+              height: "28px",
+              borderRadius: "999px",
+              border: "none",
+              background: whatsappEnabled ? "#25d366" : "rgba(255,255,255,0.15)",
+              cursor: waSaving ? "wait" : "pointer",
+              transition: "background 0.2s",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{
+              position: "absolute",
+              top: "3px",
+              left: whatsappEnabled ? "27px" : "3px",
+              width: "22px",
+              height: "22px",
+              borderRadius: "50%",
+              background: "#fff",
+              transition: "left 0.2s",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+            }} />
+          </button>
+        </div>
+
+        <p style={{ fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.75rem" }}>
+          {waSaving
+            ? <><Loader2 size={11} style={{ display: "inline", animation: "spin 1s linear infinite" }} /> Saving...</>
+            : <>Turn this ON after completing the Meta WhatsApp Business API setup. Messages won&apos;t be sent while OFF.</>
+          }
         </p>
       </div>
 

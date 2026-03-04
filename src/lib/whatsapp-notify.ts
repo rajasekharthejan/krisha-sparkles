@@ -4,6 +4,24 @@ const WA_TOKEN = process.env.WHATSAPP_BUSINESS_TOKEN;
 const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const WA_API_BASE = "https://graph.facebook.com/v22.0";
 
+// ── Global kill switch — checks store_settings.whatsapp_enabled ──────────
+async function isWhatsAppEnabled(): Promise<boolean> {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data } = await supabase
+      .from("store_settings")
+      .select("value")
+      .eq("key", "whatsapp_enabled")
+      .single();
+    return data?.value === "true";
+  } catch {
+    return false; // if check fails, default to OFF (safe)
+  }
+}
+
 // Admin numbers to notify on every new order
 const ADMIN_WA_NUMBERS = [
   process.env.ADMIN_WA_NUMBER_1 || "16825835389",   // +1 682-583-5389
@@ -52,6 +70,11 @@ function logWhatsApp(params: {
 // ── Core sender — returns WhatsApp message ID ────────────────────────────────
 async function sendWAMessage(to: string, bodyText: string): Promise<string | null> {
   if (!WA_TOKEN || !WA_PHONE_ID) return null;
+  // Global kill switch — admin toggle in Settings
+  if (!(await isWhatsAppEnabled())) {
+    console.log("[WhatsApp] Skipped — WhatsApp is turned OFF in admin settings");
+    return null;
+  }
   const res = await fetch(`${WA_API_BASE}/${WA_PHONE_ID}/messages`, {
     method: "POST",
     headers: {
