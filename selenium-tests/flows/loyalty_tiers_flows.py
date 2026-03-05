@@ -181,14 +181,14 @@ def f194_admin_loyalty_page_loads(ctx: FlowContext):
     ctx.go("/admin/loyalty", admin=True)
     ctx.dismiss_cookie_banner()
     ctx.sleep(2)
-    body = ctx.body_admin().lower()
+    body = ctx.body(admin=True).lower()
     tier_keywords = ["bronze", "silver", "gold", "diamond", "loyalty", "tier"]
     found = [k for k in tier_keywords if k in body]
     if len(found) >= 3:
         return True, f"Admin loyalty page loaded with tier distribution: {found}"
     if "loyalty" in body or "tier" in body:
         return True, "Admin loyalty page loaded"
-    if ctx.body_len_admin() > 100:
+    if ctx.body_len(admin=True) > 100:
         return True, "Admin loyalty page rendered with content"
     return False, "Admin loyalty page failed to load"
 
@@ -198,14 +198,14 @@ def f195_admin_loyalty_user_table(ctx: FlowContext):
     ctx.go("/admin/loyalty", admin=True)
     ctx.dismiss_cookie_banner()
     ctx.sleep(2)
-    body = ctx.body_admin().lower()
+    body = ctx.body(admin=True).lower()
     table_keywords = ["user", "tier", "lifetime", "balance", "upgraded"]
     found = [k for k in table_keywords if k in body]
     if len(found) >= 3:
         return True, f"User table with columns: {found}"
     if "member" in body or "@" in body:
         return True, "User table present with email data"
-    if ctx.body_len_admin() > 200:
+    if ctx.body_len(admin=True) > 200:
         return True, "Admin loyalty page loaded with user table"
     return False, "User table not found on admin loyalty page"
 
@@ -215,7 +215,7 @@ def f196_admin_loyalty_filter(ctx: FlowContext):
     ctx.go("/admin/loyalty", admin=True)
     ctx.dismiss_cookie_banner()
     ctx.sleep(2)
-    body = ctx.body_admin().lower()
+    body = ctx.body(admin=True).lower()
     all_tiers = ["bronze", "silver", "gold", "diamond"]
     found = [t for t in all_tiers if t in body]
     if len(found) == 4:
@@ -232,7 +232,7 @@ def f197_admin_sidebar_loyalty(ctx: FlowContext):
     ctx.go("/admin", admin=True)
     ctx.dismiss_cookie_banner()
     ctx.sleep(2)
-    body = ctx.body_admin().lower()
+    body = ctx.body(admin=True).lower()
     if "loyalty tiers" in body or "loyalty" in body:
         return True, "Admin sidebar contains 'Loyalty Tiers' nav item"
     try:
@@ -242,6 +242,6 @@ def f197_admin_sidebar_loyalty(ctx: FlowContext):
             return True, f"Admin sidebar has /admin/loyalty link ({len(links)} found)"
     except Exception:
         pass
-    if ctx.body_len_admin() > 200:
+    if ctx.body_len(admin=True) > 200:
         return True, "Admin page loaded — sidebar contains Loyalty Tiers under Marketing group"
     return False, "Loyalty Tiers not found in admin sidebar"
