@@ -18,8 +18,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { getTierConfig, type LoyaltyTierName } from "@/lib/loyalty-tiers";
 
-const POINTS_PER_DOLLAR = 100; // 100 loyalty points = $1 discount
+const DEFAULT_POINTS_PER_DOLLAR = 100; // fallback: 100 loyalty points = $1 discount
 const MIN_REDEEM_POINTS = 100; // minimum 100 points ($1) to redeem
 
 export async function POST(req: NextRequest) {
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json(
         {
-          error: `Points must be a multiple of ${MIN_REDEEM_POINTS} (minimum ${MIN_REDEEM_POINTS} points = $${MIN_REDEEM_POINTS / POINTS_PER_DOLLAR})`,
+          error: `Points must be a multiple of ${MIN_REDEEM_POINTS} (minimum ${MIN_REDEEM_POINTS} points = $${MIN_REDEEM_POINTS / DEFAULT_POINTS_PER_DOLLAR})`,
         },
         { status: 400 }
       );
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     );
     const { data: profile, error: profileError } = await admin
       .from("user_profiles")
-      .select("points_balance")
+      .select("points_balance, loyalty_tier")
       .eq("id", user.id)
       .single();
 
@@ -79,6 +80,11 @@ export async function POST(req: NextRequest) {
     const currentBalance: number = profile.points_balance || 0;
 
     // Validate: must have enough points
+    // Use tier-based redemption rate (Gold: 90pts/$1, Diamond: 80pts/$1, default: 100pts/$1)
+    const tierName = (profile.loyalty_tier || "bronze") as LoyaltyTierName;
+    const tierConfig = getTierConfig(tierName);
+    const POINTS_PER_DOLLAR = tierConfig.pointsPerDollar || DEFAULT_POINTS_PER_DOLLAR;
+
     if (requestedPoints > currentBalance) {
       return NextResponse.json(
         {
@@ -89,7 +95,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Calculate discount amount (floor to 2 decimal places)
+    // Calculate discount amount using tier-based rate (floor to 2 decimal places)
     const discountAmount = Math.floor((requestedPoints / POINTS_PER_DOLLAR) * 100) / 100;
     const remainingBalance = currentBalance - requestedPoints;
 

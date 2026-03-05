@@ -1,5 +1,5 @@
 """
-flow_registry.py — Central registry of all 185 Krisha Sparkles test flows.
+flow_registry.py — Central registry of all 197 Krisha Sparkles test flows.
 """
 
 from flows.base import FlowDef
@@ -149,6 +149,14 @@ from flows.complex_flows import (
     f180_loyalty_earn_then_redeem, f181_pwa_offline_fallback,
     f182_multi_item_cart_checkout, f183_admin_analytics_to_promotion,
     f184_complete_e2e_purchase, f185_admin_dashboard_overview,
+)
+from flows.loyalty_tiers_flows import (
+    f186_points_page_shows_tier, f187_points_page_progress_bar,
+    f188_points_page_benefits, f189_points_page_tiers_table,
+    f190_points_page_lifetime_stat, f191_account_page_tier_badge,
+    f192_api_loyalty_tier, f193_api_loyalty_history_includes_tier,
+    f194_admin_loyalty_page_loads, f195_admin_loyalty_user_table,
+    f196_admin_loyalty_filter, f197_admin_sidebar_loyalty,
 )
 
 # ── Build Registry ───────────────────────────────────────────────────────────
@@ -392,6 +400,20 @@ ALL_FLOWS: list[FlowDef] = [
     FlowDef("F183", "Analytics to Promotion",         "Admin views analytics then creates targeted promotion",  "Complex Flows",    f183_admin_analytics_to_promotion, requires_admin=True),
     FlowDef("F184", "Complete E2E Purchase",          "Browse to product to cart to checkout (full E2E)",       "Complex Flows",    f184_complete_e2e_purchase),
     FlowDef("F185", "Admin Dashboard Overview",       "Admin dashboard shows complete store overview",           "Complex Flows",    f185_admin_dashboard_overview, requires_admin=True),
+
+    # F186-F197: Phase 8 — Loyalty Tiers
+    FlowDef("F186", "Points Page Shows Tier",        "Points page shows current tier icon and name",            "Loyalty Tiers",    f186_points_page_shows_tier,     requires_auth=True),
+    FlowDef("F187", "Tier Progress Bar",             "Points page shows progress bar to next tier",             "Loyalty Tiers",    f187_points_page_progress_bar,   requires_auth=True),
+    FlowDef("F188", "Tier Benefits Display",         "Points page shows tier benefits (multiplier, shipping)",  "Loyalty Tiers",    f188_points_page_benefits,       requires_auth=True),
+    FlowDef("F189", "All Tiers Comparison",          "Points page shows Bronze/Silver/Gold/Diamond table",      "Loyalty Tiers",    f189_points_page_tiers_table,    requires_auth=True),
+    FlowDef("F190", "Lifetime Points Stat",          "Points page stats row includes lifetime points card",     "Loyalty Tiers",    f190_points_page_lifetime_stat,  requires_auth=True),
+    FlowDef("F191", "Account Tier Badge",            "Account page shows tier badge instead of generic points", "Loyalty Tiers",    f191_account_page_tier_badge,    requires_auth=True),
+    FlowDef("F192", "Tier API Endpoint",             "GET /api/loyalty/tier returns tier info for user",        "Loyalty Tiers",    f192_api_loyalty_tier),
+    FlowDef("F193", "History API Includes Tier",     "GET /api/loyalty/history includes tier + lifetime",       "Loyalty Tiers",    f193_api_loyalty_history_includes_tier),
+    FlowDef("F194", "Admin Loyalty Page",            "Admin loyalty page loads with tier distribution",         "Loyalty Tiers",    f194_admin_loyalty_page_loads,    requires_admin=True),
+    FlowDef("F195", "Admin Loyalty User Table",      "Admin loyalty page shows users with tier badges",         "Loyalty Tiers",    f195_admin_loyalty_user_table,    requires_admin=True),
+    FlowDef("F196", "Admin Loyalty Filter",          "Admin loyalty page tier filter buttons work",             "Loyalty Tiers",    f196_admin_loyalty_filter,        requires_admin=True),
+    FlowDef("F197", "Admin Sidebar Loyalty",         "Admin sidebar has Loyalty Tiers nav item",                "Loyalty Tiers",    f197_admin_sidebar_loyalty,       requires_admin=True),
 ]
 
 # ── Derived lookups ──────────────────────────────────────────────────────────

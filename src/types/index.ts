@@ -173,16 +173,6 @@ export interface EmailCampaign {
   created_by: string;
 }
 
-export interface PointsHistory {
-  order_id: string;
-  order_short: string;
-  points_earned: number;
-  points_redeemed: number;
-  order_total: number;
-  status: string;
-  created_at: string;
-}
-
 // F5: Bundle Builder
 export interface ProductBundle {
   id: string;

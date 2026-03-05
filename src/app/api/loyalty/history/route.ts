@@ -62,10 +62,10 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
     }
 
-    // Fetch current balance from user_profiles
+    // Fetch current balance + tier info from user_profiles
     const { data: profile } = await admin
       .from("user_profiles")
-      .select("points_balance")
+      .select("points_balance, loyalty_tier, lifetime_points")
       .eq("id", user.id)
       .single();
 
@@ -86,6 +86,8 @@ export async function GET() {
       history,
       current_balance: currentBalance,
       points_per_dollar: POINTS_PER_DOLLAR,
+      loyalty_tier: profile?.loyalty_tier || "bronze",
+      lifetime_points: profile?.lifetime_points || 0,
     });
   } catch (err) {
     console.error("Loyalty history error:", err);

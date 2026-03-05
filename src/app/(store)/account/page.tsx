@@ -1,8 +1,9 @@
 import { requireAuth } from "@/lib/auth-server";
 import { createAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { User, ShoppingBag, Package, ChevronRight, Star, Gift } from "lucide-react";
+import { User, ShoppingBag, Package, ChevronRight, Star, Gift, Crown } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import { getTierConfig, type LoyaltyTierName } from "@/lib/loyalty-tiers";
 
 export default async function AccountPage() {
   const user = await requireAuth();
@@ -10,7 +11,7 @@ export default async function AccountPage() {
 
   // Fetch last 3 orders for this user (graceful if user_id column doesn't exist yet)
   let orders: { id: string; created_at: string; total: number; status: string; order_items?: { id: string }[] }[] = [];
-  let profile: { first_name?: string; last_name?: string; points_balance?: number } | null = null;
+  let profile: { first_name?: string; last_name?: string; points_balance?: number; loyalty_tier?: string; lifetime_points?: number } | null = null;
 
   try {
     const { data: ordersData } = await supabase
@@ -25,7 +26,7 @@ export default async function AccountPage() {
   try {
     const { data: profileData } = await supabase
       .from("user_profiles")
-      .select("first_name, last_name, points_balance")
+      .select("first_name, last_name, points_balance, loyalty_tier, lifetime_points")
       .eq("id", user.id)
       .single();
     profile = profileData;
@@ -63,7 +64,7 @@ export default async function AccountPage() {
           {[
             { href: "/account/orders", icon: <ShoppingBag size={22} style={{ color: "var(--gold)" }} />, title: "My Orders", desc: "Track and view your orders" },
             { href: "/account/profile", icon: <User size={22} style={{ color: "var(--gold)" }} />, title: "Edit Profile", desc: "Name, phone, address" },
-            { href: "/account/points", icon: <Star size={22} style={{ color: "var(--gold)" }} />, title: "My Points", desc: `${(profile?.points_balance ?? 0).toLocaleString()} pts · Earn 1 pt per $1` },
+            { href: "/account/points", icon: <Crown size={22} style={{ color: getTierConfig((profile?.loyalty_tier || "bronze") as LoyaltyTierName).color }} />, title: `${getTierConfig((profile?.loyalty_tier || "bronze") as LoyaltyTierName).icon} ${getTierConfig((profile?.loyalty_tier || "bronze") as LoyaltyTierName).label} Member`, desc: `${(profile?.points_balance ?? 0).toLocaleString()} pts · ${getTierConfig((profile?.loyalty_tier || "bronze") as LoyaltyTierName).pointsMultiplier}x earning` },
             { href: "/account/referrals", icon: <Gift size={22} style={{ color: "var(--gold)" }} />, title: "Refer a Friend", desc: "Earn $5 credit per referral" },
           ].map((card) => (
             <Link

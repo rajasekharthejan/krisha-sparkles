@@ -834,3 +834,56 @@ export async function sendReviewRequestEmail({ email, name, orderId }: { email: 
   });
   logEmail({ type: "review_request", to: email, subject: "How did you like your order? ⭐", resend_id: d10?.id, status: e10 ? "failed" : "sent", error: e10?.message, order_id: orderId });
 }
+
+// ── Loyalty Tier Upgrade Email ────────────────────────────────────────────
+
+export async function sendTierUpgradeEmail(
+  to: string,
+  tierLabel: string,
+  tierIcon: string,
+  tierColor: string
+) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
+  const subject = `${tierIcon} Congratulations! You've reached ${tierLabel} status`;
+
+  const benefitsMap: Record<string, string> = {
+    Silver: "✓ 1.25x points on every purchase<br>✓ Free shipping on orders $50+<br>✓ 100 bonus birthday points",
+    Gold: "✓ 1.5x points on every purchase<br>✓ Free shipping on orders $25+<br>✓ 250 bonus birthday points<br>✓ Early access to new drops<br>✓ Better redemption rate (90 pts = $1)",
+    Diamond: "✓ 2x points on every purchase<br>✓ Always FREE shipping<br>✓ 500 bonus birthday points<br>✓ Early access to new drops<br>✓ Exclusive drops access<br>✓ Best redemption rate (80 pts = $1)",
+  };
+  const benefits = benefitsMap[tierLabel] || "";
+
+  const { data: d11, error: e11 } = await resend.emails.send({
+    from: `Krisha Sparkles <${FROM}>`,
+    to,
+    subject,
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <p style="font-size:28px;font-weight:700;color:#c9a84c;margin:0;">✦ Krisha Sparkles</p>
+      <p style="color:#888;margin:8px 0 0;font-size:13px;">Exquisite Imitation Jewelry</p>
+    </div>
+    <div style="background:#111;border:1px solid ${tierColor}40;border-radius:12px;padding:40px 32px;margin-bottom:24px;text-align:center;">
+      <p style="font-size:56px;margin:0 0 16px;">${tierIcon}</p>
+      <h2 style="color:${tierColor};font-size:26px;margin:0 0 8px;font-family:Georgia,serif;">You've reached ${tierLabel}!</h2>
+      <p style="color:#aaa;font-size:15px;margin:0 0 28px;">Your loyalty has been rewarded. Enjoy your new exclusive benefits:</p>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:20px;text-align:left;margin:0 0 28px;">
+        <p style="color:#ddd;font-size:14px;line-height:2;margin:0;">${benefits}</p>
+      </div>
+      <a href="${siteUrl}/account/points" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:16px;">View My Rewards →</a>
+    </div>
+    <p style="color:#555;font-size:12px;text-align:center;">You earned this status through your purchases at Krisha Sparkles. Thank you for being a valued customer!</p>
+    ${unsubscribeFooter(to)}
+  </div>
+</body>
+</html>`,
+  });
+  logEmail({ type: "tier_upgrade", to, subject, resend_id: d11?.id, status: e11 ? "failed" : "sent", error: e11?.message });
+}
