@@ -24,6 +24,37 @@ const DEFAULTS: HeroProps = {
   ctaSecondaryUrl: "https://www.instagram.com/krisha_sparkles/",
 };
 
+const BUTTON_TEXT_OPTIONS = [
+  "Shop Collection",
+  "Shop Now",
+  "Explore Collection",
+  "Browse Catalog",
+  "New Arrivals",
+  "View All",
+  "Shop Jewelry",
+  "Shop Dresses",
+  "Gift Sets",
+  "Instagram",
+  "Follow Us",
+  "WhatsApp",
+  "Contact Us",
+  "Learn More",
+];
+
+const BUTTON_URL_OPTIONS: { label: string; value: string }[] = [
+  { label: "Shop → /shop", value: "/shop" },
+  { label: "New Arrivals → /shop?sort=newest", value: "/shop?sort=newest" },
+  { label: "Jewelry → /shop?category=necklaces", value: "/shop?category=necklaces" },
+  { label: "Dresses → /shop?category=dresses", value: "/shop?category=dresses" },
+  { label: "Gift Sets → /bundles", value: "/bundles" },
+  { label: "Collections → /collections", value: "/collections" },
+  { label: "Blog → /blog", value: "/blog" },
+  { label: "Contact → /contact", value: "/contact" },
+  { label: "Instagram", value: "https://www.instagram.com/krisha_sparkles/" },
+  { label: "WhatsApp", value: "https://wa.me/14694776498" },
+  { label: "About → /about", value: "/about" },
+];
+
 /* ─── Mini layout preview thumbnails (CSS-only) ─── */
 function LayoutThumbnail({ id }: { id: string }) {
   const base: React.CSSProperties = {
@@ -335,23 +366,31 @@ export default function AdminHeroPage() {
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)", marginBottom: "0.4rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Primary Button Text
             </label>
-            <input
+            <select
               className="input-dark"
               value={settings.ctaPrimaryText}
               onChange={(e) => update("ctaPrimaryText", e.target.value)}
-              style={{ width: "100%" }}
-            />
+              style={{ width: "100%", cursor: "pointer" }}
+            >
+              {BUTTON_TEXT_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)", marginBottom: "0.4rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Primary Button URL
             </label>
-            <input
+            <select
               className="input-dark"
               value={settings.ctaPrimaryUrl}
               onChange={(e) => update("ctaPrimaryUrl", e.target.value)}
-              style={{ width: "100%" }}
-            />
+              style={{ width: "100%", cursor: "pointer" }}
+            >
+              {BUTTON_URL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Secondary CTA */}
@@ -359,23 +398,31 @@ export default function AdminHeroPage() {
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)", marginBottom: "0.4rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Secondary Button Text
             </label>
-            <input
+            <select
               className="input-dark"
               value={settings.ctaSecondaryText}
               onChange={(e) => update("ctaSecondaryText", e.target.value)}
-              style={{ width: "100%" }}
-            />
+              style={{ width: "100%", cursor: "pointer" }}
+            >
+              {BUTTON_TEXT_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)", marginBottom: "0.4rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Secondary Button URL
             </label>
-            <input
+            <select
               className="input-dark"
               value={settings.ctaSecondaryUrl}
               onChange={(e) => update("ctaSecondaryUrl", e.target.value)}
-              style={{ width: "100%" }}
-            />
+              style={{ width: "100%", cursor: "pointer" }}
+            >
+              {BUTTON_URL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
