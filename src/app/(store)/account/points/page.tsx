@@ -139,14 +139,17 @@ export default async function PointsPage() {
             </p>
 
             {/* Points balance */}
-            <p style={{
-              fontFamily: "var(--font-playfair)",
-              fontSize: "3.5rem",
-              fontWeight: 700,
-              color: tier.color,
-              margin: "0 0 0.25rem",
-              lineHeight: 1,
-            }}>
+            <p
+              data-testid="points-balance"
+              style={{
+                fontFamily: "var(--font-playfair)",
+                fontSize: "3.5rem",
+                fontWeight: 700,
+                color: tier.color,
+                margin: "0 0 0.25rem",
+                lineHeight: 1,
+              }}
+            >
               {pointsBalance.toLocaleString()}
             </p>
             <p style={{ color: "var(--muted)", fontSize: "0.8rem", marginBottom: 0 }}>
