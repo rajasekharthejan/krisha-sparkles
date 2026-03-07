@@ -47,12 +47,12 @@ Usage:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # SELECTOR CONTRACT
 # Every data-testid the bot depends on is registered here.
-# The pre-flight check navigates to each page and verifies the
-# element EXISTS before any real test step runs.
+# The pre-flight check (PRE-FLIGHT 2) runs AFTER customer login
+# so that auth-protected pages actually render their content.
 # Adding a new check? Add its data-testid here too.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SELECTOR_CONTRACT = {
-    # testid                page path (for pre-flight)
+    # testid                page path (auth-protected — check runs post-login)
     "points-balance":       "/account/points",
 }
 # (add more rows as new data-testid attributes are added to the app)
@@ -486,29 +486,6 @@ def run_order_lifecycle(headed=False, slow=False):
                 pg.evaluate('localStorage.setItem("ks_cookie_consent","declined")')
                 info("SYSTEM", f"{label} browser: cookie consent pre-declined")
 
-            # ── PRE-FLIGHT 2: SELECTOR CONTRACT CHECK ─────────────────────────
-            # Verify every data-testid in SELECTOR_CONTRACT exists on its page.
-            # If any are missing the whole run aborts here — not after 10 steps.
-            # This means a broken JSX or missing DB column is caught immediately.
-            info("SYSTEM", f"Verifying selector contract ({len(SELECTOR_CONTRACT)} testids)...")
-            contract_failures = []
-            for testid, page_path in SELECTOR_CONTRACT.items():
-                cust.goto(f"{BASE_URL}{page_path}", wait_until="networkidle")
-                cust.wait_for_timeout(1500)
-                el = cust.locator(f'[data-testid="{testid}"]')
-                if el.count() > 0 and el.first.is_visible():
-                    info("SYSTEM", f"  ✅ data-testid='{testid}' found on {page_path}")
-                else:
-                    contract_failures.append(testid)
-                    info("SYSTEM", f"  ❌ data-testid='{testid}' MISSING on {page_path}")
-            if contract_failures:
-                ss = snap(cust, "contract_failure")
-                raise RuntimeError(
-                    f"SELECTOR CONTRACT FAILED — these data-testid attributes are missing "
-                    f"from the live page: {contract_failures}\n"
-                    f"Fix: add data-testid='...' to the JSX and redeploy, OR check DB columns."
-                )
-
             # ════════════════════════════════════════════════════════
             # PHASE 1 — Create test user (API — email verify skip)
             # ════════════════════════════════════════════════════════
@@ -530,6 +507,30 @@ def run_order_lifecycle(headed=False, slow=False):
             expect(cust.locator('button[aria-label="Account menu"]')).to_be_visible(timeout=15000)
             ss = snap(cust, "logged_in")
             ok("CUSTOMER", "Logged in — avatar button visible in navbar", ss)
+
+            # ── PRE-FLIGHT 2: SELECTOR CONTRACT CHECK (runs AFTER login) ──────
+            # IMPORTANT: must run after login because all entries in
+            # SELECTOR_CONTRACT point to auth-protected pages.
+            # Visiting them unauthenticated just redirects to /auth/login
+            # and the elements never render — the check would always fail.
+            info("SYSTEM", f"Verifying selector contract ({len(SELECTOR_CONTRACT)} testids)...")
+            contract_failures = []
+            for testid, page_path in SELECTOR_CONTRACT.items():
+                cust.goto(f"{BASE_URL}{page_path}", wait_until="networkidle")
+                cust.wait_for_timeout(1500)
+                el = cust.locator(f'[data-testid="{testid}"]')
+                if el.count() > 0 and el.first.is_visible():
+                    info("SYSTEM", f"  ✅ data-testid='{testid}' found on {page_path}")
+                else:
+                    contract_failures.append(testid)
+                    info("SYSTEM", f"  ❌ data-testid='{testid}' MISSING on {page_path}")
+            if contract_failures:
+                ss = snap(cust, "contract_failure")
+                raise RuntimeError(
+                    f"SELECTOR CONTRACT FAILED — these data-testid attributes are missing "
+                    f"from the live page: {contract_failures}\n"
+                    f"Fix: add data-testid='...' to the JSX and redeploy, OR check DB columns."
+                )
 
             # ════════════════════════════════════════════════════════
             # PHASE 3 — Customer checks initial points
