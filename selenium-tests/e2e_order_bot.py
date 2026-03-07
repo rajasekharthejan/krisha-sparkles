@@ -11,7 +11,51 @@ Usage:
   python e2e_order_bot.py --headed         # watch it live
   python e2e_order_bot.py --headed --slow  # slow motion (1s delays)
   BASE_URL=http://localhost:3000 python e2e_order_bot.py  # local
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  DEVELOPER CONTRACT — READ BEFORE ADDING NEW CHECKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  RULE 1 — NEVER use substring matching for numeric values:
+    ❌  if str(N) in page.inner_text()
+    ❌  if str(N) in locator('text=...').locator('..').inner_text()
+    ✅  use read_numeric_field(page, "testid-name", expected_value)
+
+  RULE 2 — NEVER walk up to a parent container to read a value:
+    ❌  locator('text="label"').locator('..')   # grabs ALL sibling text
+    ✅  target the EXACT element via data-testid
+
+  RULE 3 — Every page numeric you test MUST have a data-testid:
+    Add  data-testid="your-field"  to the JSX element.
+    Register it in SELECTOR_CONTRACT below.
+    The pre-flight check will fail the run if it is missing from prod.
+
+  RULE 4 — read_numeric_field() returns -1 on missing element:
+    -1 is treated as ❌ FAIL — it NEVER silently passes.
+    A missing data-testid surfaces immediately, not after a human
+    stares at a screenshot wondering why the number looks wrong.
+
+  WHY THESE RULES EXIST:
+    In March 2026 the bot falsely passed a "500 pts" check because
+    `str(500) in parent_text` matched "500 pts to Silver" (tier
+    progress label) even though the actual balance was 0.
+    The production DB was broken, the bot said ✅, nobody knew.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# SELECTOR CONTRACT
+# Every data-testid the bot depends on is registered here.
+# The pre-flight check navigates to each page and verifies the
+# element EXISTS before any real test step runs.
+# Adding a new check? Add its data-testid here too.
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SELECTOR_CONTRACT = {
+    # testid                page path (for pre-flight)
+    "points-balance":       "/account/points",
+}
+# (add more rows as new data-testid attributes are added to the app)
 
 import os, sys, uuid, math, argparse, time, base64
 import requests as http_requests
@@ -91,21 +135,54 @@ def snap(page: Page, name: str) -> str:
     info("SCREEN", f"📸 {path.name}")
     return str(path)
 
-def read_points_balance(page: Page) -> int:
+def read_numeric_field(page: Page, testid: str) -> int:
     """
-    Read the EXACT numeric balance from [data-testid='points-balance'].
-    Uses a precise selector — NOT a broad container text search.
-    Returns -1 if the element is missing or unreadable (itself a failure signal).
+    CANONICAL way to read any numeric value from the page.
+
+    Targets [data-testid=<testid>] — one specific element, nothing else.
+    Returns the integer value, or -1 if the element is missing/unreadable.
+    -1 is an EXPLICIT FAILURE SIGNAL — callers must treat it as ❌.
+
+    DO NOT bypass this with inner_text() + substring matching.
+    See DEVELOPER CONTRACT at the top of this file.
     """
-    el = page.locator('[data-testid="points-balance"]')
+    el = page.locator(f'[data-testid="{testid}"]')
     try:
         el.wait_for(state="visible", timeout=8000)
         raw = el.text_content(timeout=5000) or ""
-        # strip commas from "1,234" → "1234", then cast
-        return int(raw.replace(",", "").strip())
+        return int(raw.replace(",", "").replace(" ", "").strip())
     except Exception as exc:
-        info("SCREEN", f"⚠️  read_points_balance failed: {exc}")
+        info("SCREEN", f"⚠️  read_numeric_field('{testid}') failed: {exc}")
         return -1
+
+
+def read_points_balance(page: Page) -> int:
+    """Convenience wrapper — reads points-balance via the canonical helper."""
+    return read_numeric_field(page, "points-balance")
+
+
+def verify_numeric(actor: str, testid: str, expected: int,
+                   page: Page, screenshot: str, label: str = "") -> bool:
+    """
+    Read a numeric field and immediately record pass/fail.
+    Returns True on match, False on any mismatch or missing element.
+    Use this for ALL numeric assertions in flows.
+    """
+    actual = read_numeric_field(page, testid)
+    display = label or testid
+    if actual == expected:
+        ok(actor, f"{display}: {actual} ✓", screenshot)
+        return True
+    elif actual == -1:
+        fail(actor,
+             f"{display}: [data-testid='{testid}'] NOT FOUND on page "
+             f"(expected {expected}) — check DB columns or data-testid in JSX",
+             screenshot)
+    else:
+        fail(actor,
+             f"{display} mismatch — screen shows {actual}, expected {expected}",
+             screenshot)
+    return False
 
 
 # ── Supabase Direct (only for things with NO UI) ──────────────────────────────
@@ -403,11 +480,34 @@ def run_order_lifecycle(headed=False, slow=False):
         admin = admin_ctx.new_page()
 
         try:
-            # ── PRE-FLIGHT: decline cookies so banner never blocks clicks ──
+            # ── PRE-FLIGHT 1: decline cookies so banner never blocks clicks ──
             for pg, label in [(cust,"Customer"),(admin,"Admin")]:
                 pg.goto(f"{BASE_URL}/auth/login", wait_until="domcontentloaded")
                 pg.evaluate('localStorage.setItem("ks_cookie_consent","declined")')
                 info("SYSTEM", f"{label} browser: cookie consent pre-declined")
+
+            # ── PRE-FLIGHT 2: SELECTOR CONTRACT CHECK ─────────────────────────
+            # Verify every data-testid in SELECTOR_CONTRACT exists on its page.
+            # If any are missing the whole run aborts here — not after 10 steps.
+            # This means a broken JSX or missing DB column is caught immediately.
+            info("SYSTEM", f"Verifying selector contract ({len(SELECTOR_CONTRACT)} testids)...")
+            contract_failures = []
+            for testid, page_path in SELECTOR_CONTRACT.items():
+                cust.goto(f"{BASE_URL}{page_path}", wait_until="networkidle")
+                cust.wait_for_timeout(1500)
+                el = cust.locator(f'[data-testid="{testid}"]')
+                if el.count() > 0 and el.first.is_visible():
+                    info("SYSTEM", f"  ✅ data-testid='{testid}' found on {page_path}")
+                else:
+                    contract_failures.append(testid)
+                    info("SYSTEM", f"  ❌ data-testid='{testid}' MISSING on {page_path}")
+            if contract_failures:
+                ss = snap(cust, "contract_failure")
+                raise RuntimeError(
+                    f"SELECTOR CONTRACT FAILED — these data-testid attributes are missing "
+                    f"from the live page: {contract_failures}\n"
+                    f"Fix: add data-testid='...' to the JSX and redeploy, OR check DB columns."
+                )
 
             # ════════════════════════════════════════════════════════
             # PHASE 1 — Create test user (API — email verify skip)
@@ -466,17 +566,9 @@ def run_order_lifecycle(headed=False, slow=False):
             step("CUSTOMER", "Verify seeded points on screen")
             cust.goto(f"{BASE_URL}/account/points", wait_until="networkidle")
             cust.wait_for_timeout(2000)
-            # ── PRECISE CHECK: read the exact balance element, compare numerically ──
-            # Never use `str(N) in container_text` — too broad, matches tier-progress numbers too.
-            seeded_balance = read_points_balance(cust)
             ss = snap(cust, "points_seeded")
-            if seeded_balance == POINTS_TO_SEED:
-                ok("CUSTOMER", f"Screen shows exactly {POINTS_TO_SEED} pts ✓ (data-testid hit)", ss)
-            else:
-                fail("CUSTOMER",
-                     f"Balance mismatch — screen: {seeded_balance}, expected: {POINTS_TO_SEED}"
-                     f"{' (element missing — DB columns may not exist)' if seeded_balance == -1 else ''}",
-                     ss)
+            verify_numeric("CUSTOMER", "points-balance", POINTS_TO_SEED, cust, ss,
+                           label=f"Seeded balance ({POINTS_TO_SEED} pts)")
 
             # ════════════════════════════════════════════════════════
             # PHASE 6 — Customer browses shop
@@ -603,20 +695,9 @@ def run_order_lifecycle(headed=False, slow=False):
             cust.goto(f"{BASE_URL}/account/points", wait_until="networkidle")
             cust.wait_for_timeout(2000)
             expected_final = POINTS_TO_SEED - POINTS_TO_REDEEM + earned
-            # ── PRECISE CHECK: exact element, numeric comparison ──────────────────
-            # DO NOT use `str(N) in big_text` — tier progress text also contains
-            # numbers (e.g. "500 pts to Silver") which causes false positives.
-            final_balance = read_points_balance(cust)
             ss = snap(cust, "points_final")
-            if final_balance == expected_final:
-                ok("CUSTOMER", f"Final balance: {final_balance} pts ✓  (expected {expected_final})", ss)
-            elif final_balance == -1:
-                fail("CUSTOMER",
-                     f"[data-testid='points-balance'] NOT FOUND — page may have DB column error"
-                     f" (expected {expected_final})", ss)
-            else:
-                fail("CUSTOMER",
-                     f"Balance mismatch — screen: {final_balance}, expected: {expected_final}", ss)
+            verify_numeric("CUSTOMER", "points-balance", expected_final, cust, ss,
+                           label=f"Final balance (seed {POINTS_TO_SEED} − redeem {POINTS_TO_REDEEM} + earned {earned})")
 
             step("ADMIN", "Final admin state")
             admin.goto(f"{BASE_URL}/admin/orders", wait_until="networkidle")
