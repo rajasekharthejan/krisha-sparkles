@@ -1,20 +1,14 @@
 /**
  * GET /api/loyalty/history
  *
- * Returns the authenticated user's loyalty points earning history,
- * derived from their paid orders. Each paid order earns 1 point per $1
- * spent (Math.floor of order total).
+ * Returns the authenticated user's loyalty points history.
  *
- * Also returns the current points balance from user_profiles.
+ * Points are now earned ONLY when an order reaches "delivered" status.
+ * The exact points awarded are stored in orders.points_earned (with tier
+ * multiplier applied). Non-delivered orders show 0 earned but are included
+ * so customers can see "pending delivery" orders in their history.
  *
  * Auth required — returns 401 for unauthenticated requests.
- *
- * Returns:
- * {
- *   history: PointsHistory[],   // most recent first
- *   current_balance: number,    // live from user_profiles.points_balance
- *   points_per_dollar: number,  // always 100 (100 pts = $1)
- * }
  */
 
 import { NextResponse } from "next/server";
@@ -48,14 +42,15 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Fetch paid/shipped/delivered orders for points history
-    // Points earned = Math.floor(order.total) per order (1pt per $1)
+    // Fetch ALL user orders (any status) — history shows pending + delivered + cancelled
+    // points_earned comes from the DB column (set when order reaches "delivered")
+    // points_redeemed is set at checkout time for orders where customer used points
     const { data: orders, error: ordersError } = await admin
       .from("orders")
-      .select("id, total, status, created_at, points_redeemed")
+      .select("id, total, status, created_at, points_redeemed, points_earned")
       .eq("user_id", user.id)
-      .in("status", ["paid", "shipped", "delivered"])
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(50);
 
     if (ordersError) {
       console.error("Failed to fetch orders for points history:", ordersError);
@@ -71,11 +66,12 @@ export async function GET() {
 
     const currentBalance: number = profile?.points_balance || 0;
 
-    // Map orders to points history entries
+    // Map orders to points history entries.
+    // points_earned is the stored DB value (0 for non-delivered orders).
     const history = (orders || []).map((order) => ({
       order_id: order.id,
       order_short: order.id.slice(-8).toUpperCase(),
-      points_earned: Math.floor(order.total),
+      points_earned: order.points_earned || 0,
       points_redeemed: order.points_redeemed || 0,
       order_total: order.total,
       status: order.status,

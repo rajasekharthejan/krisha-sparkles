@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { sendOrderConfirmation, sendAdminOrderNotification, sendTierUpgradeEmail } from "@/lib/email";
+import { sendOrderConfirmation, sendAdminOrderNotification } from "@/lib/email";
 import { sendWhatsAppOrderConfirmation, notifyAdminNewOrder } from "@/lib/whatsapp-notify";
 import { getStripe } from "@/lib/stripe";
 import { getStripeWebhookSecret, getStripeWebhookSecretFallback } from "@/lib/paymentMode";
-import { getTierConfig, getTierByLifetimePoints, type LoyaltyTierName } from "@/lib/loyalty-tiers";
 
 function getSupabaseAdmin() {
   return createClient(
@@ -255,60 +254,10 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Award loyalty points with tier-based multiplier
-      // Base: 1 point per $1 spent. Multiplied by tier (e.g. Gold = 1.5x, Diamond = 2x).
-      // Also increments lifetime_points + checks for tier upgrade.
-      if (userId) {
-        try {
-          // Fetch user's current tier for multiplier
-          const { data: tierProfile } = await supabaseAdmin
-            .from("user_profiles")
-            .select("loyalty_tier, lifetime_points")
-            .eq("id", userId)
-            .single();
-          const tierName = (tierProfile?.loyalty_tier || "bronze") as LoyaltyTierName;
-          const tierConfig = getTierConfig(tierName);
-
-          const basePts = Math.floor(total);
-          const pts = Math.floor(basePts * tierConfig.pointsMultiplier);
-
-          if (pts > 0) {
-            // Increment redeemable balance
-            await supabaseAdmin.rpc("increment_points", { user_id: userId, pts });
-
-            // Increment lifetime_points + check for tier upgrade
-            try {
-              const { data: newTier } = await supabaseAdmin.rpc("increment_lifetime_points", {
-                p_user_id: userId,
-                p_pts: basePts, // lifetime uses base (un-multiplied) for fair tier progression
-              });
-
-              // Send tier upgrade email if tier changed
-              if (newTier && newTier !== tierName) {
-                const newTierConfig = getTierConfig(newTier);
-                const email = session.customer_details?.email;
-                if (email) {
-                  sendTierUpgradeEmail(email, newTierConfig.label, newTierConfig.icon, newTierConfig.color)
-                    .catch(() => console.error("Failed to send tier upgrade email"));
-                }
-                console.log(`User ${userId.slice(-8)} upgraded: ${tierName} → ${newTier}`);
-              }
-            } catch {
-              // Fallback: increment lifetime_points manually if RPC doesn't exist
-              try {
-                await supabaseAdmin
-                  .from("user_profiles")
-                  .update({ lifetime_points: (tierProfile?.lifetime_points || 0) + basePts })
-                  .eq("id", userId);
-              } catch {
-                console.error("Failed to increment lifetime points");
-              }
-            }
-          }
-        } catch {
-          console.error("Failed to award loyalty points");
-        }
-      }
+      // NOTE: Loyalty points are NOT awarded here.
+      // Points are awarded only when the order reaches "delivered" status
+      // via /api/admin/orders/status. This prevents awarding points for
+      // orders that are later cancelled, returned, or never fulfilled.
 
       // Complete referral if applicable
       const referralCode = metadata?.referral_code;

@@ -47,16 +47,17 @@ export default async function PointsPage() {
   } catch { /* column may not exist */ }
 
   try {
+    // Fetch all orders — points_earned is 0 until delivered, then set by status route
     const { data: orders } = await supabase
       .from("orders")
-      .select("id, total, status, created_at, points_redeemed")
+      .select("id, total, status, created_at, points_redeemed, points_earned")
       .eq("user_id", user.id)
-      .in("status", ["paid", "shipped", "delivered"])
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(50);
 
     if (orders) {
       history = orders.map((o) => {
-        const earned = Math.floor(o.total);
+        const earned = o.points_earned || 0;   // stored by status route on delivery
         const redeemed = o.points_redeemed || 0;
         totalEarned += earned;
         totalRedeemed += redeemed;
@@ -420,8 +421,16 @@ export default async function PointsPage() {
                     </Link>
                     <span style={{
                       fontSize: "0.7rem", padding: "1px 6px", borderRadius: "20px", fontWeight: 600,
-                      background: entry.status === "delivered" ? "rgba(16,185,129,0.12)" : "rgba(201,168,76,0.12)",
-                      color: entry.status === "delivered" ? "#10b981" : "var(--gold)",
+                      background: entry.status === "delivered"
+                        ? "rgba(16,185,129,0.12)"
+                        : entry.status === "cancelled" || entry.status === "returned"
+                          ? "rgba(239,68,68,0.12)"
+                          : "rgba(201,168,76,0.12)",
+                      color: entry.status === "delivered"
+                        ? "#10b981"
+                        : entry.status === "cancelled" || entry.status === "returned"
+                          ? "#ef4444"
+                          : "var(--gold)",
                     }}>
                       {entry.status}
                     </span>
@@ -432,10 +441,23 @@ export default async function PointsPage() {
                 </div>
 
                 <div style={{ textAlign: "right", paddingRight: "1.5rem" }}>
-                  <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.875rem" }}>
-                    +{entry.points_earned.toLocaleString()}
-                  </span>
-                  <p style={{ color: "var(--muted)", fontSize: "0.7rem", margin: 0 }}>pts</p>
+                  {entry.points_earned > 0 ? (
+                    <>
+                      <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.875rem" }}>
+                        +{entry.points_earned.toLocaleString()}
+                      </span>
+                      <p style={{ color: "var(--muted)", fontSize: "0.7rem", margin: 0 }}>pts earned</p>
+                    </>
+                  ) : entry.status === "delivered" ? (
+                    <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>—</span>
+                  ) : entry.status === "cancelled" || entry.status === "returned" ? (
+                    <span style={{ color: "#ef4444", fontSize: "0.75rem" }}>no points</span>
+                  ) : (
+                    <>
+                      <span style={{ color: "var(--gold)", fontSize: "0.75rem", fontWeight: 600 }}>pending</span>
+                      <p style={{ color: "var(--muted)", fontSize: "0.7rem", margin: 0 }}>on delivery</p>
+                    </>
+                  )}
                 </div>
 
                 <div style={{ textAlign: "right" }}>
@@ -465,7 +487,7 @@ export default async function PointsPage() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "2.5rem" }}>
           {[
-            { icon: <ShoppingBag size={20} style={{ color: "var(--gold)" }} />, title: "Shop & Earn", desc: `Earn ${tier.pointsMultiplier > 1 ? `${tier.pointsMultiplier}x` : "1"} point${tier.pointsMultiplier > 1 ? "s" : ""} for every $1 you spend as a ${tier.label} member.` },
+            { icon: <ShoppingBag size={20} style={{ color: "var(--gold)" }} />, title: "Shop & Earn", desc: `Earn ${tier.pointsMultiplier > 1 ? `${tier.pointsMultiplier}x` : "1"} point${tier.pointsMultiplier > 1 ? "s" : ""} for every $1 you spend as a ${tier.label} member. Points are credited when your order is delivered.` },
             { icon: <Zap size={20} style={{ color: "var(--gold)" }} />, title: "Level Up", desc: "Your lifetime points determine your tier. Higher tiers unlock better multipliers and exclusive perks." },
             { icon: <Gift size={20} style={{ color: "var(--gold)" }} />, title: "Redeem at Checkout", desc: `Use points at checkout — ${tier.pointsPerDollar} points = $1 off your order at ${tier.label} tier.` },
           ].map((item, i) => (
