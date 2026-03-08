@@ -23,7 +23,7 @@ import type { Product } from "@/types";
 import InstagramFeed from "@/components/store/InstagramFeed";
 // import TikTokFeed from "@/components/store/TikTokFeed"; // Hidden for now
 import Image from "next/image";
-import { ArrowRight, Star, Shield, Truck, MessageCircle, Gift } from "lucide-react";
+import { ArrowRight, Star, Shield, Truck, MessageCircle, Gift, Camera, Video } from "lucide-react";
 
 interface BundlePreview {
   id: string;
@@ -111,11 +111,82 @@ async function getHeroSettings(): Promise<HeroProps> {
   }
 }
 
+interface LiveEventPreview {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  scheduled_at: string | null;
+  thumbnail: string | null;
+}
+
+async function getLiveOrUpcomingEvent(): Promise<LiveEventPreview | null> {
+  try {
+    const supabase = createSupabaseAdmin(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    // Priority: live > upcoming (soonest)
+    const { data: liveEvents } = await supabase
+      .from("live_events")
+      .select("id, title, slug, status, scheduled_at, thumbnail")
+      .eq("status", "live")
+      .limit(1);
+    if (liveEvents && liveEvents.length > 0) return liveEvents[0] as LiveEventPreview;
+
+    const { data: upcoming } = await supabase
+      .from("live_events")
+      .select("id, title, slug, status, scheduled_at, thumbnail")
+      .eq("status", "scheduled")
+      .order("scheduled_at", { ascending: true })
+      .limit(1);
+    if (upcoming && upcoming.length > 0) return upcoming[0] as LiveEventPreview;
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+interface CustomerPhoto {
+  id: string;
+  images: string[];
+  rating: number;
+  products: { name: string; slug: string };
+  user_profiles?: { first_name?: string };
+}
+
+async function getCustomerPhotos(): Promise<CustomerPhoto[]> {
+  try {
+    const supabase = createSupabaseAdmin(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data } = await supabase
+      .from("reviews")
+      .select("id, images, rating, user_profiles(first_name), products!inner(name, slug)")
+      .eq("approved", true)
+      .eq("photo_approved", true)
+      .not("images", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    // Filter out reviews with empty images arrays
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ((data as unknown as CustomerPhoto[]) || []).filter(
+      (r) => r.images && r.images.length > 0
+    );
+  } catch {
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const [featured, bundles, heroSettings] = await Promise.all([
+  const [featured, bundles, heroSettings, customerPhotos, liveEvent] = await Promise.all([
     getFeaturedProducts(),
     getTopBundles(),
     getHeroSettings(),
+    getCustomerPhotos(),
+    getLiveOrUpcomingEvent(),
   ]);
 
   return (
@@ -125,6 +196,68 @@ export default async function HomePage() {
 
       {/* ── Marquee Ticker ────────────────────────────── */}
       <MarqueeTicker />
+
+      {/* ── Live Shopping Banner ──────────────────────── */}
+      {liveEvent && (
+        <section
+          style={{
+            background: liveEvent.status === "live"
+              ? "linear-gradient(135deg, rgba(239,68,68,0.08), rgba(201,168,76,0.08))"
+              : "var(--surface)",
+            borderBottom: "1px solid var(--gold-border)",
+            padding: "1rem 1.5rem",
+          }}
+        >
+          <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+            <Link
+              href={`/live/${liveEvent.slug}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.75rem",
+                textDecoration: "none",
+                color: "var(--text)",
+              }}
+            >
+              {liveEvent.status === "live" ? (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    background: "rgba(239,68,68,0.15)",
+                    color: "#ef4444",
+                    padding: "0.2rem 0.65rem",
+                    borderRadius: "9999px",
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: "#ef4444",
+                      animation: "pulseLive 1.5s ease-in-out infinite",
+                    }}
+                  />
+                  Live Now
+                </span>
+              ) : (
+                <Video size={16} style={{ color: "var(--gold)" }} />
+              )}
+              <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+                {liveEvent.status === "live" ? `Join "${liveEvent.title}" — Shop Live!` : `Upcoming: ${liveEvent.title}`}
+              </span>
+              <ArrowRight size={14} style={{ color: "var(--gold)" }} />
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* ── Features Strip ────────────────────────────── */}
       <section
@@ -509,6 +642,119 @@ export default async function HomePage() {
       )}
 
       {/* TikTok Feed Section — hidden for now */}
+
+      {/* ── Customer Photos Section ─────────────────── */}
+      {customerPhotos.length > 0 && (
+        <section style={{ padding: "5rem 1.5rem", background: "var(--surface)" }}>
+          <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+              <span className="badge-gold">
+                <Camera size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />
+                Photo Reviews
+              </span>
+              <h2
+                style={{
+                  fontFamily: "var(--font-playfair)",
+                  fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+                  fontWeight: 700,
+                  marginTop: "0.75rem",
+                  marginBottom: "0.5rem",
+                }}
+              >
+                Real Customers, Real Sparkle
+              </h2>
+              <div className="gold-divider" />
+              <p style={{ color: "var(--muted)", marginTop: "0.75rem", fontSize: "0.9rem" }}>
+                See how our community styles their Krisha Sparkles jewelry
+              </p>
+            </div>
+
+            {/* Horizontal Scroll Row */}
+            <div
+              className="customer-photos-scroll"
+              style={{
+                display: "flex",
+                gap: "1rem",
+                overflowX: "auto",
+                paddingBottom: "0.5rem",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              {customerPhotos.map((photo) => (
+                <Link
+                  key={photo.id}
+                  href="/gallery"
+                  style={{
+                    flexShrink: 0,
+                    width: "180px",
+                    textDecoration: "none",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    border: "1px solid var(--gold-border)",
+                    background: "var(--elevated)",
+                    transition: "transform 0.2s, border-color 0.2s",
+                  }}
+                  className="customer-photo-card"
+                >
+                  <div style={{ position: "relative", aspectRatio: "1", overflow: "hidden" }}>
+                    <Image
+                      src={photo.images[0]}
+                      alt={`Review by ${photo.user_profiles?.first_name || "Customer"}`}
+                      fill
+                      sizes="180px"
+                      style={{ objectFit: "cover" }}
+                    />
+                  </div>
+                  <div style={{ padding: "0.5rem 0.6rem" }}>
+                    <div style={{ display: "flex", gap: "1px", marginBottom: "0.2rem" }}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          size={10}
+                          style={{
+                            color: s <= photo.rating ? "var(--gold)" : "var(--subtle)",
+                            fill: s <= photo.rating ? "var(--gold)" : "none",
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <p style={{
+                      fontSize: "0.7rem", fontWeight: 600, color: "var(--text)",
+                      margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {photo.products?.name}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* View Full Gallery CTA */}
+            <div style={{ textAlign: "center", marginTop: "2rem" }}>
+              <Link
+                href="/gallery"
+                className="btn-gold-outline"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 2rem",
+                  fontSize: "0.875rem",
+                  textDecoration: "none",
+                }}
+              >
+                View Full Gallery <ArrowRight size={15} />
+              </Link>
+            </div>
+          </div>
+          <style>{`
+            .customer-photo-card:hover {
+              transform: translateY(-3px);
+              border-color: var(--gold) !important;
+            }
+          `}</style>
+        </section>
+      )}
 
       <NewsletterSection />
     </div>

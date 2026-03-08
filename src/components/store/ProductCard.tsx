@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag, Heart, Check, Eye } from "lucide-react";
+import { ShoppingBag, Heart, Check, Eye, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import QuickViewModal from "@/components/store/QuickViewModal";
 import { useCartStore } from "@/store/cartStore";
@@ -16,9 +16,11 @@ import BackInStockButton from "@/components/store/BackInStockButton";
 interface ProductCardProps {
   product: Product;
   index?: number;
+  avgRating?: number;
+  reviewCount?: number;
 }
 
-export default function ProductCard({ product, index = 0 }: ProductCardProps) {
+export default function ProductCard({ product, index = 0, avgRating, reviewCount }: ProductCardProps) {
   const [wished, setWished] = useState(false);
   const [wishLoading, setWishLoading] = useState(false);
   const [added, setAdded] = useState(false);
@@ -292,6 +294,23 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           >
             {product.name}
           </h3>
+          {avgRating !== undefined && avgRating > 0 && reviewCount !== undefined && reviewCount > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginBottom: "0.4rem" }}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star
+                  key={s}
+                  size={12}
+                  style={{
+                    color: s <= Math.round(avgRating) ? "var(--gold)" : "var(--subtle)",
+                    fill: s <= Math.round(avgRating) ? "var(--gold)" : "none",
+                  }}
+                />
+              ))}
+              <span style={{ fontSize: "0.7rem", color: "var(--muted)", marginLeft: "0.15rem" }}>
+                ({reviewCount})
+              </span>
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <span
               style={{
@@ -317,6 +336,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           </div>
           {product.stock_quantity > 0 && product.stock_quantity <= 5 && (
             <p
+              suppressHydrationWarning
               style={{
                 fontSize: "0.68rem",
                 color: "#f59e0b",

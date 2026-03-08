@@ -98,6 +98,10 @@ function ColorSwatch({
   );
 }
 
+interface ReviewStatsMap {
+  [productId: string]: { avg_rating: number; review_count: number };
+}
+
 function ShopContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -108,6 +112,7 @@ function ShopContent() {
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
+  const [reviewStats, setReviewStats] = useState<ReviewStatsMap>({});
 
   // ── Advanced filter state ──────────────────────────────────────────────────
   const [selectedMaterial, setSelectedMaterial] = useState(searchParams.get("material") || "");
@@ -174,8 +179,27 @@ function ShopContent() {
     else if (sortBy === "featured") query = query.eq("featured", true).order("created_at", { ascending: false });
 
     const { data } = await query;
-    setProducts((data as Product[]) || []);
+    const prods = (data as Product[]) || [];
+    setProducts(prods);
     setLoading(false);
+
+    // Fetch batch review stats for displayed products
+    if (prods.length > 0) {
+      try {
+        const ids = prods.map((p) => p.id).join(",");
+        const res = await fetch(`/api/reviews/stats?product_ids=${ids}`);
+        if (res.ok) {
+          const json = await res.json();
+          const map: ReviewStatsMap = {};
+          for (const s of json.stats || []) {
+            map[s.product_id] = { avg_rating: s.avg_rating, review_count: s.review_count };
+          }
+          setReviewStats(map);
+        }
+      } catch {
+        // silently ignore — stars just won't show
+      }
+    }
   }, [selectedCategory, search, sortBy, priceRange, selectedMaterial, selectedColor, selectedOccasion, selectedStyle]);
 
   useEffect(() => {
@@ -218,7 +242,7 @@ function ShopContent() {
             Shop All Jewelry
           </h1>
           <div className="gold-divider" />
-          <p style={{ color: "var(--muted)", marginTop: "0.75rem", fontSize: "0.9rem" }}>
+          <p style={{ color: "var(--muted)", marginTop: "0.75rem", fontSize: "0.9rem" }} suppressHydrationWarning>
             {products.length} {products.length === 1 ? "piece" : "pieces"} available
           </p>
         </div>
@@ -669,7 +693,12 @@ function ShopContent() {
             }}
           >
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                avgRating={reviewStats[product.id]?.avg_rating}
+                reviewCount={reviewStats[product.id]?.review_count}
+              />
             ))}
           </div>
         )}

@@ -63,6 +63,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright, Page, expect
+from admin_session import admin_login as _admin_login
 
 # ── Load env ──────────────────────────────────────────────────────────────────
 project_root = Path(__file__).resolve().parent.parent
@@ -545,15 +546,7 @@ def run_order_lifecycle(headed=False, slow=False):
             # PHASE 4 — Admin logs in via real browser form
             # ════════════════════════════════════════════════════════
             step("ADMIN", "Pass admin gate + login")
-            admin.goto(f"{BASE_URL}/api/admin/gate?t={ADMIN_GATE}", wait_until="networkidle")
-            admin.wait_for_timeout(1500)
-            admin.goto(f"{BASE_URL}/admin/login", wait_until="networkidle")
-            expect(admin.locator('text="ADMIN PORTAL"')).to_be_visible(timeout=10000)
-            admin.fill('input[placeholder="admin@krishasparkles.com"]', ADMIN_EMAIL)
-            admin.fill('input[placeholder="••••••••"]', ADMIN_PASSWORD)
-            ss = snap(admin, "admin_login")
-            admin.click('button[type="submit"]')
-            expect(admin.locator('text="Dashboard"').first).to_be_visible(timeout=15000)
+            _admin_login(admin_ctx, admin, BASE_URL, ADMIN_GATE, ADMIN_EMAIL, ADMIN_PASSWORD)
             ss = snap(admin, "admin_dashboard")
             ok("ADMIN", "Logged in — dashboard visible", ss)
 

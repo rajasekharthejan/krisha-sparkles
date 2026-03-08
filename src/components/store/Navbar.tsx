@@ -19,6 +19,8 @@ const NAV_LINKS = [
   { label: "Earrings",  href: "/shop?category=earrings" },
   { label: "Jadau",     href: "/shop?category=jadau-jewelry" },
   { label: "Gift Sets", href: "/bundles" },
+  { label: "Live",      href: "/live" },
+  { label: "Gallery",   href: "/gallery" },
   { label: "Blog",      href: "/blog" },
 ];
 

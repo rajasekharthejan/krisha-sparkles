@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   const { data: orders } = await admin
     .from("orders")
-    .select("id, email, name")
+    .select("id, email, name, order_items(product_name, product_image)")
     .eq("status", "delivered")
     .lt("delivered_at", fiveDaysAgo)
     .eq("review_requested", false)
@@ -32,10 +32,19 @@ export async function GET(req: NextRequest) {
   let sent = 0;
   for (const order of orders) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const items = (order as any).order_items || [];
+      const products = items
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((i: any) => i.product_image)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((i: any) => ({ name: i.product_name, image: i.product_image }));
+
       await sendReviewRequestEmail({
         email: order.email,
         name: order.name,
         orderId: order.id,
+        products,
       });
       await admin.from("orders").update({ review_requested: true }).eq("id", order.id);
       sent++;

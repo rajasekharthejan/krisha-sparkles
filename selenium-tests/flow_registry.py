@@ -1,5 +1,5 @@
 """
-flow_registry.py — Central registry of all 197 Krisha Sparkles test flows.
+flow_registry.py — Central registry of all 245 Krisha Sparkles test flows.
 """
 
 from flows.base import FlowDef
@@ -157,6 +157,38 @@ from flows.loyalty_tiers_flows import (
     f192_api_loyalty_tier, f193_api_loyalty_history_includes_tier,
     f194_admin_loyalty_page_loads, f195_admin_loyalty_user_table,
     f196_admin_loyalty_filter, f197_admin_sidebar_loyalty,
+)
+from flows.gallery_flows import (
+    f198_gallery_page_loads, f199_gallery_filter_pills,
+    f200_gallery_empty_state, f201_review_stats_api_single,
+    f202_review_stats_api_batch, f203_gallery_api_json,
+    f204_gallery_api_category_filter, f205_gallery_api_min_rating,
+    f206_shop_page_star_ratings, f207_product_detail_breakdown,
+    f208_gallery_nav_link, f209_homepage_customer_photos,
+)
+from flows.live_shopping_flows import (
+    f210_live_events_page_loads, f211_live_event_detail_page,
+    f212_live_event_product_sidebar, f213_live_event_chat_area,
+    f214_live_event_countdown, f215_live_event_discount_banner,
+    f216_live_event_add_to_cart, f217_live_events_api,
+    f218_live_event_detail_api, f219_admin_live_events_page,
+    f220_admin_create_event, f221_navbar_live_link,
+)
+from flows.advanced_analytics_flows import (
+    f222_advanced_analytics_tabs, f223_cohorts_tab_loads,
+    f224_ltv_tab_loads, f225_funnels_tab_loads,
+    f226_categories_tab_loads, f227_cohorts_api_json,
+    f228_ltv_api_json, f229_funnels_api_json,
+    f230_categories_api_json, f231_tab_switching_works,
+    f232_advanced_analytics_csv_export, f233_period_toggle_advanced_tabs,
+)
+from flows.ab_testing_flows import (
+    f234_admin_experiments_page, f235_create_experiment_modal,
+    f236_experiments_api_json, f237_active_experiments_api,
+    f238_track_api_post, f239_results_api_json,
+    f240_experiment_status_change, f241_experiments_table_columns,
+    f242_variant_display, f243_ab_session_cookie,
+    f244_sidebar_experiments_link, f245_results_stats_display,
 )
 
 # ── Build Registry ───────────────────────────────────────────────────────────
@@ -414,6 +446,62 @@ ALL_FLOWS: list[FlowDef] = [
     FlowDef("F195", "Admin Loyalty User Table",      "Admin loyalty page shows users with tier badges",         "Loyalty Tiers",    f195_admin_loyalty_user_table,    requires_admin=True),
     FlowDef("F196", "Admin Loyalty Filter",          "Admin loyalty page tier filter buttons work",             "Loyalty Tiers",    f196_admin_loyalty_filter,        requires_admin=True),
     FlowDef("F197", "Admin Sidebar Loyalty",         "Admin sidebar has Loyalty Tiers nav item",                "Loyalty Tiers",    f197_admin_sidebar_loyalty,       requires_admin=True),
+
+    # F198-F209: Phase 8 — Photo Reviews & UGC Gallery
+    FlowDef("F198", "Gallery Page Loads",            "Gallery page (/gallery) loads with header",               "Photo Reviews",    f198_gallery_page_loads),
+    FlowDef("F199", "Gallery Filter Pills",          "Gallery page shows category + rating filters",            "Photo Reviews",    f199_gallery_filter_pills),
+    FlowDef("F200", "Gallery Empty State",            "Gallery handles empty state gracefully",                   "Photo Reviews",    f200_gallery_empty_state),
+    FlowDef("F201", "Review Stats API Single",        "Stats API returns data for single product",               "Photo Reviews",    f201_review_stats_api_single),
+    FlowDef("F202", "Review Stats API Batch",         "Stats API returns batch stats array",                     "Photo Reviews",    f202_review_stats_api_batch),
+    FlowDef("F203", "Gallery API JSON",               "Gallery API returns reviews + total + page",              "Photo Reviews",    f203_gallery_api_json),
+    FlowDef("F204", "Gallery API Category Filter",    "Gallery API accepts category filter param",               "Photo Reviews",    f204_gallery_api_category_filter),
+    FlowDef("F205", "Gallery API Min Rating",         "Gallery API accepts min_rating filter",                   "Photo Reviews",    f205_gallery_api_min_rating),
+    FlowDef("F206", "Shop Page Star Ratings",         "Shop page product cards show star ratings",               "Photo Reviews",    f206_shop_page_star_ratings),
+    FlowDef("F207", "Product Detail Breakdown",       "Product detail shows review breakdown bars",              "Photo Reviews",    f207_product_detail_breakdown),
+    FlowDef("F208", "Gallery Nav Link",               "Navbar includes Gallery link to /gallery",                "Photo Reviews",    f208_gallery_nav_link),
+    FlowDef("F209", "Homepage Customer Photos",       "Homepage shows customer photos section if reviews exist", "Photo Reviews",    f209_homepage_customer_photos),
+
+    # F210-F221: Phase 8 — Live Shopping
+    FlowDef("F210", "Live Events Page Loads",       "Live events page (/live) loads with heading",             "Live Shopping",    f210_live_events_page_loads),
+    FlowDef("F211", "Live Event Detail Page",       "Live event detail page handles navigation",               "Live Shopping",    f211_live_event_detail_page),
+    FlowDef("F212", "Live Event Product Sidebar",   "Featured products shown on event detail",                 "Live Shopping",    f212_live_event_product_sidebar),
+    FlowDef("F213", "Live Event Chat Area",         "Chat section or sign-in prompt shown",                    "Live Shopping",    f213_live_event_chat_area),
+    FlowDef("F214", "Live Event Countdown",         "Scheduled event shows countdown elements",                "Live Shopping",    f214_live_event_countdown),
+    FlowDef("F215", "Live Event Discount Banner",   "Discount code banner shown when set",                     "Live Shopping",    f215_live_event_discount_banner),
+    FlowDef("F216", "Live Event Add to Cart",       "Add to Cart button accessible from live event",           "Live Shopping",    f216_live_event_add_to_cart),
+    FlowDef("F217", "Live Events API",              "GET /api/live-events returns JSON",                       "Live Shopping",    f217_live_events_api),
+    FlowDef("F218", "Live Event Detail API",        "GET /api/live-events/[slug] returns data or 404",         "Live Shopping",    f218_live_event_detail_api),
+    FlowDef("F219", "Admin Live Events Page",       "Admin live events page loads",                            "Live Shopping",    f219_admin_live_events_page,    requires_admin=True),
+    FlowDef("F220", "Admin Create Event",           "Create event modal has form fields",                      "Live Shopping",    f220_admin_create_event,        requires_admin=True),
+    FlowDef("F221", "Navbar Live Link",             "Live link in navigation",                                 "Live Shopping",    f221_navbar_live_link),
+
+    # F222-F233: Phase 8 — Advanced Analytics
+    FlowDef("F222", "Advanced Analytics Tabs",       "Analytics page shows Cohorts/LTV/Funnels/Categories tabs", "Advanced Analytics", f222_advanced_analytics_tabs,       requires_admin=True),
+    FlowDef("F223", "Cohorts Tab Loads",             "Cohorts tab loads with retention data",                    "Advanced Analytics", f223_cohorts_tab_loads,             requires_admin=True),
+    FlowDef("F224", "LTV Tab Loads",                 "Lifetime Value tab loads with distribution",               "Advanced Analytics", f224_ltv_tab_loads,                 requires_admin=True),
+    FlowDef("F225", "Funnels Tab Loads",             "Funnels tab loads with conversion steps",                  "Advanced Analytics", f225_funnels_tab_loads,             requires_admin=True),
+    FlowDef("F226", "Categories Tab Loads",          "Categories tab loads with revenue breakdown",              "Advanced Analytics", f226_categories_tab_loads,          requires_admin=True),
+    FlowDef("F227", "Cohorts API JSON",              "Cohorts API returns proper JSON structure",                "Advanced Analytics", f227_cohorts_api_json,              requires_admin=True),
+    FlowDef("F228", "LTV API JSON",                  "LTV API returns proper JSON structure",                    "Advanced Analytics", f228_ltv_api_json,                  requires_admin=True),
+    FlowDef("F229", "Funnels API JSON",              "Funnels API returns proper JSON structure",                "Advanced Analytics", f229_funnels_api_json,              requires_admin=True),
+    FlowDef("F230", "Categories API JSON",           "Categories API returns proper JSON structure",             "Advanced Analytics", f230_categories_api_json,           requires_admin=True),
+    FlowDef("F231", "Tab Switching Works",           "Switching between analytics tabs updates content",         "Advanced Analytics", f231_tab_switching_works,           requires_admin=True),
+    FlowDef("F232", "Advanced Analytics CSV",        "CSV export still works from advanced analytics page",      "Advanced Analytics", f232_advanced_analytics_csv_export, requires_admin=True),
+    FlowDef("F233", "Period Toggle Advanced Tabs",   "Period toggle affects advanced tab data",                  "Advanced Analytics", f233_period_toggle_advanced_tabs,   requires_admin=True),
+
+    # F234-F245: Phase 8 — A/B Testing
+    FlowDef("F234", "Admin Experiments Page",        "Admin experiments page loads with heading",               "A/B Testing",       f234_admin_experiments_page,        requires_admin=True),
+    FlowDef("F235", "Create Experiment Modal",       "Create experiment button opens form",                     "A/B Testing",       f235_create_experiment_modal,       requires_admin=True),
+    FlowDef("F236", "Experiments API JSON",          "Admin experiments API returns JSON",                      "A/B Testing",       f236_experiments_api_json,          requires_admin=True),
+    FlowDef("F237", "Active Experiments API",        "Public active experiments API returns JSON",              "A/B Testing",       f237_active_experiments_api,        requires_admin=True),
+    FlowDef("F238", "Track API POST",               "Track API accepts POST requests",                         "A/B Testing",       f238_track_api_post,               requires_admin=True),
+    FlowDef("F239", "Results API JSON",              "Results API returns proper JSON structure",               "A/B Testing",       f239_results_api_json,             requires_admin=True),
+    FlowDef("F240", "Experiment Status Change",      "Admin can change experiment status",                      "A/B Testing",       f240_experiment_status_change,      requires_admin=True),
+    FlowDef("F241", "Experiments Table Columns",     "Experiments table shows proper columns",                  "A/B Testing",       f241_experiments_table_columns,     requires_admin=True),
+    FlowDef("F242", "Variant Display",               "Experiment shows variant information",                    "A/B Testing",       f242_variant_display,              requires_admin=True),
+    FlowDef("F243", "AB Session Cookie",             "A/B session cookie mechanism works",                      "A/B Testing",       f243_ab_session_cookie,            requires_admin=True),
+    FlowDef("F244", "Sidebar Experiments Link",      "Admin sidebar has Experiments navigation link",           "A/B Testing",       f244_sidebar_experiments_link,     requires_admin=True),
+    FlowDef("F245", "Results Stats Display",         "Results show impressions and conversions stats",          "A/B Testing",       f245_results_stats_display,        requires_admin=True),
 ]
 
 # ── Derived lookups ──────────────────────────────────────────────────────────

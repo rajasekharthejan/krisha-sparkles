@@ -43,6 +43,8 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
   const [reviewImages, setReviewImages] = useState<File[]>([]);
   const [reviewImagePreviews, setReviewImagePreviews] = useState<string[]>([]);
   const [reviewImageUploading, setReviewImageUploading] = useState(false);
+  const [ratingBreakdown, setRatingBreakdown] = useState<Record<number, number>>({});
+  const [avgRating, setAvgRating] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const addToCartBtnRef = useRef<HTMLButtonElement>(null);
@@ -89,6 +91,17 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
           .eq("approved", true)
           .order("created_at", { ascending: false });
         setReviews((revs as Review[]) || []);
+        // Fetch rating breakdown
+        try {
+          const statsRes = await fetch(`/api/reviews/stats?product_id=${data.id}`);
+          if (statsRes.ok) {
+            const statsJson = await statsRes.json();
+            if (statsJson.stats) {
+              setRatingBreakdown(statsJson.stats.breakdown || {});
+              setAvgRating(statsJson.stats.avg_rating || 0);
+            }
+          }
+        } catch { /* ignore */ }
         // Check wishlist state
         if (user) {
           const { data: wl } = await supabase
@@ -597,7 +610,8 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
             {/* WhatsApp — Chat about this product */}
             {process.env.NEXT_PUBLIC_WHATSAPP_NUMBER && (
               <a
-                href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hi! I'm interested in "${product.name}" — ${typeof window !== "undefined" ? window.location.href : ""}`)}`}
+                href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hi! I'm interested in "${product.name}" — https://shopkrisha.com/shop/${slug}`)}`}
+                suppressHydrationWarning
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
@@ -661,6 +675,55 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
             )}
           </div>
 
+          {/* Rating Breakdown Bars */}
+          {reviews.length > 0 && (
+            <div className="rating-breakdown" style={{ marginBottom: "2.5rem" }}>
+              {/* Left: Big average */}
+              <div style={{ textAlign: "center", minWidth: "120px" }}>
+                <p style={{ fontSize: "3rem", fontWeight: 700, color: "var(--gold)", lineHeight: 1, margin: 0, fontFamily: "var(--font-playfair)" }}>
+                  {avgRating > 0 ? avgRating.toFixed(1) : (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)}
+                </p>
+                <div style={{ display: "flex", justifyContent: "center", gap: "2px", margin: "0.5rem 0 0.25rem" }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} size={16} style={{
+                      color: s <= Math.round(avgRating || (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length)) ? "var(--gold)" : "var(--subtle)",
+                      fill: s <= Math.round(avgRating || (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length)) ? "var(--gold)" : "none",
+                    }} />
+                  ))}
+                </div>
+                <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: 0 }}>
+                  {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              {/* Right: Bars */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = ratingBreakdown[star] || reviews.filter((r) => r.rating === star).length;
+                  const total = reviews.length;
+                  const pct = total > 0 ? (count / total) * 100 : 0;
+                  return (
+                    <div key={star} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--muted)", minWidth: "1.25rem", textAlign: "right" }}>{star}</span>
+                      <Star size={12} style={{ color: "var(--gold)", fill: "var(--gold)", flexShrink: 0 }} />
+                      <div style={{ flex: 1, height: "8px", background: "var(--elevated)", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{
+                          width: `${pct}%`,
+                          height: "100%",
+                          background: "linear-gradient(90deg, var(--gold), #e8c96a)",
+                          borderRadius: "4px",
+                          transition: "width 0.6s ease",
+                        }} />
+                      </div>
+                      <span style={{ fontSize: "0.7rem", color: "var(--subtle)", minWidth: "2rem", textAlign: "right" }}>
+                        {pct > 0 ? `${Math.round(pct)}%` : "0%"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "2rem", alignItems: "start" }}>
             {/* Reviews list */}
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -686,8 +749,8 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                         </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <p style={{ fontSize: "0.72rem", color: "var(--subtle)", margin: 0 }}>
-                          {new Date(review.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        <p style={{ fontSize: "0.72rem", color: "var(--subtle)", margin: 0 }} suppressHydrationWarning>
+                          {new Date(review.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}
                         </p>
                         {review.verified_purchase && (
                           <span style={{ fontSize: "0.65rem", color: "#10b981", fontWeight: 600 }}>✓ Verified</span>

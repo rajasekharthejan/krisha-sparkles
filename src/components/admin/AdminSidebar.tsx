@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Warehouse,
   LogOut, ExternalLink, Upload, TrendingUp, Tag, Star,
   RotateCcw, Mail, MessageCircle, Instagram, Layout,
-  BookOpen, Gift, BarChart3, Boxes, Music2, Users, RefreshCw, Settings, Sparkles, Crown,
+  BookOpen, Gift, BarChart3, Boxes, Music2, Users, RefreshCw, Settings, Sparkles, Crown, Video, FlaskConical,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/utils";
 
@@ -50,6 +50,8 @@ const GROUPS = [
       { href: "/admin/affiliates",   label: "Affiliates",     icon: <TrendingUp size={16} /> },
       { href: "/admin/referrals",   label: "Referrals",      icon: <Gift size={16} /> },
       { href: "/admin/loyalty",    label: "Loyalty Tiers",  icon: <Crown size={16} /> },
+      { href: "/admin/live-events", label: "Live Events",  icon: <Video size={16} /> },
+      { href: "/admin/experiments", label: "Experiments",  icon: <FlaskConical size={16} /> },
     ],
   },
   {

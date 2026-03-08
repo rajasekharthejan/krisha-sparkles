@@ -800,11 +800,35 @@ export async function sendDripDay7({ email, name, siteUrl }: { email: string; na
 
 // ── Review Request Email ───────────────────────────────────────────────────
 
-export async function sendReviewRequestEmail({ email, name, orderId }: { email: string; name: string; orderId: string }) {
+export async function sendReviewRequestEmail({
+  email, name, orderId, products,
+}: {
+  email: string;
+  name: string;
+  orderId: string;
+  products?: { name: string; image: string }[];
+}) {
   const resend = getResend();
   if (!resend) return;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shopkrisha.com";
+
+  // Build product thumbnails HTML
+  const productRows = (products && products.length > 0)
+    ? `<div style="margin:24px 0;text-align:center;">
+        <p style="color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 12px;">Your Purchase</p>
+        <table style="margin:0 auto;border-collapse:collapse;" cellpadding="0" cellspacing="0">
+          <tr>
+            ${products.slice(0, 4).map((p) => `
+              <td style="padding:0 6px;text-align:center;">
+                <img src="${p.image}" alt="${p.name}" width="80" height="80" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid rgba(201,168,76,0.2);" />
+                <p style="color:#aaa;font-size:11px;margin:6px 0 0;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</p>
+              </td>
+            `).join("")}
+          </tr>
+        </table>
+      </div>`
+    : "";
 
   const { data: d10, error: e10 } = await resend.emails.send({
     from: `Krisha Sparkles <${FROM}>`,
@@ -823,7 +847,9 @@ export async function sendReviewRequestEmail({ email, name, orderId }: { email: 
     <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:32px;margin-bottom:24px;text-align:center;">
       <p style="font-size:40px;margin:0 0 16px;">⭐</p>
       <h2 style="color:#c9a84c;font-size:22px;margin:0 0 12px;">How did we do?</h2>
-      <p style="color:#aaa;margin:0 0 24px;">Hi ${name}, we hope you're loving your Krisha Sparkles purchase! Your feedback means the world to us and helps other customers make great choices.</p>
+      <p style="color:#aaa;margin:0 0 8px;">Hi ${name}, we hope you're loving your Krisha Sparkles purchase! Your feedback means the world to us and helps other customers make great choices.</p>
+      ${productRows}
+      <p style="color:#888;font-size:13px;margin:0 0 24px;">Share a photo of you wearing your jewelry and get featured in our customer gallery!</p>
       <a href="${siteUrl}/account/orders/${orderId}" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8c96a);color:#0a0a0a;font-weight:700;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;">Leave a Review</a>
     </div>
     <p style="color:#555;font-size:12px;text-align:center;">You received this because you recently made a purchase. <br>Order #${orderId.slice(-8).toUpperCase()}</p>

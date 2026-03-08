@@ -18,3 +18,4 @@ screenshots/
 
 # Env files (contains credentials)
 .env.test
+.vercel

@@ -208,6 +208,149 @@ export interface Recommendation {
   category_id: string | null;
 }
 
+// ── Phase 8 F2 — Photo Reviews & UGC Gallery ─────────────────────────────────
+export interface GalleryReview {
+  id: string;
+  rating: number;
+  title?: string;
+  body: string;
+  images: string[];
+  verified_purchase: boolean;
+  created_at: string;
+  user_profiles?: { first_name?: string };
+  products: {
+    name: string;
+    slug: string;
+    images: string[];
+    categories?: { slug: string; name: string };
+  };
+}
+
+export interface ReviewStats {
+  product_id: string;
+  avg_rating: number;
+  review_count: number;
+  breakdown: Record<number, number>;
+  photo_count: number;
+}
+
+// ── Phase 8 F3 — Live Shopping ───────────────────────────────────────────────
+export interface LiveEvent {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string | null;
+  video_url?: string | null;
+  thumbnail?: string | null;
+  status: "scheduled" | "live" | "ended";
+  discount_code?: string | null;
+  discount_label?: string | null;
+  scheduled_at?: string | null;
+  started_at?: string | null;
+  ended_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  live_event_products?: LiveEventProduct[];
+}
+
+export interface LiveEventProduct {
+  id: string;
+  event_id: string;
+  product_id: string;
+  display_order: number;
+  special_price?: number | null;
+  products?: Product;
+}
+
+export interface LiveEventMessage {
+  id: string;
+  event_id: string;
+  user_id?: string | null;
+  user_name: string;
+  message: string;
+  created_at: string;
+}
+
+// ── Phase 8 F4: Advanced Analytics ───────────────────────────────────────────
+export interface CohortRow {
+  cohort_month: string;
+  period_offset: number;
+  customer_count: number;
+  total_revenue: number;
+}
+
+export interface LtvCustomer {
+  email: string;
+  name: string;
+  total_spent: number;
+  order_count: number;
+  first_purchase: string;
+  last_purchase: string;
+  avg_order_value: number;
+}
+
+export interface FunnelStep {
+  name: string;
+  count: number;
+  rate: number;
+}
+
+export interface CategoryRevenue {
+  category_name: string;
+  category_id: string;
+  total_revenue: number;
+  total_units: number;
+  order_count: number;
+}
+
+// ── Phase 8 F5: A/B Testing ─────────────────────────────────────────────────
+export interface Experiment {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  status: "draft" | "active" | "paused" | "completed";
+  target_page: string;
+  target_component: string;
+  traffic_pct: number;
+  created_by: string;
+  created_at: string;
+  started_at?: string | null;
+  ended_at?: string | null;
+  updated_at: string;
+  experiment_variants?: ExperimentVariant[];
+}
+
+export interface ExperimentVariant {
+  id: string;
+  experiment_id: string;
+  name: string;
+  weight: number;
+  config: Record<string, unknown>;
+  is_control: boolean;
+  created_at: string;
+}
+
+export interface ExperimentEvent {
+  id: string;
+  experiment_id: string;
+  variant_id: string;
+  event_type: "impression" | "conversion";
+  session_id: string;
+  revenue?: number | null;
+  created_at: string;
+}
+
+export interface ExperimentResult {
+  variant_id: string;
+  variant_name: string;
+  is_control: boolean;
+  impressions: number;
+  conversions: number;
+  conversion_rate: number;
+  total_revenue: number;
+}
+
 // F10: TikTok
 export interface TikTokPost {
   id: string;
