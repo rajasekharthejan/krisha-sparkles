@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Package, MapPin, CreditCard, Truck, ExternalLink, CheckCircle2, Circle, Clock, MapPinned } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Truck, ExternalLink, CheckCircle2, Circle, Clock, MapPinned, ChevronRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -36,7 +36,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   const { data: order } = await supabase
     .from("orders")
-    .select("*, order_items(id, product_name, product_image, quantity, price, product_id)")
+    .select("*, order_items(id, product_name, product_image, quantity, price, product_id, products(slug))")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -84,22 +84,32 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           {order.order_items?.map((item: {
             id: string; product_name: string; product_image?: string;
             quantity: number; price: number; product_id?: string;
-          }) => (
-            <div key={item.id} style={{ display: "flex", gap: "1rem", padding: "1.25rem 1.5rem", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
-              <div style={{ width: "56px", height: "56px", borderRadius: "8px", overflow: "hidden", flexShrink: 0, background: "var(--elevated)", border: "1px solid rgba(201,168,76,0.15)" }}>
-                {item.product_image ? (
-                  <Image src={item.product_image} alt={item.product_name} width={56} height={56} style={{ objectFit: "cover" }} />
-                ) : (
-                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem" }}>💎</div>
-                )}
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 500, fontSize: "0.9rem", margin: "0 0 2px" }}>{item.product_name}</p>
-                <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>Qty: {item.quantity}</p>
-              </div>
-              <p style={{ color: "var(--gold)", fontWeight: 700 }}>{formatPrice(item.price * item.quantity)}</p>
-            </div>
-          ))}
+            products?: { slug: string } | null;
+          }) => {
+            const slug = item.products?.slug;
+            const ItemWrapper = slug ? Link : "div";
+            const wrapperProps = slug
+              ? { href: `/shop/${slug}`, style: { display: "flex", gap: "1rem", padding: "1.25rem 1.5rem", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center", textDecoration: "none", color: "inherit", transition: "background 0.15s" }, onMouseEnter: (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.background = "rgba(201,168,76,0.04)"; }, onMouseLeave: (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.background = "transparent"; } }
+              : { style: { display: "flex", gap: "1rem", padding: "1.25rem 1.5rem", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" } };
+            return (
+              // @ts-expect-error dynamic tag
+              <ItemWrapper key={item.id} {...wrapperProps}>
+                <div style={{ width: "56px", height: "56px", borderRadius: "8px", overflow: "hidden", flexShrink: 0, background: "var(--elevated)", border: "1px solid rgba(201,168,76,0.15)" }}>
+                  {item.product_image ? (
+                    <Image src={item.product_image} alt={item.product_name} width={56} height={56} style={{ objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem" }}>💎</div>
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 500, fontSize: "0.9rem", margin: "0 0 2px" }}>{item.product_name}</p>
+                  <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>Qty: {item.quantity}</p>
+                </div>
+                <p style={{ color: "var(--gold)", fontWeight: 700 }}>{formatPrice(item.price * item.quantity)}</p>
+                {slug && <ChevronRight size={14} style={{ color: "var(--muted)", flexShrink: 0 }} />}
+              </ItemWrapper>
+            );
+          })}
           {/* Totals */}
           <div style={{ padding: "1.25rem 1.5rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem", fontSize: "0.875rem" }}>

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowLeft, Package, MapPin, User, Mail, Truck, MessageCircle,
-  ExternalLink, Copy, CheckCheck, Loader2, Tag, X, Printer, RotateCcw, AlertTriangle
+  ExternalLink, Copy, CheckCheck, Loader2, Tag, X, Printer, RotateCcw, AlertTriangle, Pencil
 } from "lucide-react";
 import { formatPrice, formatDate } from "@/lib/utils";
 import type { Order } from "@/types";
@@ -338,22 +339,37 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           {/* Order Summary */}
           <Section title="Order Summary" icon={<Package size={15} />}>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1rem" }}>
-              {(order.order_items || []).map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "var(--elevated)", borderRadius: "8px" }}>
-                  {item.product_image ? (
-                    <Image src={item.product_image} alt={item.product_name} width={48} height={48} style={{ borderRadius: "6px", objectFit: "cover", flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 48, height: 48, borderRadius: "6px", background: "rgba(201,168,76,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Package size={20} style={{ color: "var(--gold)", opacity: 0.5 }} />
+              {(order.order_items || []).map((item, i) => {
+                const editHref = item.product_id ? `/admin/products/${item.product_id}/edit` : null;
+                const Row = editHref ? Link : "div";
+                const rowProps = editHref
+                  ? {
+                      href: editHref,
+                      title: "Edit product",
+                      style: { display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "var(--elevated)", borderRadius: "8px", textDecoration: "none", color: "inherit", cursor: "pointer", border: "1px solid transparent", transition: "border-color 0.15s, background 0.15s" } as React.CSSProperties,
+                      onMouseEnter: (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.borderColor = "rgba(201,168,76,0.3)"; e.currentTarget.style.background = "rgba(201,168,76,0.05)"; },
+                      onMouseLeave: (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.background = "var(--elevated)"; },
+                    }
+                  : { style: { display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "var(--elevated)", borderRadius: "8px" } as React.CSSProperties };
+                return (
+                  // @ts-expect-error dynamic tag
+                  <Row key={i} {...rowProps}>
+                    {item.product_image ? (
+                      <Image src={item.product_image} alt={item.product_name} width={48} height={48} style={{ borderRadius: "6px", objectFit: "cover", flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 48, height: 48, borderRadius: "6px", background: "rgba(201,168,76,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Package size={20} style={{ color: "var(--gold)", opacity: 0.5 }} />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "0.875rem", fontWeight: 500, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.product_name}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: "0.15rem 0 0" }}>Qty: {item.quantity} · {formatPrice(item.price)} each</p>
                     </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 500, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.product_name}</p>
-                    <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: "0.15rem 0 0" }}>Qty: {item.quantity} · {formatPrice(item.price)} each</p>
-                  </div>
-                  <span style={{ color: "var(--gold)", fontWeight: 700, fontSize: "0.875rem", flexShrink: 0 }}>{formatPrice(item.price * item.quantity)}</span>
-                </div>
-              ))}
+                    <span style={{ color: "var(--gold)", fontWeight: 700, fontSize: "0.875rem", flexShrink: 0 }}>{formatPrice(item.price * item.quantity)}</span>
+                    {editHref && <Pencil size={13} style={{ color: "var(--muted)", flexShrink: 0, opacity: 0.6 }} />}
+                  </Row>
+                );
+              })}
             </div>
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.825rem", color: "var(--muted)" }}>
