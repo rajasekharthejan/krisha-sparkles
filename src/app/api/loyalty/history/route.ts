@@ -42,19 +42,33 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Fetch ALL user orders (any status) — history shows pending + delivered + cancelled
-    // points_earned comes from the DB column (set when order reaches "delivered")
-    // points_redeemed is set at checkout time for orders where customer used points
-    const { data: orders, error: ordersError } = await admin
+    // Try with points_earned column first; fall back without it if migration not applied yet.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let orders: any[] | null = null;
+    let hasPointsEarnedCol = false;
+
+    const { data: ordersWithPts, error: ptsErr } = await admin
       .from("orders")
       .select("id, total, status, created_at, points_redeemed, points_earned")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50);
 
-    if (ordersError) {
-      console.error("Failed to fetch orders for points history:", ordersError);
-      return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
+    if (!ptsErr) {
+      orders = ordersWithPts;
+      hasPointsEarnedCol = true;
+    } else {
+      const { data: ordersBase, error: baseErr } = await admin
+        .from("orders")
+        .select("id, total, status, created_at, points_redeemed")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (baseErr) {
+        console.error("Failed to fetch orders for points history:", baseErr);
+        return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
+      }
+      orders = ordersBase;
     }
 
     // Fetch current balance + tier info from user_profiles
@@ -67,11 +81,14 @@ export async function GET() {
     const currentBalance: number = profile?.points_balance || 0;
 
     // Map orders to points history entries.
-    // points_earned is the stored DB value (0 for non-delivered orders).
+    // If column exists: use stored DB value (0 until delivered, then tier-multiplied pts).
+    // If column missing (pre-migration): fall back to delivered-only calculation.
     const history = (orders || []).map((order) => ({
       order_id: order.id,
       order_short: order.id.slice(-8).toUpperCase(),
-      points_earned: order.points_earned || 0,
+      points_earned: hasPointsEarnedCol
+        ? (order.points_earned || 0)
+        : (order.status === "delivered" ? Math.floor(order.total) : 0),
       points_redeemed: order.points_redeemed || 0,
       order_total: order.total,
       status: order.status,

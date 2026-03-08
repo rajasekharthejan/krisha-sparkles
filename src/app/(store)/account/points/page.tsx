@@ -47,17 +47,40 @@ export default async function PointsPage() {
   } catch { /* column may not exist */ }
 
   try {
-    // Fetch all orders — points_earned is 0 until delivered, then set by status route
-    const { data: orders } = await supabase
+    // Try to fetch with points_earned column (requires DB migration).
+    // Falls back to query without it if the column doesn't exist yet in production.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let orders: any[] | null = null;
+    let hasPointsEarnedCol = false;
+
+    const { data: ordersWithPts, error: ptsErr } = await supabase
       .from("orders")
       .select("id, total, status, created_at, points_redeemed, points_earned")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50);
 
+    if (!ptsErr) {
+      orders = ordersWithPts;
+      hasPointsEarnedCol = true;
+    } else {
+      // Column doesn't exist yet — fall back to query without points_earned
+      const { data: ordersBase } = await supabase
+        .from("orders")
+        .select("id, total, status, created_at, points_redeemed")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      orders = ordersBase;
+    }
+
     if (orders) {
       history = orders.map((o) => {
-        const earned = o.points_earned || 0;   // stored by status route on delivery
+        // If column exists: use stored value (0 until delivered).
+        // If column missing: use old calculation so history isn't blank during migration window.
+        const earned = hasPointsEarnedCol
+          ? (o.points_earned || 0)
+          : (o.status === "delivered" ? Math.floor(o.total) : 0);
         const redeemed = o.points_redeemed || 0;
         totalEarned += earned;
         totalRedeemed += redeemed;
@@ -381,7 +404,7 @@ export default async function PointsPage() {
           }}>
             <Star size={40} style={{ color: "var(--subtle)", margin: "0 auto 1rem", display: "block" }} strokeWidth={1} />
             <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
-              No points earned yet. Place your first order to start earning!
+              No orders yet. Place your first order to start earning points on delivery!
             </p>
           </div>
         ) : (
