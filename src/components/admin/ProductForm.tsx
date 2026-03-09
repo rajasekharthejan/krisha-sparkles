@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { CATEGORIES, MATERIALS, COLORS, OCCASIONS, STYLES } from "@/lib/utils";
-import { Upload, X, Plus, Loader2, Trash2 } from "lucide-react";
+import { Upload, X, Plus, Loader2, Trash2, GripVertical, Star } from "lucide-react";
 import type { Product, ProductVariant } from "@/types";
 
 interface ProductFormProps {
@@ -81,8 +81,26 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  function removeImage(url: string) {
-    setImages((prev) => prev.filter((img) => img !== url));
+  function removeImage(index: number) {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function makePrimary(index: number) {
+    setImages((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(index, 1);
+      copy.unshift(item);
+      return copy;
+    });
+  }
+
+  function moveImage(from: number, to: number) {
+    setImages((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(from, 1);
+      copy.splice(to, 0, item);
+      return copy;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -255,33 +273,102 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
             </div>
             <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={handleImageUpload} />
 
+            {/* Image count */}
+            {images.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                  {images.length} image{images.length !== 1 ? "s" : ""} · First = primary (shown in cart & listings)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setImages([])}
+                  style={{ fontSize: "0.7rem", color: "#ef4444", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}
+                >
+                  Remove all
+                </button>
+              </div>
+            )}
+
             {/* Image Grid */}
             {images.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: "0.75rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "0.75rem" }}>
                 {images.map((url, i) => (
-                  <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", border: "1px solid var(--gold-border)" }}>
-                    <Image src={url} alt="" fill style={{ objectFit: "cover" }} />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(url)}
-                      style={{
-                        position: "absolute",
-                        top: "4px",
-                        right: "4px",
-                        width: "20px",
-                        height: "20px",
-                        borderRadius: "50%",
-                        background: "rgba(239,68,68,0.9)",
-                        border: "none",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#fff",
-                      }}
-                    >
-                      <X size={11} />
-                    </button>
+                  <div
+                    key={`${url}-${i}`}
+                    draggable
+                    onDragStart={(e) => e.dataTransfer.setData("text/plain", String(i))}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const from = parseInt(e.dataTransfer.getData("text/plain"));
+                      if (!isNaN(from) && from !== i) moveImage(from, i);
+                    }}
+                    style={{
+                      position: "relative",
+                      borderRadius: "10px",
+                      overflow: "hidden",
+                      border: i === 0 ? "2px solid var(--gold)" : "1px solid var(--gold-border)",
+                      background: "var(--elevated)",
+                      cursor: "grab",
+                    }}
+                  >
+                    {/* Image */}
+                    <div style={{ position: "relative", aspectRatio: "1" }}>
+                      <Image src={url} alt="" fill style={{ objectFit: "cover" }} sizes="160px" />
+                      {/* Index badge */}
+                      <span style={{
+                        position: "absolute", top: "6px", left: "6px",
+                        background: "rgba(0,0,0,0.7)", color: i === 0 ? "var(--gold)" : "#fff",
+                        borderRadius: "4px", fontSize: "0.65rem", fontWeight: 700,
+                        padding: "1px 5px", lineHeight: "16px",
+                      }}>
+                        {i === 0 ? "★ Primary" : `#${i + 1}`}
+                      </span>
+                      {/* Grip icon (visual drag hint) */}
+                      <span style={{
+                        position: "absolute", top: "6px", right: "6px",
+                        color: "rgba(255,255,255,0.7)",
+                      }}>
+                        <GripVertical size={14} />
+                      </span>
+                    </div>
+                    {/* Action buttons */}
+                    <div style={{ display: "flex", gap: "1px" }}>
+                      {i !== 0 && (
+                        <button
+                          type="button"
+                          onClick={() => makePrimary(i)}
+                          title="Set as primary image"
+                          style={{
+                            flex: 1, padding: "5px 4px", background: "var(--gold-muted)",
+                            border: "none", borderTop: "1px solid var(--gold-border)",
+                            cursor: "pointer", color: "var(--gold)", fontSize: "0.65rem",
+                            fontWeight: 600, display: "flex", alignItems: "center",
+                            justifyContent: "center", gap: "3px",
+                          }}
+                        >
+                          <Star size={10} /> Primary
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        title="Delete image"
+                        style={{
+                          flex: i === 0 ? undefined : undefined,
+                          width: i === 0 ? "100%" : "36px",
+                          padding: "5px",
+                          background: "rgba(239,68,68,0.15)",
+                          border: "none", borderTop: "1px solid rgba(239,68,68,0.2)",
+                          cursor: "pointer", color: "#ef4444", fontSize: "0.65rem",
+                          fontWeight: 600, display: "flex", alignItems: "center",
+                          justifyContent: "center", gap: "3px",
+                        }}
+                      >
+                        <Trash2 size={11} />
+                        {i === 0 && " Delete"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

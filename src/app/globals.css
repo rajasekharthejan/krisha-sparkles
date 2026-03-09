@@ -610,6 +610,21 @@ h1, h2, h3, h4, h5 {
   animation: shimmer 2s linear infinite;
 }
 
+/* ─── Product thumbnail strip scrollbar ──────────────────── */
+.thumb-strip::-webkit-scrollbar {
+  height: 4px;
+}
+.thumb-strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thumb-strip::-webkit-scrollbar-thumb {
+  background: rgba(201,168,76,0.3);
+  border-radius: 4px;
+}
+.thumb-strip::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
+
 /* ─── Section reveal ─────────────────────────────────────── */
 .reveal-up {
   opacity: 0;

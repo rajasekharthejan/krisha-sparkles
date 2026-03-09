@@ -319,11 +319,11 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 </div>
               )}
 
-              {/* Nav Arrows */}
+              {/* Nav Arrows + Image counter */}
               {images.length > 1 && (
                 <>
                   <button
-                    onClick={() => setActiveImage((activeImage - 1 + images.length) % images.length)}
+                    onClick={(e) => { e.stopPropagation(); setActiveImage((activeImage - 1 + images.length) % images.length); }}
                     style={{
                       position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)",
                       width: "36px", height: "36px", borderRadius: "50%",
@@ -335,7 +335,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                     <ChevronLeft size={18} />
                   </button>
                   <button
-                    onClick={() => setActiveImage((activeImage + 1) % images.length)}
+                    onClick={(e) => { e.stopPropagation(); setActiveImage((activeImage + 1) % images.length); }}
                     style={{
                       position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
                       width: "36px", height: "36px", borderRadius: "50%",
@@ -346,25 +346,58 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                   >
                     <ChevronRight size={18} />
                   </button>
+                  {/* Counter badge */}
+                  <span style={{
+                    position: "absolute", bottom: "12px", right: "12px",
+                    background: "rgba(10,10,10,0.75)", backdropFilter: "blur(6px)",
+                    color: "var(--text)", borderRadius: "20px",
+                    fontSize: "0.7rem", fontWeight: 600, padding: "3px 10px",
+                    border: "1px solid rgba(201,168,76,0.2)",
+                  }}>
+                    {activeImage + 1} / {images.length}
+                  </span>
                 </>
               )}
             </div>
 
-            {/* Thumbnail Strip */}
+            {/* Thumbnail Strip — horizontal scroll, no wrap */}
             {images.length > 1 && (
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "0.5rem",
+                  overflowX: "auto",
+                  paddingBottom: "6px",
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "var(--gold-border) transparent",
+                  /* webkit scrollbar handled via class below */
+                }}
+                className="thumb-strip"
+              >
                 {images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setActiveImage(i)}
                     style={{
-                      width: "72px", height: "72px", borderRadius: "8px", overflow: "hidden",
+                      flexShrink: 0,
+                      width: "68px", height: "68px", borderRadius: "8px", overflow: "hidden",
                       border: `2px solid ${activeImage === i ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
-                      cursor: "pointer", padding: 0, background: "var(--surface)",
+                      cursor: "pointer", padding: 0,
+                      background: "var(--surface)",
                       transition: "border-color 0.2s ease",
+                      opacity: activeImage === i ? 1 : 0.7,
                     }}
                   >
-                    {img && <Image src={img} alt="" width={72} height={72} style={{ objectFit: "cover", width: "100%", height: "100%" }} />}
+                    {img && (
+                      <Image
+                        src={img}
+                        alt={`View ${i + 1}`}
+                        width={68}
+                        height={68}
+                        loading={i < 4 ? "eager" : "lazy"}
+                        style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                      />
+                    )}
                   </button>
                 ))}
               </div>

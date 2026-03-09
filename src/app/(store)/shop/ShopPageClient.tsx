@@ -154,7 +154,19 @@ function ShopContent() {
       .eq("active", true);
 
     if (selectedCategory) {
-      query = query.eq("categories.slug", selectedCategory);
+      // Resolve category slug → id first (PostgREST join filters don't work as WHERE clauses)
+      const { data: catData } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("slug", selectedCategory)
+        .single();
+      if (catData?.id) {
+        query = query.eq("category_id", catData.id);
+      } else {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
     }
     if (search) {
       query = query.ilike("name", `%${search}%`);
