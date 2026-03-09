@@ -21,6 +21,8 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [variants, setVariants] = useState<ProductVariant[]>(product?.variants || []);
   const [newOptionInputs, setNewOptionInputs] = useState<Record<number, string>>({});
+  // Per-variant stock: key = option values joined by "-" e.g. {"40": 1, "44": 1}
+  const [variantStock, setVariantStock] = useState<Record<string, number>>(product?.variant_stock || {});
 
   const [form, setForm] = useState({
     name: product?.name || "",
@@ -94,6 +96,29 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
     });
   }
 
+  /** Build all combo keys from current variants, e.g. ["40","44"] or ["40-Red","44-Blue"] */
+  function getVariantCombinations(vs: ProductVariant[]): string[] {
+    const active = vs.filter((v) => v.name.trim() && v.options.length > 0);
+    if (active.length === 0) return [];
+    return active.reduce<string[]>((combos, variant) => {
+      if (combos.length === 0) return variant.options;
+      const out: string[] = [];
+      for (const c of combos) for (const o of variant.options) out.push(`${c}-${o}`);
+      return out;
+    }, []);
+  }
+
+  /** Called after editing variantStock; also syncs total stock_quantity */
+  function updateVariantStock(key: string, qty: number) {
+    setVariantStock((prev) => {
+      const next = { ...prev, [key]: qty };
+      // Auto-sync total: sum of all variant qtys
+      const total = Object.values(next).reduce((s, n) => s + n, 0);
+      setForm((f) => ({ ...f, stock_quantity: String(total) }));
+      return next;
+    });
+  }
+
   function moveImage(from: number, to: number) {
     setImages((prev) => {
       const copy = [...prev];
@@ -124,6 +149,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
           featured: form.featured,
           active: form.active,
           variants: variants.filter((v) => v.name.trim() && v.options.length > 0),
+          variant_stock: variantStock,
           material: form.material || null,
           color: form.color || null,
           occasion: form.occasion || null,
@@ -535,18 +561,71 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
             <h3 style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem", color: "var(--gold)" }}>
               Inventory
             </h3>
-            <div>
-              <label style={labelStyle}>Stock Quantity</label>
-              <input
-                name="stock_quantity"
-                type="number"
-                min="0"
-                value={form.stock_quantity}
-                onChange={handleChange}
-                style={inputStyle}
-                className="input-dark"
-              />
-            </div>
+
+            {(() => {
+              const combos = getVariantCombinations(variants);
+              if (combos.length === 0) {
+                // No variants — single global stock field
+                return (
+                  <div>
+                    <label style={labelStyle}>Stock Quantity</label>
+                    <input
+                      name="stock_quantity"
+                      type="number"
+                      min="0"
+                      value={form.stock_quantity}
+                      onChange={handleChange}
+                      style={inputStyle}
+                      className="input-dark"
+                    />
+                  </div>
+                );
+              }
+
+              // Variants exist — show one qty input per combination
+              return (
+                <div>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem" }}>
+                    Stock per variant
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {combos.map((key) => {
+                      const qty = variantStock[key] ?? 0;
+                      const isOOS = qty === 0;
+                      return (
+                        <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          <span style={{
+                            flex: 1, fontSize: "0.85rem", fontWeight: 600,
+                            color: isOOS ? "var(--muted)" : "var(--text)",
+                            textDecoration: isOOS ? "line-through" : "none",
+                          }}>
+                            {key}
+                          </span>
+                          <span style={{ fontSize: "0.7rem", color: isOOS ? "#ef4444" : "#10b981", fontWeight: 600, minWidth: 60, textAlign: "right" }}>
+                            {isOOS ? "Sold Out" : `${qty} left`}
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={qty}
+                            onChange={(e) => updateVariantStock(key, Math.max(0, parseInt(e.target.value, 10) || 0))}
+                            style={{ ...inputStyle, width: "70px", padding: "0.4rem 0.6rem", textAlign: "center" }}
+                            className="input-dark"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Auto-computed total */}
+                  <div style={{ marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px solid rgba(201,168,76,0.15)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Total stock</span>
+                    <span style={{ fontSize: "1rem", fontWeight: 700, color: "var(--gold)" }}>
+                      {form.stock_quantity} unit{Number(form.stock_quantity) !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Status */}

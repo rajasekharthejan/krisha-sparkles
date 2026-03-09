@@ -170,9 +170,10 @@ export async function POST(req: NextRequest) {
       customer_email: userEmail || undefined,
       metadata: {
         items: JSON.stringify(
-          items.map((i: { productId: string; quantity: number }) => ({
+          items.map((i: { productId: string; quantity: number; selectedVariant?: string }) => ({
             productId: i.productId,
             quantity: i.quantity,
+            selectedVariant: i.selectedVariant || "",
           }))
         ),
         user_id: userId || "",

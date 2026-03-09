@@ -26,6 +26,10 @@ export interface Product {
   featured: boolean;
   active: boolean;
   variants?: ProductVariant[];
+  /** Per-variant stock map: key = option values joined by "-" in variant order.
+   *  e.g. {"40": 1, "44": 1}  or  {"40-Red": 0, "44-Blue": 1}
+   *  When empty / missing, fall back to stock_quantity for the whole product. */
+  variant_stock?: Record<string, number>;
   tags?: string[];
   material?: string;
   color?: string;

@@ -154,20 +154,39 @@ export async function POST(req: NextRequest) {
 
       await supabaseAdmin.from("order_items").insert(orderItems);
 
-      // Decrement stock
+      // Decrement stock (global + per-variant)
       for (const item of itemsJson) {
         if (item.productId) {
           const { data: prod } = await supabaseAdmin
             .from("products")
-            .select("stock_quantity")
+            .select("stock_quantity, variant_stock")
             .eq("id", item.productId)
             .single();
 
           if (prod) {
             const newQty = Math.max(0, prod.stock_quantity - item.quantity);
+            const updates: Record<string, unknown> = { stock_quantity: newQty };
+
+            // Per-variant stock: parse selectedVariant "Size: 40" → key "40"
+            if (item.selectedVariant) {
+              const variantKey = item.selectedVariant
+                .split(", ")
+                .map((part: string) => part.split(": ")[1] || "")
+                .filter(Boolean)
+                .join("-");
+              if (variantKey) {
+                const currentVS: Record<string, number> = prod.variant_stock || {};
+                const currentVariantQty = currentVS[variantKey] ?? 0;
+                updates.variant_stock = {
+                  ...currentVS,
+                  [variantKey]: Math.max(0, currentVariantQty - item.quantity),
+                };
+              }
+            }
+
             await supabaseAdmin
               .from("products")
-              .update({ stock_quantity: newQty })
+              .update(updates)
               .eq("id", item.productId);
           }
         }

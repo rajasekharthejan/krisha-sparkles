@@ -137,6 +137,48 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
     return () => window.removeEventListener("keydown", handleKey);
   }, [lightboxOpen, sizeGuideOpen]);
 
+  // ── Per-variant stock helpers ─────────────────────────────────────────────
+  /** Build variant combination key following product.variants order.
+   *  Single dim: "40" | Multi dim: "40-Red" */
+  function getVariantKey(sels: Record<string, string>): string {
+    if (!product?.variants?.length) return "";
+    return product.variants.map((v) => sels[v.name] || "").filter(Boolean).join("-");
+  }
+
+  /** Stock qty for a fully-resolved key (falls back to global stock_quantity) */
+  function getVariantQty(key: string): number {
+    if (!product) return 0;
+    const vs = product.variant_stock;
+    if (!vs || Object.keys(vs).length === 0) return product.stock_quantity;
+    return vs[key] ?? 0;
+  }
+
+  /** Is a specific option (at variantGroupIdx) fully sold out across all combos? */
+  function isOptionOOS(option: string, variantGroupIdx: number): boolean {
+    if (!product?.variant_stock || Object.keys(product.variant_stock).length === 0) return false;
+    const entries = Object.entries(product.variant_stock).filter(([key]) => {
+      const parts = key.split("-");
+      return parts[variantGroupIdx] === option;
+    });
+    if (entries.length === 0) return false;
+    return entries.every(([, qty]) => qty === 0);
+  }
+
+  // Current selection state
+  const selectedKey = product ? getVariantKey(selectedVariants) : "";
+  const hasFullSelection = !!product?.variants?.length && product.variants.every((v) => selectedVariants[v.name]);
+  const selectedVariantQty = hasFullSelection && selectedKey ? getVariantQty(selectedKey) : null;
+  const isSelectedVariantOOS = hasFullSelection ? selectedVariantQty === 0 : false;
+  // Overall OOS: no variants → use global stock; has variants → OOS only if ALL combos = 0
+  const isGloballyOOS = product
+    ? !product.variants?.length
+      ? product.stock_quantity === 0
+      : product.variant_stock && Object.keys(product.variant_stock).length > 0
+        ? Object.values(product.variant_stock).every((q) => q === 0)
+        : product.stock_quantity === 0
+    : true;
+  // ─────────────────────────────────────────────────────────────────────────
+
   function handleAddToCart() {
     if (!product) return;
 
@@ -450,20 +492,34 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
               </p>
             )}
 
-            {/* Stock */}
+            {/* Stock — per-variant when a variant is selected, global otherwise */}
             <div>
-              {product.stock_quantity > 0 ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#10b981", fontSize: "0.875rem" }}>
-                  <Check size={16} />
-                  {product.stock_quantity <= 5 ? `Only ${product.stock_quantity} left in stock` : "In Stock"}
-                </div>
-              ) : (
-                <p style={{ color: "#ef4444", fontSize: "0.875rem" }}>Out of Stock</p>
-              )}
+              {(() => {
+                // If a full variant is selected, show that variant's stock
+                if (hasFullSelection && selectedVariantQty !== null) {
+                  return selectedVariantQty > 0 ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#10b981", fontSize: "0.875rem" }}>
+                      <Check size={16} />
+                      {selectedVariantQty === 1 ? "Only 1 left — order now!" : `${selectedVariantQty} left in stock`}
+                    </div>
+                  ) : (
+                    <p style={{ color: "#ef4444", fontSize: "0.875rem" }}>This size is sold out</p>
+                  );
+                }
+                // No variant selected yet (or no variants on product)
+                return isGloballyOOS ? (
+                  <p style={{ color: "#ef4444", fontSize: "0.875rem" }}>Out of Stock</p>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#10b981", fontSize: "0.875rem" }}>
+                    <Check size={16} />
+                    {product.stock_quantity <= 5 ? `Only ${product.stock_quantity} left in stock` : "In Stock"}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Quantity */}
-            {product.stock_quantity > 0 && (
+            {!isGloballyOOS && !isSelectedVariantOOS && (
               <div>
                 <label style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
                   Quantity
@@ -488,7 +544,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                     {quantity}
                   </span>
                   <button
-                    onClick={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
+                    onClick={() => setQuantity(Math.min(selectedVariantQty ?? product.stock_quantity, quantity + 1))}
                     style={{
                       width: "40px", height: "40px", border: "1px solid var(--gold-border)", borderLeft: "none",
                       borderRadius: "0 4px 4px 0", background: "var(--elevated)", color: "var(--gold)",
@@ -505,7 +561,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
             {/* Variant Selectors */}
             {product.variants && product.variants.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                {product.variants.map((variant) => (
+                {product.variants.map((variant, vi) => (
                   <div key={variant.name}>
                     <label style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
                       {variant.name}
@@ -518,21 +574,30 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                       {variant.options.map((option) => {
                         const isSelected = selectedVariants[variant.name] === option;
+                        const optionOOS = isOptionOOS(option, vi);
                         return (
                           <button
                             key={option}
                             type="button"
-                            onClick={() => setSelectedVariants((prev) => ({ ...prev, [variant.name]: option }))}
+                            onClick={() => {
+                              if (!optionOOS) {
+                                setSelectedVariants((prev) => ({ ...prev, [variant.name]: option }));
+                              }
+                            }}
+                            title={optionOOS ? "Sold out" : undefined}
                             style={{
                               padding: "0.4rem 0.9rem",
                               borderRadius: "6px",
-                              border: `1px solid ${isSelected ? "var(--gold)" : "rgba(201,168,76,0.2)"}`,
+                              border: `1px solid ${isSelected ? "var(--gold)" : optionOOS ? "rgba(255,255,255,0.08)" : "rgba(201,168,76,0.2)"}`,
                               background: isSelected ? "var(--gold-muted)" : "var(--elevated)",
-                              color: isSelected ? "var(--gold)" : "var(--muted)",
+                              color: isSelected ? "var(--gold)" : optionOOS ? "rgba(255,255,255,0.2)" : "var(--muted)",
                               fontSize: "0.8rem",
                               fontWeight: isSelected ? 600 : 400,
-                              cursor: "pointer",
+                              cursor: optionOOS ? "not-allowed" : "pointer",
                               transition: "all 0.15s ease",
+                              textDecoration: optionOOS ? "line-through" : "none",
+                              opacity: optionOOS ? 0.45 : 1,
+                              position: "relative" as const,
                             }}
                           >
                             {option}
@@ -547,7 +612,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
 
             {/* CTA Buttons */}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {product.stock_quantity === 0 ? (
+              {isGloballyOOS || isSelectedVariantOOS ? (
                 <BackInStockButton
                   productId={product.id}
                   productName={product.name}
@@ -1091,7 +1156,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
         productPrice={product.price}
         productImage={product.images?.[0] || ""}
         productSlug={product.slug}
-        inStock={product.stock_quantity > 0}
+        inStock={!isGloballyOOS && !isSelectedVariantOOS}
         addToCartRef={addToCartBtnRef}
       />
 
