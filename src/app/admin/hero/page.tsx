@@ -6,11 +6,12 @@ import HeroSection from "@/components/store/HeroSection";
 import type { HeroProps } from "@/components/store/HeroSection";
 
 const LAYOUTS: { id: HeroProps["layout"]; name: string; desc: string }[] = [
-  { id: "celestial", name: "Grand Celestial", desc: "Floating gold particles, centered text, radial glow" },
-  { id: "split",     name: "Split Showcase",  desc: "Left text, right geometric diamond pattern" },
-  { id: "minimal",   name: "Minimal Luxe",    desc: "Oversized typography, pure black, gold rule" },
-  { id: "diagonal",  name: "Bold Diagonal",   desc: "Diagonal gold stripe, left-aligned uppercase" },
-  { id: "framed",    name: "Elegant Frame",    desc: "Double-border ornamental frame, centered" },
+  { id: "celestial", name: "Grand Celestial",    desc: "Floating gold particles, centered text, radial glow" },
+  { id: "split",     name: "Split Showcase",     desc: "Left text, right geometric diamond pattern" },
+  { id: "minimal",   name: "Minimal Luxe",       desc: "Oversized typography, pure black, gold rule" },
+  { id: "diagonal",  name: "Bold Diagonal",      desc: "Diagonal gold stripe, left-aligned uppercase" },
+  { id: "framed",    name: "Elegant Frame",      desc: "Double-border ornamental frame, centered" },
+  { id: "luxury",    name: "Luxury Editorial",   desc: "Full-bleed dark, bottom-left text, bare CTAs — Zara-style" },
 ];
 
 const DEFAULTS: HeroProps = {
@@ -129,6 +130,24 @@ function LayoutThumbnail({ id }: { id: string }) {
           <div style={{ ...line("30%", "3px", "35%", "35%") }} />
           <div style={{ ...line("22%", "2px", "50%", "39%") }} />
           <div style={{ ...line("26%", "2px", "62%", "37%") }} />
+        </div>
+      );
+    case "luxury":
+      return (
+        <div style={{ ...base, background: "linear-gradient(155deg, #0f0f0f, #0d0a03)" }}>
+          {/* Watermark K */}
+          <div style={{ position: "absolute", right: "-4px", top: "50%", transform: "translateY(-50%)", fontFamily: "serif", fontSize: "72px", fontWeight: 700, color: "transparent", WebkitTextStroke: "1px rgba(201,168,76,0.08)", lineHeight: 1 }}>K</div>
+          {/* top hairline */}
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px", background: "linear-gradient(90deg, transparent, rgba(201,168,76,0.4), transparent)" }} />
+          {/* bottom-left content */}
+          <div style={{ position: "absolute", bottom: "10px", left: "10px" }}>
+            <div style={{ width: "18px", height: "1px", background: "rgba(201,168,76,0.6)", marginBottom: "5px" }} />
+            <div style={{ width: "55px", height: "5px", background: "rgba(245,245,245,0.75)", borderRadius: "1px", marginBottom: "4px" }} />
+            <div style={{ width: "38px", height: "2px", background: "rgba(245,245,245,0.2)", borderRadius: "1px", marginBottom: "6px" }} />
+            <div style={{ width: "32px", height: "1px", background: "transparent", borderBottom: "1px solid rgba(201,168,76,0.4)" }} />
+          </div>
+          {/* right scroll line */}
+          <div style={{ position: "absolute", right: "10px", bottom: "8px", width: "1px", height: "20px", background: "linear-gradient(to bottom, rgba(201,168,76,0.5), transparent)" }} />
         </div>
       );
     default:
@@ -255,7 +274,7 @@ export default function AdminHeroPage() {
             fontSize: "0.65rem", color: "var(--muted)", letterSpacing: "0.08em",
             textTransform: "uppercase",
           }}>
-            Preview — {LAYOUTS.find((l) => l.id === settings.layout)?.name}
+            Preview — {LAYOUTS.find((l) => l.id === settings.layout)?.name ?? settings.layout}
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Eye, Save, ExternalLink, Sparkles, LayoutTemplate } from "lucide-react";
+import { Loader2, Eye, Save, ExternalLink } from "lucide-react";
 
 interface SectionDef {
   key: string;
@@ -44,21 +44,14 @@ const SECTIONS: SectionDef[] = [
 
 export default function AdminSectionsPage() {
   const [settings, setSettings] = useState<Record<string, boolean>>({});
-  const [heroStyle, setHeroStyle] = useState<"classic" | "luxury">("classic");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    // Load section toggles
     fetch("/api/admin/sections")
       .then((r) => r.json())
       .then((data) => { setSettings(data); setLoading(false); });
-    // Load hero style setting
-    fetch("/api/admin/sections/hero-style")
-      .then((r) => r.ok ? r.json() : { style: "classic" })
-      .then((d) => setHeroStyle(d.style === "luxury" ? "luxury" : "classic"))
-      .catch(() => {});
   }, []);
 
   function toggle(key: string) {
@@ -67,20 +60,13 @@ export default function AdminSectionsPage() {
 
   async function handleSave() {
     setSaving(true);
-    const [secRes] = await Promise.all([
-      fetch("/api/admin/sections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      }),
-      fetch("/api/admin/sections/hero-style", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ style: heroStyle }),
-      }),
-    ]);
+    const res = await fetch("/api/admin/sections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
     setSaving(false);
-    if (secRes.ok) {
+    if (res.ok) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     }
@@ -138,81 +124,6 @@ export default function AdminSectionsPage() {
       }}>
         <Eye size={13} style={{ color: "var(--gold)" }} />
         <span><strong style={{ color: "var(--text)" }}>{visibleCount}</strong> of {SECTIONS.length} sections visible</span>
-      </div>
-
-      {/* ── Hero Style Picker ── */}
-      <div style={{
-        background: "var(--surface)", border: "1px solid var(--gold-border)",
-        borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.4rem" }}>
-          <LayoutTemplate size={16} style={{ color: "var(--gold)" }} />
-          <p style={{ fontWeight: 700, fontSize: "0.95rem" }}>Hero Style</p>
-        </div>
-        <p style={{ fontSize: "0.78rem", color: "var(--subtle)", marginBottom: "1.25rem" }}>
-          Choose how the top hero section looks on the homepage
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
-
-          {/* Classic option */}
-          <button
-            onClick={() => setHeroStyle("classic")}
-            style={{
-              padding: "1.1rem 1rem", borderRadius: "10px", cursor: "pointer", textAlign: "left",
-              border: `2px solid ${heroStyle === "classic" ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
-              background: heroStyle === "classic" ? "rgba(201,168,76,0.07)" : "var(--elevated)",
-              transition: "all 0.2s",
-            }}
-          >
-            {/* Mini preview */}
-            <div style={{ width: "100%", height: "56px", borderRadius: "6px", marginBottom: "0.75rem", overflow: "hidden", position: "relative", background: "radial-gradient(ellipse at 50% 40%, #1a0f05, #0a0a0a)" }}>
-              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center" }}>
-                <div style={{ height: "6px", width: "60px", background: "rgba(201,168,76,0.5)", borderRadius: "3px", margin: "0 auto 5px" }} />
-                <div style={{ height: "4px", width: "40px", background: "rgba(245,245,245,0.2)", borderRadius: "2px", margin: "0 auto 6px" }} />
-                <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-                  <div style={{ height: "12px", width: "30px", background: "rgba(201,168,76,0.35)", borderRadius: "3px" }} />
-                  <div style={{ height: "12px", width: "30px", border: "1px solid rgba(201,168,76,0.3)", borderRadius: "3px" }} />
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.2rem" }}>
-              <p style={{ fontSize: "0.82rem", fontWeight: 700, color: heroStyle === "classic" ? "var(--text)" : "var(--muted)" }}>Classic</p>
-              {heroStyle === "classic" && <span style={{ fontSize: "0.6rem", background: "var(--gold)", color: "#000", padding: "0.1rem 0.4rem", borderRadius: "9999px", fontWeight: 700 }}>Active</span>}
-            </div>
-            <p style={{ fontSize: "0.72rem", color: "var(--subtle)", margin: 0 }}>Centered text, gold buttons, warm glow effects</p>
-          </button>
-
-          {/* Luxury option */}
-          <button
-            onClick={() => setHeroStyle("luxury")}
-            style={{
-              padding: "1.1rem 1rem", borderRadius: "10px", cursor: "pointer", textAlign: "left",
-              border: `2px solid ${heroStyle === "luxury" ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
-              background: heroStyle === "luxury" ? "rgba(201,168,76,0.07)" : "var(--elevated)",
-              transition: "all 0.2s",
-            }}
-          >
-            {/* Mini preview */}
-            <div style={{ width: "100%", height: "56px", borderRadius: "6px", marginBottom: "0.75rem", overflow: "hidden", position: "relative", background: "linear-gradient(155deg, #0f0f0f, #0d0a03)" }}>
-              <div style={{ position: "absolute", right: -8, top: "50%", transform: "translateY(-50%)", fontFamily: "serif", fontSize: "64px", fontWeight: 700, color: "transparent", WebkitTextStroke: "1px rgba(201,168,76,0.07)", lineHeight: 1 }}>K</div>
-              <div style={{ position: "absolute", bottom: "10px", left: "12px" }}>
-                <div style={{ height: "1px", width: "20px", background: "rgba(201,168,76,0.6)", marginBottom: "5px" }} />
-                <div style={{ height: "7px", width: "70px", background: "rgba(245,245,245,0.7)", borderRadius: "2px", marginBottom: "4px" }} />
-                <div style={{ height: "4px", width: "45px", background: "rgba(245,245,245,0.15)", borderRadius: "2px" }} />
-              </div>
-              <div style={{ position: "absolute", right: "10px", bottom: "10px", display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }}>
-                <div style={{ height: "14px", width: "1px", background: "linear-gradient(to bottom, rgba(201,168,76,0.5), transparent)" }} />
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.2rem" }}>
-              <Sparkles size={12} style={{ color: "var(--gold)" }} />
-              <p style={{ fontSize: "0.82rem", fontWeight: 700, color: heroStyle === "luxury" ? "var(--text)" : "var(--muted)" }}>Luxury Editorial</p>
-              {heroStyle === "luxury" && <span style={{ fontSize: "0.6rem", background: "var(--gold)", color: "#000", padding: "0.1rem 0.4rem", borderRadius: "9999px", fontWeight: 700 }}>Active</span>}
-            </div>
-            <p style={{ fontSize: "0.72rem", color: "var(--subtle)", margin: 0 }}>Full-bleed, bottom-left text, bare CTAs — Zara-style</p>
-          </button>
-
-        </div>
       </div>
 
       {/* Section cards */}
