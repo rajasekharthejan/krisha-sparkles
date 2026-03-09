@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { ReactNode } from "react";
 
 export interface HeroProps {
-  layout: "celestial" | "split" | "minimal" | "diagonal" | "framed";
+  layout: "celestial" | "split" | "minimal" | "diagonal" | "framed" | "luxury";
   heading: string;
   subtext: string;
   badge: string;
@@ -245,6 +245,159 @@ function FramedHero(p: HeroProps) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   LAYOUT 6: Luxury Editorial (Zara-inspired — full-bleed, bottom-left)
+   ═══════════════════════════════════════════════════════════════════ */
+function LuxuryHero(p: HeroProps) {
+  return (
+    <section style={{
+      position: "relative",
+      height: "100vh",
+      minHeight: "640px",
+      display: "flex",
+      alignItems: "flex-end",
+      overflow: "hidden",
+      background: "#0a0a0a",
+    }}>
+
+      {/* ── Dark editorial background gradient ── */}
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 1,
+        background: "linear-gradient(155deg, #0f0f0f 0%, #0a0808 45%, #0d0a03 100%)",
+      }} />
+
+      {/* ── Grain texture for premium depth ── */}
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none", opacity: 0.55,
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E")`,
+      }} />
+
+      {/* ── Top hairline gold accent ── */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: "1px", zIndex: 10,
+        background: "linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.5) 25%, rgba(201,168,76,0.5) 75%, transparent 100%)",
+      }} />
+
+      {/* ── Oversized decorative watermark letter ── */}
+      <div style={{
+        position: "absolute", right: "-0.05em", top: "50%",
+        transform: "translateY(-50%)",
+        fontFamily: "var(--font-playfair)",
+        fontSize: "clamp(22rem, 38vw, 50rem)",
+        fontWeight: 700,
+        color: "transparent",
+        WebkitTextStroke: "1px rgba(201,168,76,0.045)",
+        lineHeight: 1,
+        pointerEvents: "none", userSelect: "none",
+        zIndex: 2, letterSpacing: "-0.05em",
+      }}>K</div>
+
+      {/* ── Thin vertical right accent line ── */}
+      <div style={{
+        position: "absolute", right: "clamp(1.5rem, 5vw, 5rem)",
+        top: "15%", bottom: "15%", width: "1px", zIndex: 4,
+        background: "linear-gradient(to bottom, transparent, rgba(201,168,76,0.18) 30%, rgba(201,168,76,0.18) 70%, transparent)",
+      }} />
+
+      {/* ── Scroll indicator — rotated text + animated line ── */}
+      <div style={{
+        position: "absolute", bottom: "3rem",
+        right: "clamp(1.25rem, 4.5vw, 4.5rem)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", gap: "0.85rem", zIndex: 10,
+      }}>
+        <span style={{
+          fontSize: "0.5rem", letterSpacing: "0.45em",
+          color: "rgba(245,245,245,0.28)", textTransform: "uppercase",
+          writingMode: "vertical-rl", textOrientation: "mixed",
+        }}>Scroll</span>
+        <div style={{
+          width: "1px", height: "55px",
+          background: "linear-gradient(to bottom, rgba(201,168,76,0.55), transparent)",
+          animation: "float 2.2s ease-in-out infinite",
+        }} />
+      </div>
+
+      {/* ── Main editorial content — bottom left ── */}
+      <div style={{
+        position: "relative", zIndex: 10,
+        padding: "0 clamp(1.75rem, 6vw, 6rem)",
+        paddingBottom: "clamp(4rem, 11vh, 8rem)",
+        maxWidth: "820px", width: "100%",
+      }}>
+        {/* Collection label */}
+        <p style={{
+          fontSize: "0.62rem", letterSpacing: "0.5em",
+          textTransform: "uppercase", color: "var(--gold)",
+          marginBottom: "1.25rem", fontWeight: 400,
+          animation: "slideUp 0.7s ease 0.1s both",
+        }}>
+          ✦ &nbsp;{p.badge}
+        </p>
+
+        {/* Short gold rule above heading */}
+        <div style={{
+          width: "2.75rem", height: "1px",
+          background: "var(--gold)", marginBottom: "1.5rem",
+          opacity: 0.65, animation: "slideUp 0.7s ease 0.2s both",
+        }} />
+
+        {/* The big headline */}
+        <h1 style={{
+          fontFamily: "var(--font-playfair)",
+          fontSize: "clamp(2.75rem, 9.5vw, 6.5rem)",
+          fontWeight: 400,
+          lineHeight: 1.0,
+          letterSpacing: "-0.025em",
+          marginBottom: "2rem",
+          color: "var(--text)",
+          animation: "slideUp 0.8s ease 0.3s both",
+        }}>
+          {parseHeading(p.heading)}
+        </h1>
+
+        {/* Subtext — thin, airy */}
+        <p style={{
+          fontSize: "0.82rem", letterSpacing: "0.06em",
+          color: "rgba(245,245,245,0.4)",
+          maxWidth: "360px", lineHeight: 2.0,
+          marginBottom: "2.75rem", fontWeight: 300,
+          animation: "slideUp 0.7s ease 0.45s both",
+        }}>
+          {p.subtext}
+        </p>
+
+        {/* Bare editorial CTA — no button, just underlined text */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: "2rem",
+          animation: "slideUp 0.7s ease 0.6s both",
+        }}>
+          <Link href={p.ctaPrimaryUrl} style={{
+            display: "inline-flex", alignItems: "center", gap: "0.85rem",
+            fontSize: "0.7rem", letterSpacing: "0.3em", textTransform: "uppercase",
+            color: "var(--text)", textDecoration: "none",
+            borderBottom: "1px solid rgba(201,168,76,0.4)",
+            paddingBottom: "0.3rem",
+            transition: "color 0.25s, border-color 0.25s",
+          }}>
+            {p.ctaPrimaryText}
+            <span style={{ color: "var(--gold)", fontSize: "1rem" }}>→</span>
+          </Link>
+          {p.ctaSecondaryText && (
+            <Link href={p.ctaSecondaryUrl} style={{
+              fontSize: "0.7rem", letterSpacing: "0.3em", textTransform: "uppercase",
+              color: "rgba(245,245,245,0.35)", textDecoration: "none",
+              transition: "color 0.25s",
+            }}>
+              {p.ctaSecondaryText}
+            </Link>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    MAIN EXPORT — renders the selected layout
    ═══════════════════════════════════════════════════════════════════ */
 export default function HeroSection(props: HeroProps) {
@@ -253,6 +406,7 @@ export default function HeroSection(props: HeroProps) {
     case "minimal":  return <MinimalHero {...props} />;
     case "diagonal": return <DiagonalHero {...props} />;
     case "framed":   return <FramedHero {...props} />;
+    case "luxury":   return <LuxuryHero {...props} />;
     case "celestial":
     default:         return <CelestialHero {...props} />;
   }
