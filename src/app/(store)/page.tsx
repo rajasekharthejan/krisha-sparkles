@@ -79,6 +79,49 @@ const HERO_DEFAULTS: HeroProps = {
 
 const VALID_LAYOUTS = ["celestial", "split", "minimal", "diagonal", "framed"];
 
+// ── Homepage section visibility ─────────────────────────────────────────────
+const HP_SECTION_KEYS = [
+  "hp_section_categories",
+  "hp_section_occasion",
+  "hp_section_instagram",
+  "hp_section_newsletter",
+] as const;
+
+interface SectionVisibility {
+  categories: boolean;
+  occasion:   boolean;
+  instagram:  boolean;
+  newsletter: boolean;
+}
+
+async function getSectionVisibility(): Promise<SectionVisibility> {
+  noStore();
+  // Default: occasion OFF (as requested by admin), everything else ON
+  const defaults: SectionVisibility = { categories: true, occasion: false, instagram: true, newsletter: true };
+  try {
+    const supabase = createSupabaseAdmin(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data } = await supabase
+      .from("store_settings")
+      .select("key, value")
+      .in("key", [...HP_SECTION_KEYS]);
+
+    if (!data || data.length === 0) return defaults;
+    const m: Record<string, string> = {};
+    for (const r of data) m[r.key] = r.value;
+    return {
+      categories: m.hp_section_categories !== "false",
+      occasion:   m.hp_section_occasion   === "true",   // off unless explicitly "true"
+      instagram:  m.hp_section_instagram  !== "false",
+      newsletter: m.hp_section_newsletter !== "false",
+    };
+  } catch {
+    return defaults;
+  }
+}
+
 async function getHeroSettings(): Promise<HeroProps> {
   noStore();
   try {
@@ -181,12 +224,13 @@ async function getCustomerPhotos(): Promise<CustomerPhoto[]> {
 }
 
 export default async function HomePage() {
-  const [featured, bundles, heroSettings, customerPhotos, liveEvent] = await Promise.all([
+  const [featured, bundles, heroSettings, customerPhotos, liveEvent, sections] = await Promise.all([
     getFeaturedProducts(),
     getTopBundles(),
     getHeroSettings(),
     getCustomerPhotos(),
     getLiveOrUpcomingEvent(),
+    getSectionVisibility(),
   ]);
 
   return (
@@ -318,7 +362,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── Categories ────────────────────────────────── */}
-      <section style={{ padding: "5rem 1.5rem", background: "var(--bg)" }}>
+      {sections.categories && <section style={{ padding: "5rem 1.5rem", background: "var(--bg)" }}>
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3rem" }}>
             <span className="badge-gold">Collections</span>
@@ -340,10 +384,10 @@ export default async function HomePage() {
           </div>
           <CategoryGrid />
         </div>
-      </section>
+      </section>}
 
       {/* ── Shop by Occasion ───────────────────────────── */}
-      <section style={{ padding: "5rem 1.5rem 4rem", background: "var(--surface)" }}>
+      {sections.occasion && <section style={{ padding: "5rem 1.5rem 4rem", background: "var(--surface)" }}>
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3rem" }}>
             <span className="badge-gold">Perfect For Every Event</span>
@@ -410,7 +454,7 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* ── Featured Products ─────────────────────────── */}
       <section style={{ padding: "5rem 1.5rem 4rem", background: "var(--surface)" }}>
@@ -488,8 +532,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── New Arrivals Strip ────────────────────────── */}
-      <section
+      {/* ── Instagram Section ─────────────────────────── */}
+      {sections.instagram && <section
         style={{
           background: "var(--bg)",
           padding: "5rem 1.5rem",
@@ -569,7 +613,7 @@ export default async function HomePage() {
             box-shadow: 0 12px 40px rgba(0,0,0,0.3);
           }
         `}</style>
-      </section>
+      </section>}
 
       {/* ── Gift Sets / Bundles Section ───────────────── */}
       {bundles.length > 0 && (
@@ -756,7 +800,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      <NewsletterSection />
+      {sections.newsletter && <NewsletterSection />}
     </div>
   );
 }
