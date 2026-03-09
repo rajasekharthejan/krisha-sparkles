@@ -34,7 +34,7 @@ export function truncate(str: string, length: number): string {
 }
 
 /** Single source of truth for the app version — used in admin sidebar + store footer */
-export const APP_VERSION = "v8.3";
+export const APP_VERSION = "v8.4";
 
 // ── Product metadata filter options ──────────────────────────────────────────
 export const MATERIALS = ["Gold Plated", "Silver Plated", "Kundan", "Meenakari", "Pearl", "Oxidized", "Temple"];

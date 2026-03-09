@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Warehouse,
   LogOut, ExternalLink, Upload, TrendingUp, Tag, Star,
   RotateCcw, Mail, MessageCircle, Instagram, Layout,
-  BookOpen, Gift, BarChart3, Boxes, Music2, Users, RefreshCw, Settings, Sparkles, Crown, Video, FlaskConical,
+  BookOpen, Gift, BarChart3, Boxes, Music2, Users, RefreshCw, Settings, Sparkles, Crown, Video, FlaskConical, LayoutGrid,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/utils";
 
@@ -25,6 +25,7 @@ const GROUPS = [
     label: "Catalog",
     items: [
       { href: "/admin/products",             label: "Products",     icon: <Package size={16} /> },
+      { href: "/admin/categories",           label: "Categories",   icon: <LayoutGrid size={16} /> },
       { href: "/admin/products/bulk-upload", label: "Bulk Upload",  icon: <Upload size={16} /> },
       { href: "/admin/products/bulk-price",  label: "Bulk Pricing", icon: <TrendingUp size={16} /> },
       { href: "/admin/inventory",            label: "Inventory",    icon: <Warehouse size={16} /> },
