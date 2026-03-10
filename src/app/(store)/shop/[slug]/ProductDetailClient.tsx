@@ -377,45 +377,53 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 </div>
               )}
 
-              {/* Nav Arrows + Image counter — only when viewing images */}
-              {activeVideo === null && images.length > 1 && (
-                <>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setActiveImage((activeImage - 1 + images.length) % images.length); }}
-                    style={{
-                      position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)",
-                      width: "36px", height: "36px", borderRadius: "50%",
-                      background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
-                      border: "1px solid var(--gold-border)", cursor: "pointer",
-                      color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
-                    }}
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setActiveImage((activeImage + 1) % images.length); }}
-                    style={{
-                      position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
-                      width: "36px", height: "36px", borderRadius: "50%",
-                      background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
-                      border: "1px solid var(--gold-border)", cursor: "pointer",
-                      color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
-                    }}
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                  {/* Counter badge */}
-                  <span style={{
-                    position: "absolute", bottom: "12px", right: "12px",
-                    background: "rgba(10,10,10,0.75)", backdropFilter: "blur(6px)",
-                    color: "var(--text)", borderRadius: "20px",
-                    fontSize: "0.7rem", fontWeight: 600, padding: "3px 10px",
-                    border: "1px solid rgba(201,168,76,0.2)",
-                  }}>
-                    {activeImage + 1} / {images.length}
-                  </span>
-                </>
-              )}
+              {/* Nav Arrows + counter — navigate all images + videos */}
+              {(images.length + videos.length) > 1 && (() => {
+                const total = images.length + videos.length;
+                const currentIdx = activeVideo !== null ? images.length + activeVideo : activeImage;
+                function navigate(dir: 1 | -1) {
+                  const newIdx = (currentIdx + dir + total) % total;
+                  if (newIdx < images.length) { setActiveImage(newIdx); setActiveVideo(null); }
+                  else { setActiveVideo(newIdx - images.length); }
+                }
+                return (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(-1); }}
+                      style={{
+                        position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)",
+                        width: "36px", height: "36px", borderRadius: "50%",
+                        background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
+                        border: "1px solid var(--gold-border)", cursor: "pointer",
+                        color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(1); }}
+                      style={{
+                        position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                        width: "36px", height: "36px", borderRadius: "50%",
+                        background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
+                        border: "1px solid var(--gold-border)", cursor: "pointer",
+                        color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                    <span style={{
+                      position: "absolute", bottom: "12px", right: "12px",
+                      background: "rgba(10,10,10,0.75)", backdropFilter: "blur(6px)",
+                      color: "var(--text)", borderRadius: "20px",
+                      fontSize: "0.7rem", fontWeight: 600, padding: "3px 10px",
+                      border: "1px solid rgba(201,168,76,0.2)",
+                    }}>
+                      {currentIdx + 1} / {total}
+                    </span>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Thumbnail Strip — horizontal scroll, no wrap */}
