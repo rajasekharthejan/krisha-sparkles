@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowLeft, Package, MapPin, User, Mail, Truck, MessageCircle,
-  ExternalLink, Copy, CheckCheck, Loader2, Tag, X, Printer, RotateCcw, AlertTriangle, Pencil
+  ExternalLink, Copy, CheckCheck, Loader2, Tag, X, Printer, RotateCcw, AlertTriangle, Pencil, Ban
 } from "lucide-react";
 import { formatPrice, formatDate } from "@/lib/utils";
 import type { Order } from "@/types";
@@ -76,6 +76,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [refunding, setRefunding] = useState(false);
   const [refundError, setRefundError] = useState("");
   const [refundDone, setRefundDone] = useState(false);
+
+  // Cancel label state
+  const [cancelLabelOpen, setCancelLabelOpen] = useState(false);
+  const [cancellingLabel, setCancellingLabel] = useState(false);
+  const [cancelLabelError, setCancelLabelError] = useState("");
+  const [cancelLabelDone, setCancelLabelDone] = useState(false);
 
   useEffect(() => {
     fetch(`/api/admin/orders/${id}`)
@@ -193,6 +199,27 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setRefundError("Network error. Please try again.");
     }
     setRefunding(false);
+  }
+
+  async function cancelShippingLabel() {
+    if (!order) return;
+    setCancellingLabel(true);
+    setCancelLabelError("");
+    try {
+      const res = await fetch("/api/admin/shippo/cancel-label", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: order.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCancelLabelError(data.error || "Failed to cancel label"); setCancellingLabel(false); return; }
+      setCancelLabelDone(true);
+      // Clear tracking / label info from local state, revert status to paid
+      setOrder((o) => o ? { ...o, tracking_number: undefined, tracking_url: undefined, label_url: undefined, shippo_transaction_id: undefined, status: "paid" as Order["status"] } : o);
+    } catch {
+      setCancelLabelError("Network error. Please try again.");
+    }
+    setCancellingLabel(false);
   }
 
   function copy(text: string) {
@@ -321,14 +348,29 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     {copied ? <CheckCheck size={13} /> : <Copy size={13} />}
                   </button>
                 </div>
-                {order.tracking_url && (
-                  <a href={order.tracking_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.4rem 0.85rem", borderRadius: "6px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", color: "#3b82f6", fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>
-                    <ExternalLink size={12} /> Track Package
-                  </a>
-                )}
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  {order.tracking_url && (
+                    <a href={order.tracking_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.4rem 0.85rem", borderRadius: "6px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", color: "#3b82f6", fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>
+                      <ExternalLink size={12} /> Track Package
+                    </a>
+                  )}
+                  {order.label_url && (
+                    <a href={order.label_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.4rem 0.85rem", borderRadius: "6px", background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", color: "var(--gold)", fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>
+                      <Printer size={12} /> Print Label
+                    </a>
+                  )}
+                  {order.shippo_transaction_id && (
+                    <button
+                      onClick={() => { setCancelLabelOpen(true); setCancelLabelError(""); setCancelLabelDone(false); }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.4rem 0.85rem", borderRadius: "6px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
+                    >
+                      <Ban size={12} /> Cancel Label
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
-              <p style={{ color: "var(--muted)", fontStyle: "italic", fontSize: "0.875rem" }}>No tracking yet — generate a USPS label or add tracking manually</p>
+              <p style={{ color: "var(--muted)", fontStyle: "italic", fontSize: "0.875rem" }}>No tracking yet — generate a label using the button above</p>
             )}
           </Section>
         </div>
@@ -532,6 +574,81 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <button onClick={() => setRefundOpen(false)} className="btn-gold" style={{ display: "inline-flex" }}>
                   Close
                 </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Label Modal */}
+      {cancelLabelOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+          onClick={(e) => { if (e.target === e.currentTarget && !cancellingLabel) setCancelLabelOpen(false); }}>
+          <div style={{ background: "var(--surface)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: "16px", padding: "2rem", width: "100%", maxWidth: "420px" }}>
+
+            {!cancelLabelDone ? (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Ban size={18} style={{ color: "#ef4444" }} />
+                    </div>
+                    <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>Cancel Shipping Label</h2>
+                  </div>
+                  {!cancellingLabel && (
+                    <button onClick={() => setCancelLabelOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", display: "flex" }}><X size={18} /></button>
+                  )}
+                </div>
+
+                <div style={{ background: "var(--elevated)", borderRadius: "10px", padding: "1rem", marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.825rem" }}>
+                    <span style={{ color: "var(--muted)" }}>Order</span>
+                    <span style={{ fontFamily: "monospace", fontWeight: 600 }}>#{order.id.slice(-8).toUpperCase()}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.825rem" }}>
+                    <span style={{ color: "var(--muted)" }}>Tracking #</span>
+                    <span style={{ fontFamily: "monospace", color: "#3b82f6" }}>{order.tracking_number}</span>
+                  </div>
+                </div>
+
+                <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: "0 0 0.5rem", lineHeight: 1.5 }}>
+                  This will <strong style={{ color: "var(--text)" }}>void the shipping label</strong> and request a refund from Shippo. The refund is credited to your <strong style={{ color: "var(--text)" }}>Shippo account balance</strong> (not your card directly).
+                </p>
+                <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 1.25rem", lineHeight: 1.5 }}>
+                  ⚠️ Only works if the package has <strong style={{ color: "var(--text)" }}>NOT been scanned</strong> by the carrier yet. USPS allows up to 28 days. The order will be reverted to <strong style={{ color: "#10b981" }}>Paid</strong> status.
+                </p>
+
+                {cancelLabelError && (
+                  <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1rem", color: "#ef4444", fontSize: "0.8rem" }}>
+                    {cancelLabelError}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button onClick={() => setCancelLabelOpen(false)} disabled={cancellingLabel} className="btn-gold-outline" style={{ flex: 1 }}>Keep Label</button>
+                  <button
+                    onClick={cancelShippingLabel}
+                    disabled={cancellingLabel}
+                    style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", padding: "0.65rem 1.25rem", borderRadius: "8px", background: cancellingLabel ? "rgba(239,68,68,0.3)" : "#ef4444", border: "none", color: "#fff", fontWeight: 700, fontSize: "0.875rem", cursor: cancellingLabel ? "wait" : "pointer", transition: "all 0.2s" }}
+                  >
+                    {cancellingLabel
+                      ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Cancelling...</>
+                      : <><Ban size={15} /> Void &amp; Refund Label</>
+                    }
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "1rem 0" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>✅</div>
+                <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.5rem" }}>Label Voided!</h2>
+                <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: "0 0 0.35rem" }}>
+                  The shipping label has been cancelled. Shippo will credit the label cost back to your account balance.
+                </p>
+                <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: "0 0 1.5rem" }}>
+                  Order status reverted to <strong style={{ color: "#10b981" }}>Paid</strong>. You can generate a new label anytime.
+                </p>
+                <button onClick={() => setCancelLabelOpen(false)} className="btn-gold" style={{ display: "inline-flex" }}>Close</button>
               </div>
             )}
           </div>

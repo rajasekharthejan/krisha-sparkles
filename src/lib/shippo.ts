@@ -226,3 +226,27 @@ export async function purchaseLabel(rateId: string): Promise<ShippoTransaction> 
 
   return data;
 }
+
+/**
+ * Request a refund for a purchased shipping label by Shippo transaction ID.
+ * Shippo credits the label cost back to your Shippo account balance.
+ * USPS: refundable up to 28 days if not yet scanned.
+ * UPS: refundable within a few days of purchase.
+ * Docs: POST /refunds/
+ */
+export async function refundLabel(transactionId: string): Promise<{ object_id: string; status: string }> {
+  const res = await fetch(`${SHIPPO_BASE}/refunds/`, {
+    method: "POST",
+    headers: await headers(),
+    body: JSON.stringify({ transaction: transactionId }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    const msg = data?.detail || data?.non_field_errors?.[0] || JSON.stringify(data);
+    throw new Error(`Shippo refund error: ${msg}`);
+  }
+
+  return { object_id: data.object_id, status: data.status };
+}

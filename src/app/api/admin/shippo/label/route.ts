@@ -46,15 +46,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
-    // Save to order: tracking_number, tracking_url, label_url, status → shipped
+    // Save to order: tracking_number, tracking_url, label_url, shippo_transaction_id, status → shipped
     const { error: updateErr } = await supabaseAdmin
       .from("orders")
       .update({
-        tracking_number: transaction.tracking_number,
-        tracking_url:    transaction.tracking_url_provider,
-        label_url:       transaction.label_url,
-        status:          "shipped",
-        shipped_at:      new Date().toISOString(),
+        tracking_number:       transaction.tracking_number,
+        tracking_url:          transaction.tracking_url_provider,
+        label_url:             transaction.label_url,
+        shippo_transaction_id: transaction.object_id,
+        status:                "shipped",
+        shipped_at:            new Date().toISOString(),
       })
       .eq("id", order_id);
 

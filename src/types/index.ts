@@ -66,6 +66,7 @@ export interface Order {
   tracking_number?: string;
   tracking_url?: string;
   label_url?: string;
+  shippo_transaction_id?: string;
   shipped_at?: string;
   delivered_at?: string;
   phone?: string;
