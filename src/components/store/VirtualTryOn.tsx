@@ -115,6 +115,8 @@ export default function VirtualTryOn({ product }: { product: Product }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overImgRef = useRef<HTMLImageElement | null>(null);
+  // Processed canvas with background/mannequin removed (only colored jewelry kept)
+  const overCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const meshRef = useRef<FMesh | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
@@ -139,9 +141,11 @@ export default function VirtualTryOn({ product }: { product: Product }) {
     img.src = url;
     img.onload = () => {
       overImgRef.current = img;
+      overCanvasRef.current = extractJewelry(img);
     };
     return () => {
       overImgRef.current = null;
+      overCanvasRef.current = null;
     };
   }, [imgIdx, open, product.images]);
 
@@ -316,10 +320,53 @@ export default function VirtualTryOn({ product }: { product: Product }) {
     }
   }
 
+  // ── Client-side background removal ───────────────────────────────────────
+  // Removes the white/grey background AND grey mannequin from product photos.
+  // Keeps only colorful/saturated pixels (gold jewelry, colored gems).
+  // Works for Indian jewelry which is typically high-saturation gold/colorful.
+  function extractJewelry(img: HTMLImageElement): HTMLCanvasElement | null {
+    try {
+      const oc = document.createElement("canvas");
+      oc.width = img.naturalWidth;
+      oc.height = img.naturalHeight;
+      const octx = oc.getContext("2d", { willReadFrequently: true });
+      if (!octx) return null;
+      octx.drawImage(img, 0, 0);
+      const id = octx.getImageData(0, 0, oc.width, oc.height);
+      const d = id.data;
+
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        // Compute colour saturation: how far from neutral grey?
+        const avg = (r + g + b) / 3;
+        const maxDiff = Math.max(Math.abs(r - avg), Math.abs(g - avg), Math.abs(b - avg));
+        const sat = avg > 1 ? maxDiff / avg : 0; // 0=pure grey, ~1=vivid colour
+
+        if (sat < 0.12) {
+          // Near-grey → fully transparent (removes white BG + grey mannequin)
+          d[i + 3] = 0;
+        } else if (sat < 0.28) {
+          // Soft edge feather — partial transparency for gradients
+          d[i + 3] = Math.round(((sat - 0.12) / 0.16) * 255);
+        }
+        // Colourful pixels (sat ≥ 0.28) stay fully opaque
+      }
+
+      octx.putImageData(id, 0, 0);
+      return oc;
+    } catch {
+      // CORS or canvas taint — fall back to raw image
+      return null;
+    }
+  }
+
   // ── Overlay drawing ──────────────────────────────────────────────────────
   function drawJewelry(ctx: CanvasRenderingContext2D, lms: FL[], W: number, H: number) {
-    const img = overImgRef.current;
-    if (!img) return;
+    // Prefer the background-removed canvas; fall back to raw image
+    const src: CanvasImageSource | null = overCanvasRef.current ?? overImgRef.current;
+    if (!src) return;
+    const srcW = src instanceof HTMLImageElement ? src.naturalWidth : (src as HTMLCanvasElement).width;
+    const srcH = src instanceof HTMLImageElement ? src.naturalHeight : (src as HTMLCanvasElement).height;
 
     // Mirror x: landmarks come in original (non-mirrored) space,
     // but canvas is drawn mirrored, so invert x.
@@ -327,32 +374,30 @@ export default function VirtualTryOn({ product }: { product: Product }) {
     const my = (i: number) => lms[i].y * H;
 
     ctx.save();
-    // "multiply" blend: white background of product photo → transparent
-    ctx.globalCompositeOperation = "multiply";
-    ctx.globalAlpha = 0.9;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 0.92;
 
     if (jtype === "earrings") {
-      // lm 454 → viewer's left ear area, lm 234 → viewer's right ear area (mirrored)
       const lx = mx(454);
       const ly = my(454);
       const rx = mx(234);
       const ry = my(234);
       const faceW = Math.abs(rx - lx);
-      const ew = faceW * 0.22; // earring width = ~22% of face width
-      const eh = ew * (img.height / img.width) * 2; // tall for jhumkas
+      const ew = faceW * 0.32;
+      const eh = ew * (srcH / srcW) * 2;
 
-      ctx.drawImage(img, lx - ew * 0.5, ly, ew, eh);
-      ctx.drawImage(img, rx - ew * 0.5, ry, ew, eh);
+      ctx.drawImage(src, lx - ew * 0.5, ly, ew, eh);
+      ctx.drawImage(src, rx - ew * 0.5, ry, ew, eh);
     } else {
-      // Necklace: anchor at chin (152), span jaw width
+      // Necklace: span 2.2× face width so it's clearly visible
       const lx = mx(454);
       const rx = mx(234);
       const chinY = my(152);
       const faceW = Math.abs(rx - lx);
-      const nw = faceW * 1.5;
-      const nh = nw * (img.height / img.width);
+      const nw = faceW * 2.2;
+      const nh = nw * (srcH / srcW);
       const nx = (lx + rx) / 2 - nw / 2;
-      ctx.drawImage(img, nx, chinY - faceW * 0.05, nw, nh);
+      ctx.drawImage(src, nx, chinY, nw, nh);
     }
 
     ctx.restore();
