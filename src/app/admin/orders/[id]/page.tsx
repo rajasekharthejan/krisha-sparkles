@@ -359,7 +359,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       <Printer size={12} /> Print Label
                     </a>
                   )}
-                  {order.shippo_transaction_id && (
+                  {(order.label_url || order.shippo_transaction_id) && (
                     <button
                       onClick={() => { setCancelLabelOpen(true); setCancelLabelError(""); setCancelLabelDone(false); }}
                       style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.4rem 0.85rem", borderRadius: "6px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
