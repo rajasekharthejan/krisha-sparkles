@@ -306,7 +306,11 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
   }
 
   const images = product.images?.length ? product.images : [""];
-  const videos = product.videos?.filter(Boolean) || [];
+  const videos = (product.videos?.filter(Boolean) || []).map((url) => {
+    // Proxy through same-origin to avoid cross-origin video issues
+    const filename = url.split("/").pop();
+    return filename ? `/api/video/${filename}` : url;
+  });
   const hasDiscount = product.compare_price && product.compare_price > product.price;
   const discountPct = hasDiscount
     ? Math.round(((product.compare_price! - product.price) / product.compare_price!) * 100)
