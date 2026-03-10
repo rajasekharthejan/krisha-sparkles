@@ -20,6 +20,7 @@ import ProductRecommendations from "@/components/store/ProductRecommendations";
 import RecentlyViewed, { addToRecentlyViewed } from "@/components/store/RecentlyViewed";
 import StickyMobileCart from "@/components/store/StickyMobileCart";
 import { openCrisp } from "@/components/store/CrispChat";
+import VirtualTryOn from "@/components/store/VirtualTryOn";
 
 export default function ProductDetailClient({ slug: initialSlug }: { slug?: string }) {
   const params = useParams<{ slug: string }>();
@@ -703,6 +704,8 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 Size Guide
               </button>
             )}
+            {/* Virtual Try-On — AR overlay for jewelry categories */}
+            <VirtualTryOn product={product} />
             </div>
 
             {/* WhatsApp — Chat about this product */}
