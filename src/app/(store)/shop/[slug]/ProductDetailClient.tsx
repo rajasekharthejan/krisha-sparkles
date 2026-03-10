@@ -48,7 +48,6 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [activeVideo, setActiveVideo] = useState<number | null>(null);
-  const [videoError, setVideoError] = useState(false);
   const addToCartBtnRef = useRef<HTMLButtonElement>(null);
   const { addItem, openCart } = useCartStore();
   const { user } = useAuthStore();
@@ -352,26 +351,13 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
               }}
             >
               {activeVideo !== null && videos[activeVideo] ? (
-                videoError ? (
-                  <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", padding: "2rem", background: "#000", color: "#aaa", textAlign: "center" }}>
-                    <span style={{ fontSize: "3rem" }}>🎬</span>
-                    <p style={{ fontSize: "0.9rem", lineHeight: 1.5 }}>
-                      This video format isn&apos;t supported in this browser.<br />
-                      <a href={videos[activeVideo!]} target="_blank" rel="noopener noreferrer" style={{ color: "var(--gold)", textDecoration: "underline", marginTop: "0.5rem", display: "inline-block" }}>
-                        Open video in new tab ↗
-                      </a>
-                    </p>
-                  </div>
-                ) : (
-                  <video
-                    key={videos[activeVideo]}
-                    src={videos[activeVideo]}
-                    controls
-                    playsInline
-                    onError={() => setVideoError(true)}
-                    style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }}
-                  />
-                )
+                <video
+                  key={videos[activeVideo]}
+                  src={videos[activeVideo]}
+                  controls
+                  playsInline
+                  style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }}
+                />
               ) : images[activeImage] ? (
                 <Image
                   src={images[activeImage]}
@@ -445,7 +431,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 {images.map((img, i) => (
                   <button
                     key={`img-${i}`}
-                    onClick={() => { setActiveImage(i); setActiveVideo(null); setVideoError(false); }}
+                    onClick={() => { setActiveImage(i); setActiveVideo(null); }}
                     style={{
                       flexShrink: 0,
                       width: "68px", height: "68px", borderRadius: "8px", overflow: "hidden",
@@ -472,14 +458,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 {videos.map((_, vi) => (
                   <button
                     key={`vid-${vi}`}
-                    onClick={() => {
-                      const url = videos[vi];
-                      const ext = url?.split(".").pop()?.toLowerCase();
-                      const mime = ext === "mov" ? "video/quicktime" : ext === "webm" ? "video/webm" : "video/mp4";
-                      const canPlay = document.createElement("video").canPlayType(mime);
-                      setVideoError(canPlay === "");
-                      setActiveVideo(vi);
-                    }}
+                    onClick={() => setActiveVideo(vi)}
                     style={{
                       flexShrink: 0,
                       width: "68px", height: "68px", borderRadius: "8px", overflow: "hidden",
