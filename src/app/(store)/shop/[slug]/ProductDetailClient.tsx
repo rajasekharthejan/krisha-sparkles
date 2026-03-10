@@ -311,6 +311,13 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
     const filename = url.split("/").pop();
     return filename ? `/api/video/${filename}` : url;
   });
+  const totalMedia = images.length + videos.length;
+  const currentMediaIdx = activeVideo !== null ? images.length + activeVideo : activeImage;
+  const navigateMedia = (dir: 1 | -1) => {
+    const newIdx = (currentMediaIdx + dir + totalMedia) % totalMedia;
+    if (newIdx < images.length) { setActiveImage(newIdx); setActiveVideo(null); }
+    else { setActiveVideo(newIdx - images.length); }
+  };
   const hasDiscount = product.compare_price && product.compare_price > product.price;
   const discountPct = hasDiscount
     ? Math.round(((product.compare_price! - product.price) / product.compare_price!) * 100)
@@ -358,8 +365,11 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 <video
                   key={videos[activeVideo]}
                   src={videos[activeVideo]}
-                  controls
+                  autoPlay
+                  loop
+                  muted
                   playsInline
+                  controls
                   style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }}
                 />
               ) : images[activeImage] ? (
@@ -378,52 +388,43 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
               )}
 
               {/* Nav Arrows + counter — navigate all images + videos */}
-              {(images.length + videos.length) > 1 && (() => {
-                const total = images.length + videos.length;
-                const currentIdx = activeVideo !== null ? images.length + activeVideo : activeImage;
-                function navigate(dir: 1 | -1) {
-                  const newIdx = (currentIdx + dir + total) % total;
-                  if (newIdx < images.length) { setActiveImage(newIdx); setActiveVideo(null); }
-                  else { setActiveVideo(newIdx - images.length); }
-                }
-                return (
-                  <>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); navigate(-1); }}
-                      style={{
-                        position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)",
-                        width: "36px", height: "36px", borderRadius: "50%",
-                        background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
-                        border: "1px solid var(--gold-border)", cursor: "pointer",
-                        color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
-                      }}
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); navigate(1); }}
-                      style={{
-                        position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
-                        width: "36px", height: "36px", borderRadius: "50%",
-                        background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
-                        border: "1px solid var(--gold-border)", cursor: "pointer",
-                        color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
-                      }}
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                    <span style={{
-                      position: "absolute", bottom: "12px", right: "12px",
-                      background: "rgba(10,10,10,0.75)", backdropFilter: "blur(6px)",
-                      color: "var(--text)", borderRadius: "20px",
-                      fontSize: "0.7rem", fontWeight: 600, padding: "3px 10px",
-                      border: "1px solid rgba(201,168,76,0.2)",
-                    }}>
-                      {currentIdx + 1} / {total}
-                    </span>
-                  </>
-                );
-              })()}
+              {totalMedia > 1 && (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigateMedia(-1); }}
+                    style={{
+                      position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)",
+                      width: "36px", height: "36px", borderRadius: "50%",
+                      background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
+                      border: "1px solid var(--gold-border)", cursor: "pointer",
+                      color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigateMedia(1); }}
+                    style={{
+                      position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                      width: "36px", height: "36px", borderRadius: "50%",
+                      background: "rgba(10,10,10,0.7)", backdropFilter: "blur(8px)",
+                      border: "1px solid var(--gold-border)", cursor: "pointer",
+                      color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                  <span style={{
+                    position: "absolute", bottom: "12px", right: "12px",
+                    background: "rgba(10,10,10,0.75)", backdropFilter: "blur(6px)",
+                    color: "var(--text)", borderRadius: "20px",
+                    fontSize: "0.7rem", fontWeight: 600, padding: "3px 10px",
+                    border: "1px solid rgba(201,168,76,0.2)",
+                  }}>
+                    {currentMediaIdx + 1} / {totalMedia}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Thumbnail Strip — horizontal scroll, no wrap */}
