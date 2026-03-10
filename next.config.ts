@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    // Cache optimized images on Vercel's CDN edge for 1 year (default is 60s)
+    minimumCacheTTL: 31536000,
+    // Serve AVIF (60% smaller than JPEG) to modern browsers, WebP as fallback
+    formats: ["image/avif", "image/webp"],
+    // Tighten device sizes to avoid generating too many variants
+    deviceSizes: [640, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 64, 96, 128, 256],
     remotePatterns: [
       {
         protocol: "https",

@@ -377,9 +377,11 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                   src={images[activeImage]}
                   alt={product.name}
                   fill
-                  sizes="(max-width: 768px) 100vw, 50vw"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
                   style={{ objectFit: "cover" }}
                   priority
+                  placeholder="blur"
+                  blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOCIgaGVpZ2h0PSI4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiMxNDE0MEUiLz48L3N2Zz4="
                 />
               ) : (
                 <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}>
@@ -461,8 +463,11 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                         alt={`View ${i + 1}`}
                         width={68}
                         height={68}
+                        sizes="96px"
                         loading={i < 4 ? "eager" : "lazy"}
                         style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                        placeholder="blur"
+                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOCIgaGVpZ2h0PSI4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiMxNDE0MEUiLz48L3N2Zz4="
                       />
                     )}
                   </button>
