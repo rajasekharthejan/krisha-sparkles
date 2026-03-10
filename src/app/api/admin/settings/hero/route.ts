@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-const VALID_LAYOUTS = ["celestial", "split", "minimal", "diagonal", "framed"] as const;
+const VALID_LAYOUTS = ["celestial", "split", "minimal", "diagonal", "framed", "luxury", "blossom"] as const;
 
 const HERO_KEYS = [
   "hero_layout", "hero_heading", "hero_subtext", "hero_badge",
