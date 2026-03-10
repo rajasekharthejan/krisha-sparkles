@@ -7,6 +7,11 @@
  *  • Earrings   — overlay on both ear lobe positions (landmarks 234 / 454)
  *  • Necklaces  — overlay below chin / neck area (landmark 152 + jaw width)
  *
+ * Image pipeline (in priority order):
+ *  1. Pre-processed transparent PNG from `product.images_no_bg[]` (via remove.bg)
+ *  2. Client-side flood-fill + pixel-threshold background removal (fallback)
+ *  3. Raw product image (last resort if CORS blocks pixel access)
+ *
  * Features:
  *  • Live webcam + face landmark tracking (468 points, 30fps)
  *  • Smoothed overlay (lerp 0.35 / 0.65) to prevent jitter
@@ -17,7 +22,6 @@
  *  • Download / Web Share API
  *  • Loading stages, face-detection pill, face-guide oval
  *  • Fully mobile-responsive full-screen modal
- *  • Multiply blend mode → white product-photo backgrounds become transparent
  */
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
@@ -40,7 +44,6 @@ declare global {
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
-// unpkg is the primary (official npm CDN); jsdelivr is fallback
 const MP_CDN = "https://unpkg.com/@mediapipe/face_mesh@0.4.1633559619";
 const MP_CDN_FALLBACK = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619";
 
@@ -99,6 +102,133 @@ function Btn({
   );
 }
 
+// ── Flood-fill background removal (fallback when no pre-processed image) ────
+// Uses flood-fill from all 4 corners to find connected background,
+// then removes mannequin dark areas, with edge feathering.
+function extractJewelryFallback(img: HTMLImageElement, jewelType: JType): HTMLCanvasElement | null {
+  try {
+    const W = img.naturalWidth;
+    const H = img.naturalHeight;
+
+    // For necklaces: auto-crop to bottom 55% to skip mannequin head
+    const cropTop = jewelType === "necklace" ? Math.floor(H * 0.35) : 0;
+    const cropH = H - cropTop;
+
+    const oc = document.createElement("canvas");
+    oc.width = W;
+    oc.height = cropH;
+    const ctx = oc.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+
+    // Draw the cropped region
+    ctx.drawImage(img, 0, cropTop, W, cropH, 0, 0, W, cropH);
+    const id = ctx.getImageData(0, 0, W, cropH);
+    const d = id.data;
+
+    // --- Pass 1: Flood-fill from corners to find connected background ---
+    const visited = new Uint8Array(W * cropH);
+    const bgMask = new Uint8Array(W * cropH); // 1 = background
+
+    // Tolerance for flood fill (how similar a pixel must be to seed)
+    const BG_TOLERANCE = 45;
+
+    function floodFill(startX: number, startY: number) {
+      const idx0 = (startY * W + startX) * 4;
+      const seedR = d[idx0], seedG = d[idx0 + 1], seedB = d[idx0 + 2];
+      // Only start flood fill if seed pixel is light (background-like)
+      const seedBright = (seedR + seedG + seedB) / 3;
+      if (seedBright < 150) return; // don't flood fill from dark corners
+
+      const stack: number[] = [startX, startY];
+      while (stack.length > 0) {
+        const y = stack.pop()!;
+        const x = stack.pop()!;
+        if (x < 0 || x >= W || y < 0 || y >= cropH) continue;
+        const pi = y * W + x;
+        if (visited[pi]) continue;
+        visited[pi] = 1;
+
+        const i = pi * 4;
+        const dr = Math.abs(d[i] - seedR);
+        const dg = Math.abs(d[i + 1] - seedG);
+        const db = Math.abs(d[i + 2] - seedB);
+        if (dr + dg + db > BG_TOLERANCE * 3) continue;
+
+        bgMask[pi] = 1;
+        // 4-connected neighbors
+        stack.push(x + 1, y);
+        stack.push(x - 1, y);
+        stack.push(x, y + 1);
+        stack.push(x, y - 1);
+      }
+    }
+
+    // Start flood fill from all 4 corners and edge midpoints
+    floodFill(0, 0);
+    floodFill(W - 1, 0);
+    floodFill(0, cropH - 1);
+    floodFill(W - 1, cropH - 1);
+    floodFill(Math.floor(W / 2), 0); // top center
+    floodFill(0, Math.floor(cropH / 2)); // left center
+    floodFill(W - 1, Math.floor(cropH / 2)); // right center
+
+    // --- Pass 2: Per-pixel processing ---
+    for (let pi = 0; pi < W * cropH; pi++) {
+      const i = pi * 4;
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      const avg = (r + g + b) / 3;
+      const maxC = Math.max(r, g, b);
+      const minC = Math.min(r, g, b);
+      const sat = maxC > 0 ? (maxC - minC) / maxC : 0;
+      const bright = avg / 255;
+
+      if (bgMask[pi]) {
+        // Flood-fill detected background → fully transparent
+        d[i + 3] = 0;
+      } else if (bright > 0.75 && sat < 0.08) {
+        // Near-white that flood fill missed (isolated bg patches)
+        const t = Math.min(1, (bright - 0.75) / 0.1 + (0.08 - sat) / 0.08);
+        d[i + 3] = Math.round((1 - t) * 255);
+      } else if (bright < 0.25 && sat < 0.12) {
+        // Very dark mannequin areas (neck, hair, shadows)
+        const t = Math.min(1, (0.25 - bright) / 0.15 + (0.12 - sat) / 0.12);
+        d[i + 3] = Math.round((1 - t) * 255);
+      } else if (bright < 0.45 && sat < 0.08) {
+        // Mid-grey mannequin skin/clothing (the problem zone)
+        const t = Math.min(1, ((0.45 - bright) / 0.2) * ((0.08 - sat) / 0.08));
+        d[i + 3] = Math.round((1 - t * 0.85) * 255);
+      }
+      // else: colorful/saturated pixels (gold, gems) → keep fully opaque
+    }
+
+    // --- Pass 3: Edge feathering (3px blur on alpha channel) ---
+    const alpha = new Uint8Array(W * cropH);
+    for (let pi = 0; pi < W * cropH; pi++) alpha[pi] = d[pi * 4 + 3];
+
+    for (let y = 1; y < cropH - 1; y++) {
+      for (let x = 1; x < W - 1; x++) {
+        const pi = y * W + x;
+        const a = alpha[pi];
+        // Only feather edges (where alpha transitions between 0 and 255)
+        if (a > 10 && a < 245) {
+          // Average with neighbors for smoother edges
+          const sum =
+            alpha[pi - W - 1] + alpha[pi - W] + alpha[pi - W + 1] +
+            alpha[pi - 1] + alpha[pi] * 2 + alpha[pi + 1] +
+            alpha[pi + W - 1] + alpha[pi + W] + alpha[pi + W + 1];
+          d[pi * 4 + 3] = Math.round(sum / 10);
+        }
+      }
+    }
+
+    ctx.putImageData(id, 0, 0);
+    return oc;
+  } catch {
+    // CORS taint — fall back to raw image
+    return null;
+  }
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 export default function VirtualTryOn({ product }: { product: Product }) {
   const jtype = detectJewelType(product.category?.slug ?? "");
@@ -111,11 +241,12 @@ export default function VirtualTryOn({ product }: { product: Product }) {
   const [imgIdx, setImgIdx] = useState(0);
   const [photo, setPhoto] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [hasTransparent, setHasTransparent] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overImgRef = useRef<HTMLImageElement | null>(null);
-  // Processed canvas with background/mannequin removed (only colored jewelry kept)
+  // Processed canvas with background/mannequin removed (only used as fallback)
   const overCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const meshRef = useRef<FMesh | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -127,27 +258,41 @@ export default function VirtualTryOn({ product }: { product: Product }) {
   // Track mount state so async ops don't setState after unmount
   useEffect(() => {
     mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
+    return () => { mountedRef.current = false; };
   }, []);
 
-  // Pre-load the overlay (product) image whenever selection changes
+  // Pre-load the overlay image — prefer transparent (no-bg) version
   useEffect(() => {
-    const url = product.images?.[imgIdx];
-    if (!url || !open) return;
+    if (!open) return;
+
+    // Priority: transparent PNG from remove.bg > original image
+    const noBgUrl = product.images_no_bg?.[imgIdx];
+    const originalUrl = product.images?.[imgIdx];
+    const url = noBgUrl || originalUrl;
+    if (!url) return;
+
+    const usingTransparent = !!noBgUrl;
+    setHasTransparent(usingTransparent);
+
     const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.src = url;
     img.onload = () => {
       overImgRef.current = img;
-      overCanvasRef.current = extractJewelry(img);
+      if (usingTransparent) {
+        // Pre-processed transparent image — no extraction needed!
+        overCanvasRef.current = null;
+      } else {
+        // Fallback: client-side extraction with flood-fill
+        overCanvasRef.current = extractJewelryFallback(img, jtype);
+      }
     };
+
     return () => {
       overImgRef.current = null;
       overCanvasRef.current = null;
     };
-  }, [imgIdx, open, product.images]);
+  }, [imgIdx, open, product.images, product.images_no_bg, jtype]);
 
   // ── Stop everything ──────────────────────────────────────────────────────
   function stopAll() {
@@ -170,10 +315,8 @@ export default function VirtualTryOn({ product }: { product: Product }) {
 
     const tryLoad = (baseUrl: string) =>
       new Promise<string>((res, rej) => {
-        // Remove any previously failed script for this src
         const existing = document.querySelector(`script[src="${baseUrl}/face_mesh.js"]`);
         if (existing) existing.remove();
-
         const s = document.createElement("script");
         s.src = `${baseUrl}/face_mesh.js`;
         s.onload = () => res(baseUrl);
@@ -181,7 +324,6 @@ export default function VirtualTryOn({ product }: { product: Product }) {
         document.head.appendChild(s);
       });
 
-    // Try primary then fallback
     let activeCdn: string;
     try {
       activeCdn = await tryLoad(MP_CDN);
@@ -193,7 +335,6 @@ export default function VirtualTryOn({ product }: { product: Product }) {
       }
     }
     mpLoadedRef.current = true;
-    // Store the CDN that worked so WASM files load from the same origin
     (window as Window & { _ksMpCdn?: string })._ksMpCdn = activeCdn;
   }
 
@@ -320,59 +461,13 @@ export default function VirtualTryOn({ product }: { product: Product }) {
     }
   }
 
-  // ── Client-side background removal ───────────────────────────────────────
-  // Removes the white/grey background AND grey mannequin from product photos.
-  // Keeps only colorful/saturated pixels (gold jewelry, colored gems).
-  // Works for Indian jewelry which is typically high-saturation gold/colorful.
-  // Pixel data from actual product images (sampled in browser):
-  //   Background:    sat≈0.01, bright≈0.84  → remove (bright>0.70 AND sat<0.06)
-  //   Mannequin:     sat≈0.06, bright≈0.23  → remove (bright<0.32 AND sat<0.13)
-  //   Gold chain:    sat≈0.10, bright≈0.66  → KEEP  (medium bright, in neither zone)
-  //   Gems/pendants: sat≈0.27, bright≈0.40  → KEEP  (higher sat)
-  function extractJewelry(img: HTMLImageElement): HTMLCanvasElement | null {
-    try {
-      const oc = document.createElement("canvas");
-      oc.width = img.naturalWidth;
-      oc.height = img.naturalHeight;
-      const octx = oc.getContext("2d", { willReadFrequently: true });
-      if (!octx) return null;
-      octx.drawImage(img, 0, 0);
-      const id = octx.getImageData(0, 0, oc.width, oc.height);
-      const d = id.data;
-
-      for (let i = 0; i < d.length; i += 4) {
-        const r = d[i], g = d[i + 1], b = d[i + 2];
-        const avg = (r + g + b) / 3;
-        const maxDiff = Math.max(Math.abs(r - avg), Math.abs(g - avg), Math.abs(b - avg));
-        const sat = avg > 1 ? maxDiff / avg : 0;
-        const bright = avg / 255;
-
-        // Remove light grey background (bright + nearly neutral)
-        if (bright > 0.70 && sat < 0.06) {
-          const t = Math.min(1, (bright - 0.70) / 0.08 + (0.06 - sat) / 0.06);
-          d[i + 3] = Math.round((1 - t) * 255);
-        }
-        // Remove dark mannequin/shadows (dark + nearly neutral)
-        else if (bright < 0.32 && sat < 0.13) {
-          const t = Math.min(1, (0.32 - bright) / 0.12 + (0.13 - sat) / 0.13);
-          d[i + 3] = Math.round((1 - t) * 255);
-        }
-        // Everything else (gold chain, gems, coloured parts) → fully opaque
-      }
-
-      octx.putImageData(id, 0, 0);
-      return oc;
-    } catch {
-      // CORS taint — fall back to raw image
-      return null;
-    }
-  }
-
   // ── Overlay drawing ──────────────────────────────────────────────────────
   function drawJewelry(ctx: CanvasRenderingContext2D, lms: FL[], W: number, H: number) {
-    // Prefer the background-removed canvas; fall back to raw image
-    const src: CanvasImageSource | null = overCanvasRef.current ?? overImgRef.current;
+    // Prefer the background-removed canvas; then transparent image; then raw image
+    const src: CanvasImageSource | null =
+      overCanvasRef.current ?? overImgRef.current;
     if (!src) return;
+
     const srcW = src instanceof HTMLImageElement ? src.naturalWidth : (src as HTMLCanvasElement).width;
     const srcH = src instanceof HTMLImageElement ? src.naturalHeight : (src as HTMLCanvasElement).height;
 
@@ -383,9 +478,10 @@ export default function VirtualTryOn({ product }: { product: Product }) {
 
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
-    ctx.globalAlpha = 0.92;
+    ctx.globalAlpha = 0.95;
 
     if (jtype === "earrings") {
+      // Earrings: place at ear lobes (landmarks 234 = right ear, 454 = left ear)
       const lx = mx(454);
       const ly = my(454);
       const rx = mx(234);
@@ -397,15 +493,33 @@ export default function VirtualTryOn({ product }: { product: Product }) {
       ctx.drawImage(src, lx - ew * 0.5, ly, ew, eh);
       ctx.drawImage(src, rx - ew * 0.5, ry, ew, eh);
     } else {
-      // Necklace: span 2.2× face width so it's clearly visible
-      const lx = mx(454);
-      const rx = mx(234);
+      // Necklace: position below chin, spanning shoulder-to-shoulder
+      // Key landmarks:
+      //   152 = chin (bottom of face)
+      //   234 = right jaw near ear
+      //   454 = left jaw near ear
+      //   10  = forehead top
+      //   172 = right jawline lower
+      //   397 = left jawline lower
+      const lx = mx(454); // left ear area
+      const rx = mx(234); // right ear area
       const chinY = my(152);
+      const foreheadY = my(10);
+      const faceH = chinY - foreheadY;
       const faceW = Math.abs(rx - lx);
+
+      // Necklace width: 2.2× face width for good coverage
       const nw = faceW * 2.2;
       const nh = nw * (srcH / srcW);
-      const nx = (lx + rx) / 2 - nw / 2;
-      ctx.drawImage(src, nx, chinY, nw, nh);
+
+      // Center horizontally on face center
+      const faceCenterX = (lx + rx) / 2;
+      const nx = faceCenterX - nw / 2;
+
+      // Position: start slightly below chin (5% of face height gap)
+      const ny = chinY + faceH * 0.05;
+
+      ctx.drawImage(src, nx, ny, nw, nh);
     }
 
     ctx.restore();
@@ -782,7 +896,7 @@ export default function VirtualTryOn({ product }: { product: Product }) {
                   }}
                 >
                   {faceOn
-                    ? `${jtype === "earrings" ? "👂" : "📿"} Jewelry overlay active`
+                    ? `${jtype === "earrings" ? "👂" : "📿"} Jewelry overlay active${hasTransparent ? "" : " (basic)"}`
                     : "Position your face in frame"}
                 </span>
               </div>
@@ -884,6 +998,7 @@ export default function VirtualTryOn({ product }: { product: Product }) {
                       boxShadow:
                         imgIdx === i ? "0 0 12px rgba(201,168,76,0.45)" : "none",
                       transition: "all 0.2s",
+                      position: "relative",
                     }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -892,6 +1007,28 @@ export default function VirtualTryOn({ product }: { product: Product }) {
                       alt={`Style ${i + 1}`}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
+                    {/* Small indicator if this image has AR-ready transparent version */}
+                    {product.images_no_bg?.[i] && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: "2px",
+                          right: "2px",
+                          width: "12px",
+                          height: "12px",
+                          borderRadius: "50%",
+                          background: "#22c55e",
+                          border: "1.5px solid #000",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "7px",
+                        }}
+                        title="AR-ready"
+                      >
+                        ✓
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
