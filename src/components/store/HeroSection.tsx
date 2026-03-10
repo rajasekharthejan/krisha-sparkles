@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { ReactNode } from "react";
 
 export interface HeroProps {
-  layout: "celestial" | "split" | "minimal" | "diagonal" | "framed" | "luxury";
+  layout: "celestial" | "split" | "minimal" | "diagonal" | "framed" | "luxury" | "blossom";
   heading: string;
   subtext: string;
   badge: string;
@@ -398,6 +398,324 @@ function LuxuryHero(p: HeroProps) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   LAYOUT 7: Blossom Garden (ivory-blush, split, rose gold, circular)
+   ═══════════════════════════════════════════════════════════════════ */
+function BlossomHero(p: HeroProps) {
+  const isExternalSecondary = p.ctaSecondaryUrl.startsWith("http");
+  return (
+    <section style={{
+      position: "relative",
+      height: "100vh",
+      minHeight: "640px",
+      display: "flex",
+      alignItems: "center",
+      overflow: "hidden",
+      background: "radial-gradient(ellipse at 28% 55%, #fdf8f3 0%, #f7ede5 42%, #ede0d4 100%)",
+    }}>
+
+      {/* ── Subtle paper-grain overlay ── */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.45, zIndex: 1,
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E")`,
+      }} />
+
+      {/* ── Scattered rose-gold ornamental dots ── */}
+      {[
+        { top: "9%",  left: "56%" }, { top: "16%", left: "63%" },
+        { top: "6%",  left: "74%" }, { top: "13%", left: "83%" },
+        { top: "24%", left: "90%" }, { top: "76%", left: "58%" },
+        { top: "84%", left: "70%" }, { top: "70%", left: "79%" },
+        { top: "89%", left: "87%" }, { top: "52%", left: "93%" },
+      ].map((dot, i) => (
+        <div key={i} style={{
+          position: "absolute", top: dot.top, left: dot.left, zIndex: 1,
+          width: i % 3 === 0 ? "5px" : "3px", height: i % 3 === 0 ? "5px" : "3px",
+          borderRadius: "50%",
+          background: i % 2 === 0 ? "rgba(180,110,90,0.28)" : "rgba(180,110,90,0.14)",
+          animation: `float ${4 + (i % 3)}s ease-in-out infinite`,
+          animationDelay: `${i * 0.35}s`,
+        }} />
+      ))}
+
+      {/* ── Top accent line ── */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: "2px", zIndex: 10,
+        background: "linear-gradient(90deg, transparent 0%, rgba(180,110,90,0.4) 30%, rgba(180,110,90,0.4) 70%, transparent 100%)",
+      }} />
+
+      {/* ── Main grid ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1.05fr 0.95fr",
+        maxWidth: "1280px",
+        margin: "0 auto",
+        padding: "0 clamp(1.5rem, 5vw, 5rem)",
+        width: "100%",
+        position: "relative",
+        zIndex: 10,
+        alignItems: "center",
+        gap: "clamp(2rem, 5vw, 5rem)",
+      }}>
+
+        {/* LEFT ── Text column */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+
+          {/* Badge with side rules */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: "0.85rem",
+            marginBottom: "1.75rem",
+            animation: "slideUp 0.6s ease 0.1s both",
+          }}>
+            <div style={{ width: "2.25rem", height: "1px", background: "rgba(180,110,90,0.55)", flexShrink: 0 }} />
+            <p style={{
+              fontSize: "0.62rem", letterSpacing: "0.42em",
+              textTransform: "uppercase", color: "#b8756a",
+              fontWeight: 600, margin: 0, whiteSpace: "nowrap",
+            }}>
+              {p.badge}
+            </p>
+            <div style={{ width: "2.25rem", height: "1px", background: "rgba(180,110,90,0.55)", flexShrink: 0 }} />
+          </div>
+
+          {/* Main heading — italic serif, deep wine */}
+          <h1 style={{
+            fontFamily: "var(--font-playfair)",
+            fontSize: "clamp(2.6rem, 6vw, 5.25rem)",
+            fontWeight: 400,
+            fontStyle: "italic",
+            lineHeight: 1.08,
+            color: "#2a1215",
+            marginBottom: "1.75rem",
+            animation: "slideUp 0.75s ease 0.25s both",
+          }}>
+            {parseHeading(p.heading)}
+          </h1>
+
+          {/* Ornamental divider */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: "0.6rem",
+            marginBottom: "1.75rem",
+            animation: "slideUp 0.6s ease 0.4s both",
+          }}>
+            <div style={{ width: "55px", height: "1px", background: "linear-gradient(90deg, #b8756a, rgba(184,117,106,0.2))" }} />
+            <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#b8756a", opacity: 0.65 }} />
+            <div style={{ width: "28px", height: "1px", background: "rgba(180,110,90,0.25)" }} />
+          </div>
+
+          {/* Subtext — dusty mauve */}
+          <p style={{
+            fontSize: "clamp(0.88rem, 1.5vw, 1.02rem)",
+            color: "#7a5a5a",
+            maxWidth: "400px",
+            lineHeight: 1.9,
+            marginBottom: "2.75rem",
+            animation: "slideUp 0.6s ease 0.5s both",
+            fontWeight: 400,
+          }}>
+            {p.subtext}
+          </p>
+
+          {/* CTAs — wine + outline */}
+          <div style={{
+            display: "flex", gap: "1rem", flexWrap: "wrap",
+            animation: "slideUp 0.6s ease 0.65s both",
+          }}>
+            <Link href={p.ctaPrimaryUrl} style={{
+              background: "#2a1215",
+              color: "#fdf8f3",
+              padding: "0.9rem 2.5rem",
+              fontSize: "0.72rem",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              textDecoration: "none",
+              display: "inline-flex", alignItems: "center", gap: "0.65rem",
+              fontWeight: 500,
+              transition: "background 0.25s",
+            }}>
+              {p.ctaPrimaryText} <span style={{ fontSize: "0.95rem" }}>→</span>
+            </Link>
+            {isExternalSecondary ? (
+              <a href={p.ctaSecondaryUrl} target="_blank" rel="noopener noreferrer" style={{
+                border: "1px solid rgba(42,18,21,0.3)",
+                color: "#2a1215",
+                padding: "0.9rem 2.5rem",
+                fontSize: "0.72rem",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                textDecoration: "none",
+                display: "inline-flex", alignItems: "center",
+                fontWeight: 500,
+                transition: "border-color 0.25s",
+              }}>
+                {p.ctaSecondaryText}
+              </a>
+            ) : (
+              <Link href={p.ctaSecondaryUrl} style={{
+                border: "1px solid rgba(42,18,21,0.3)",
+                color: "#2a1215",
+                padding: "0.9rem 2.5rem",
+                fontSize: "0.72rem",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                textDecoration: "none",
+                display: "inline-flex", alignItems: "center",
+                fontWeight: 500,
+                transition: "border-color 0.25s",
+              }}>
+                {p.ctaSecondaryText}
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT ── Decorative circular panel */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          position: "relative",
+          animation: "slideUp 0.85s ease 0.35s both",
+        }}>
+
+          {/* Soft ambient glow behind ring */}
+          <div style={{
+            position: "absolute",
+            width: "clamp(280px, 40vw, 500px)",
+            height: "clamp(280px, 40vw, 500px)",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(196,133,106,0.14) 0%, transparent 68%)",
+            pointerEvents: "none",
+          }} />
+
+          {/* Outer ring */}
+          <div style={{
+            width: "clamp(240px, 34vw, 440px)",
+            height: "clamp(240px, 34vw, 440px)",
+            borderRadius: "50%",
+            border: "1px solid rgba(180,110,90,0.28)",
+            position: "relative",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            animation: "float 9s ease-in-out infinite",
+            flexShrink: 0,
+          }}>
+
+            {/* Inner ring */}
+            <div style={{
+              position: "absolute",
+              inset: "18px",
+              borderRadius: "50%",
+              border: "1px solid rgba(180,110,90,0.14)",
+            }} />
+
+            {/* Second inner ring */}
+            <div style={{
+              position: "absolute",
+              inset: "40px",
+              borderRadius: "50%",
+              border: "1px dashed rgba(180,110,90,0.1)",
+            }} />
+
+            {/* Lotus / 8-petal SVG ornament */}
+            <svg
+              viewBox="0 0 220 220"
+              style={{
+                width: "clamp(110px, 16vw, 200px)",
+                height: "clamp(110px, 16vw, 200px)",
+                opacity: 0.22,
+                flexShrink: 0,
+              }}
+            >
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+                <ellipse
+                  key={deg}
+                  cx="110" cy="110" rx="16" ry="52"
+                  fill="rgba(180,110,90,0.25)"
+                  stroke="rgba(180,110,90,0.9)"
+                  strokeWidth="1"
+                  transform={`rotate(${deg}, 110, 110)`}
+                />
+              ))}
+              <circle cx="110" cy="110" r="14" fill="none" stroke="rgba(180,110,90,0.9)" strokeWidth="1" />
+              <circle cx="110" cy="110" r="7" fill="rgba(180,110,90,0.55)" />
+            </svg>
+
+            {/* Compass-point accent dots on the outer ring */}
+            {[
+              { top: "-5px", left: "50%", transform: "translateX(-50%)" },
+              { bottom: "-5px", left: "50%", transform: "translateX(-50%)" },
+              { left: "-5px", top: "50%", transform: "translateY(-50%)" },
+              { right: "-5px", top: "50%", transform: "translateY(-50%)" },
+            ].map((pos, i) => (
+              <div key={i} style={{
+                position: "absolute", ...pos,
+                width: "9px", height: "9px", borderRadius: "50%",
+                background: "rgba(180,110,90,0.45)",
+              }} />
+            ))}
+          </div>
+
+          {/* Floating stat badge — top right */}
+          <div style={{
+            position: "absolute", top: "8%", right: "-2%",
+            background: "rgba(253,248,243,0.97)",
+            border: "1px solid rgba(180,110,90,0.22)",
+            borderRadius: "14px",
+            padding: "0.65rem 1rem",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0 8px 30px rgba(42,18,21,0.07)",
+            textAlign: "center",
+            animation: "float 6s ease-in-out infinite",
+            animationDelay: "-2s",
+          }}>
+            <p style={{
+              fontSize: "1.25rem", fontWeight: 700,
+              color: "#2a1215", margin: 0,
+              fontFamily: "var(--font-playfair)",
+              lineHeight: 1.1,
+            }}>500+</p>
+            <p style={{
+              fontSize: "0.58rem", letterSpacing: "0.2em",
+              color: "#9a6a6a", margin: 0,
+              textTransform: "uppercase", fontWeight: 500,
+            }}>Designs</p>
+          </div>
+
+          {/* Floating stat badge — bottom left */}
+          <div style={{
+            position: "absolute", bottom: "10%", left: "-6%",
+            background: "rgba(253,248,243,0.97)",
+            border: "1px solid rgba(180,110,90,0.22)",
+            borderRadius: "14px",
+            padding: "0.65rem 1rem",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0 8px 30px rgba(42,18,21,0.07)",
+            textAlign: "center",
+            animation: "float 7s ease-in-out infinite",
+            animationDelay: "-4s",
+          }}>
+            <p style={{
+              fontSize: "1.25rem", fontWeight: 700,
+              color: "#2a1215", margin: 0,
+              fontFamily: "var(--font-playfair)",
+              lineHeight: 1.1,
+            }}>★ 4.9</p>
+            <p style={{
+              fontSize: "0.58rem", letterSpacing: "0.2em",
+              color: "#9a6a6a", margin: 0,
+              textTransform: "uppercase", fontWeight: 500,
+            }}>Rated</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bottom accent strip ── */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: "2px",
+        background: "linear-gradient(90deg, transparent, rgba(180,110,90,0.35) 25%, rgba(180,110,90,0.35) 75%, transparent)",
+      }} />
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    MAIN EXPORT — renders the selected layout
    ═══════════════════════════════════════════════════════════════════ */
 export default function HeroSection(props: HeroProps) {
@@ -407,6 +725,7 @@ export default function HeroSection(props: HeroProps) {
     case "diagonal": return <DiagonalHero {...props} />;
     case "framed":   return <FramedHero {...props} />;
     case "luxury":   return <LuxuryHero {...props} />;
+    case "blossom":  return <BlossomHero {...props} />;
     case "celestial":
     default:         return <CelestialHero {...props} />;
   }

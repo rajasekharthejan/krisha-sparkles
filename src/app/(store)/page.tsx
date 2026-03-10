@@ -77,7 +77,7 @@ const HERO_DEFAULTS: HeroProps = {
   ctaSecondaryUrl: "https://www.instagram.com/krisha_sparkles/",
 };
 
-const VALID_LAYOUTS = ["celestial", "split", "minimal", "diagonal", "framed", "luxury"];
+const VALID_LAYOUTS = ["celestial", "split", "minimal", "diagonal", "framed", "luxury", "blossom"];
 
 // ── Homepage section visibility ─────────────────────────────────────────────
 const HP_SECTION_KEYS = [

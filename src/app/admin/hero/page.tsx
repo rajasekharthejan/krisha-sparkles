@@ -12,6 +12,7 @@ const LAYOUTS: { id: HeroProps["layout"]; name: string; desc: string }[] = [
   { id: "diagonal",  name: "Bold Diagonal",      desc: "Diagonal gold stripe, left-aligned uppercase" },
   { id: "framed",    name: "Elegant Frame",      desc: "Double-border ornamental frame, centered" },
   { id: "luxury",    name: "Luxury Editorial",   desc: "Full-bleed dark, bottom-left text, bare CTAs — Zara-style" },
+  { id: "blossom",   name: "Blossom Garden",     desc: "Soft ivory & rose, split layout, lotus motif — light & feminine" },
 ];
 
 const DEFAULTS: HeroProps = {
@@ -148,6 +149,31 @@ function LayoutThumbnail({ id }: { id: string }) {
           </div>
           {/* right scroll line */}
           <div style={{ position: "absolute", right: "10px", bottom: "8px", width: "1px", height: "20px", background: "linear-gradient(to bottom, rgba(201,168,76,0.5), transparent)" }} />
+        </div>
+      );
+    case "blossom":
+      return (
+        <div style={{ ...base, background: "radial-gradient(ellipse at 30% 55%, #fdf8f3, #ede0d4)" }}>
+          {/* Top accent strip */}
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, rgba(180,110,90,0.5), transparent)" }} />
+          {/* Left text lines — wine colored */}
+          <div style={{ position: "absolute", top: "22%", left: "8%", width: "32%", height: "3px", background: "rgba(42,18,21,0.55)", borderRadius: "1px" }} />
+          <div style={{ position: "absolute", top: "36%", left: "8%", width: "25%", height: "2px", background: "rgba(42,18,21,0.3)", borderRadius: "1px" }} />
+          <div style={{ position: "absolute", top: "47%", left: "8%", width: "28%", height: "2px", background: "rgba(42,18,21,0.2)", borderRadius: "1px" }} />
+          <div style={{ position: "absolute", top: "60%", left: "8%", width: "20%", height: "2px", background: "rgba(42,18,21,0.15)", borderRadius: "1px" }} />
+          {/* CTA buttons */}
+          <div style={{ position: "absolute", bottom: "14%", left: "8%", width: "18%", height: "6px", background: "rgba(42,18,21,0.5)", borderRadius: "1px" }} />
+          <div style={{ position: "absolute", bottom: "14%", left: "30%", width: "16%", height: "6px", background: "transparent", border: "1px solid rgba(42,18,21,0.3)", borderRadius: "1px" }} />
+          {/* Right circle ring */}
+          <div style={{ position: "absolute", right: "8%", top: "50%", transform: "translateY(-50%)", width: "34px", height: "34px", borderRadius: "50%", border: "1px solid rgba(180,110,90,0.45)" }}>
+            <div style={{ position: "absolute", inset: "4px", borderRadius: "50%", border: "1px solid rgba(180,110,90,0.25)" }} />
+            {/* tiny center dot */}
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "4px", height: "4px", borderRadius: "50%", background: "rgba(180,110,90,0.5)" }} />
+          </div>
+          {/* Rose-gold ornamental dots */}
+          {[{ top: "12%", left: "62%" }, { top: "18%", left: "70%" }, { top: "80%", left: "66%" }].map((d, i) => (
+            <div key={i} style={{ position: "absolute", top: d.top, left: d.left, width: "3px", height: "3px", borderRadius: "50%", background: "rgba(180,110,90,0.35)" }} />
+          ))}
         </div>
       );
     default:
