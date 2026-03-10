@@ -2,125 +2,172 @@
 
 /**
  * ProcessARButton — Admin button to process product images through remove.bg
- * Generates transparent PNGs for AR Virtual Try-On overlay.
  *
- * Always shows the button. If REMOVE_BG_API_KEY is not configured,
- * clicking shows a helpful setup message instead of hiding the UI.
+ * Processes ONE image at a time (Vercel 10s serverless timeout safe).
+ * Shows live progress as each image is processed.
  */
 
-import { useState, useEffect } from "react";
-import { Wand2, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Wand2, Loader2, CheckCircle, AlertCircle, Square } from "lucide-react";
 
 interface ARStatus {
   hasApiKey: boolean;
   total: number;
   processed: number;
   pending: number;
+  pendingImages: { productId: string; productName: string; imageIndex: number; imageUrl: string }[];
 }
 
 export default function ProcessARButton() {
   const [status, setStatus] = useState<ARStatus | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [progress, setProgress] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef(false);
 
   // Fetch status on mount
   useEffect(() => {
-    fetch("/api/admin/products/remove-bg")
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to fetch");
-        return r.json();
-      })
-      .then(setStatus)
-      .catch(() => {
-        // If fetch fails (auth, network), set a default status so button still renders
-        setStatus({ hasApiKey: false, total: 0, processed: 0, pending: 0 });
-      });
+    fetchStatus();
   }, []);
 
+  async function fetchStatus() {
+    try {
+      const r = await fetch("/api/admin/products/remove-bg");
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      setStatus(data);
+    } catch {
+      setStatus({ hasApiKey: false, total: 0, processed: 0, pending: 0, pendingImages: [] });
+    }
+  }
+
   async function handleProcess() {
-    // If no API key, show setup instructions instead of processing
     if (status && !status.hasApiKey) {
-      setError(
-        "REMOVE_BG_API_KEY not set. Get a free key at remove.bg/api → add to Vercel env vars → redeploy."
-      );
+      setError("REMOVE_BG_API_KEY not set. Get a free key at remove.bg/api → add to Vercel env vars → redeploy.");
+      return;
+    }
+
+    if (!status?.pendingImages?.length) {
+      setError("No images to process");
       return;
     }
 
     setProcessing(true);
     setResult(null);
     setError(null);
+    abortRef.current = false;
 
-    try {
-      const res = await fetch("/api/admin/products/remove-bg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bulk: true }),
-      });
+    const pending = status.pendingImages;
+    let done = 0;
+    let failed = 0;
 
-      const data = await res.json();
+    for (let i = 0; i < pending.length; i++) {
+      if (abortRef.current) break;
 
-      if (!res.ok) {
-        setError(data.error || "Processing failed");
-        return;
+      const item = pending[i];
+      setProgress(`Processing ${i + 1}/${pending.length}: ${item.productName}`);
+
+      try {
+        const res = await fetch("/api/admin/products/remove-bg", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: item.productId, imageIndex: item.imageIndex }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) done++;
+          else failed++;
+        } else {
+          failed++;
+        }
+      } catch {
+        failed++;
       }
-
-      setResult(
-        `Done! ${data.images_processed} images processed across ${data.products_processed} products` +
-        (data.images_failed ? ` (${data.images_failed} failed)` : "")
-      );
-
-      // Refresh status
-      const statusRes = await fetch("/api/admin/products/remove-bg");
-      if (statusRes.ok) {
-        const newStatus = await statusRes.json();
-        setStatus(newStatus);
-      }
-    } catch {
-      setError("Network error — check your connection");
-    } finally {
-      setProcessing(false);
     }
+
+    setProcessing(false);
+    setProgress("");
+
+    if (abortRef.current) {
+      setResult(`Stopped. ${done} images processed${failed ? `, ${failed} failed` : ""}.`);
+    } else {
+      setResult(`Done! ${done} images processed${failed ? `, ${failed} failed` : ""}.`);
+    }
+
+    // Refresh status
+    await fetchStatus();
+  }
+
+  function handleStop() {
+    abortRef.current = true;
   }
 
   const noApiKey = status && !status.hasApiKey;
-  const allDone = status && status.hasApiKey && status.pending === 0;
+  const allDone = status && status.hasApiKey && (status.pendingImages?.length === 0);
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-      <button
-        onClick={handleProcess}
-        disabled={processing || (allDone === true)}
-        className="btn-gold-outline"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          opacity: processing ? 0.7 : 1,
-          cursor: processing ? "wait" : allDone ? "default" : "pointer",
-          borderColor: noApiKey ? "rgba(245,158,11,0.4)" : undefined,
-        }}
-      >
-        {processing ? (
-          <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-        ) : allDone ? (
-          <CheckCircle size={16} />
-        ) : noApiKey ? (
-          <AlertCircle size={16} style={{ color: "#f59e0b" }} />
-        ) : (
-          <Wand2 size={16} />
-        )}
-        {processing
-          ? "Processing AR Images…"
-          : allDone
-          ? "All AR Images Ready"
-          : noApiKey
-          ? "Setup AR Images"
-          : `Process AR Images${status?.pending ? ` (${status.pending})` : ""}`}
-      </button>
+      {processing ? (
+        <>
+          <button
+            onClick={handleStop}
+            className="btn-gold-outline"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              borderColor: "rgba(239,68,68,0.4)",
+              color: "#ef4444",
+            }}
+          >
+            <Square size={14} />
+            Stop
+          </button>
+          <span
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--gold)",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+            }}
+          >
+            <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+            {progress}
+          </span>
+        </>
+      ) : (
+        <button
+          onClick={handleProcess}
+          disabled={allDone === true}
+          className="btn-gold-outline"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            cursor: allDone ? "default" : "pointer",
+            borderColor: noApiKey ? "rgba(245,158,11,0.4)" : undefined,
+          }}
+        >
+          {allDone ? (
+            <CheckCircle size={16} />
+          ) : noApiKey ? (
+            <AlertCircle size={16} style={{ color: "#f59e0b" }} />
+          ) : (
+            <Wand2 size={16} />
+          )}
+          {allDone
+            ? "All AR Images Ready"
+            : noApiKey
+            ? "Setup AR Images"
+            : `Process AR Images${status?.pendingImages?.length ? ` (${status.pendingImages.length})` : ""}`}
+        </button>
+      )}
 
       {/* Status badge */}
-      {status && status.hasApiKey && status.total > 0 && !result && !error && (
+      {status && status.hasApiKey && status.total > 0 && !processing && !result && !error && (
         <span
           style={{
             fontSize: "0.72rem",
@@ -134,23 +181,15 @@ export default function ProcessARButton() {
         </span>
       )}
 
-      {/* Result message */}
+      {/* Result */}
       {result && (
-        <span
-          style={{
-            fontSize: "0.75rem",
-            color: "#10b981",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.3rem",
-          }}
-        >
+        <span style={{ fontSize: "0.75rem", color: "#10b981", display: "flex", alignItems: "center", gap: "0.3rem" }}>
           <CheckCircle size={14} />
           {result}
         </span>
       )}
 
-      {/* Error / info message */}
+      {/* Error */}
       {error && (
         <span
           style={{
