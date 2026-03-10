@@ -47,6 +47,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
   const [avgRating, setAvgRating] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<number | null>(null);
   const addToCartBtnRef = useRef<HTMLButtonElement>(null);
   const { addItem, openCart } = useCartStore();
   const { user } = useAuthStore();
@@ -303,6 +304,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
   }
 
   const images = product.images?.length ? product.images : [""];
+  const videos = product.videos?.filter(Boolean) || [];
   const hasDiscount = product.compare_price && product.compare_price > product.price;
   const discountPct = hasDiscount
     ? Math.round(((product.compare_price! - product.price) / product.compare_price!) * 100)
@@ -332,9 +334,9 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "4rem", alignItems: "start" }}>
           {/* Images */}
           <div>
-            {/* Main Image */}
+            {/* Main Image / Video */}
             <div
-              onClick={() => images[activeImage] && setLightboxOpen(true)}
+              onClick={() => activeVideo === null && images[activeImage] && setLightboxOpen(true)}
               style={{
                 position: "relative",
                 aspectRatio: "1",
@@ -343,10 +345,19 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 background: "var(--surface)",
                 border: "1px solid var(--gold-border)",
                 marginBottom: "1rem",
-                cursor: images[activeImage] ? "zoom-in" : "default",
+                cursor: activeVideo !== null ? "default" : images[activeImage] ? "zoom-in" : "default",
               }}
             >
-              {images[activeImage] ? (
+              {activeVideo !== null && videos[activeVideo] ? (
+                <video
+                  key={videos[activeVideo]}
+                  src={videos[activeVideo]}
+                  controls
+                  autoPlay
+                  playsInline
+                  style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }}
+                />
+              ) : images[activeImage] ? (
                 <Image
                   src={images[activeImage]}
                   alt={product.name}
@@ -361,8 +372,8 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 </div>
               )}
 
-              {/* Nav Arrows + Image counter */}
-              {images.length > 1 && (
+              {/* Nav Arrows + Image counter — only when viewing images */}
+              {activeVideo === null && images.length > 1 && (
                 <>
                   <button
                     onClick={(e) => { e.stopPropagation(); setActiveImage((activeImage - 1 + images.length) % images.length); }}
@@ -403,7 +414,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
             </div>
 
             {/* Thumbnail Strip — horizontal scroll, no wrap */}
-            {images.length > 1 && (
+            {(images.length > 1 || videos.length > 0) && (
               <div
                 style={{
                   display: "flex",
@@ -418,16 +429,16 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
               >
                 {images.map((img, i) => (
                   <button
-                    key={i}
-                    onClick={() => setActiveImage(i)}
+                    key={`img-${i}`}
+                    onClick={() => { setActiveImage(i); setActiveVideo(null); }}
                     style={{
                       flexShrink: 0,
                       width: "68px", height: "68px", borderRadius: "8px", overflow: "hidden",
-                      border: `2px solid ${activeImage === i ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
+                      border: `2px solid ${activeVideo === null && activeImage === i ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
                       cursor: "pointer", padding: 0,
                       background: "var(--surface)",
                       transition: "border-color 0.2s ease",
-                      opacity: activeImage === i ? 1 : 0.7,
+                      opacity: activeVideo === null && activeImage === i ? 1 : 0.7,
                     }}
                   >
                     {img && (
@@ -440,6 +451,27 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                         style={{ objectFit: "cover", width: "100%", height: "100%" }}
                       />
                     )}
+                  </button>
+                ))}
+                {/* Video thumbnails */}
+                {videos.map((_, vi) => (
+                  <button
+                    key={`vid-${vi}`}
+                    onClick={() => setActiveVideo(vi)}
+                    style={{
+                      flexShrink: 0,
+                      width: "68px", height: "68px", borderRadius: "8px", overflow: "hidden",
+                      border: `2px solid ${activeVideo === vi ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
+                      cursor: "pointer", padding: 0,
+                      background: "var(--surface)",
+                      transition: "border-color 0.2s ease",
+                      opacity: activeVideo === vi ? 1 : 0.7,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexDirection: "column", gap: "2px",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.5rem" }}>▶</span>
+                    <span style={{ fontSize: "0.55rem", color: "var(--gold)", fontWeight: 600 }}>VIDEO {vi + 1}</span>
                   </button>
                 ))}
               </div>

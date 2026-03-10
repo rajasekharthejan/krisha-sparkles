@@ -57,13 +57,19 @@ export async function POST(req: NextRequest) {
 
   for (const file of files) {
     // Validate type
-    if (!["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+    const allowedTypes = [
+      "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+      "video/quicktime", "video/mp4", "video/webm", "video/mov",
+    ];
+    if (!allowedTypes.includes(file.type)) {
       errors.push(`${file.name}: unsupported type (${file.type})`);
       continue;
     }
-    // Validate size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      errors.push(`${file.name}: exceeds 10MB limit`);
+    // Validate size (100MB for videos, 10MB for images)
+    const isVideo = file.type.startsWith("video/");
+    const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      errors.push(`${file.name}: exceeds ${isVideo ? "100MB" : "10MB"} limit`);
       continue;
     }
 

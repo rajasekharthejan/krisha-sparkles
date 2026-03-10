@@ -22,6 +22,7 @@ export interface Product {
   category_id?: string;
   category?: Category;
   images: string[];
+  videos?: string[];
   stock_quantity: number;
   featured: boolean;
   active: boolean;
