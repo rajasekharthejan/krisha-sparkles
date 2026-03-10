@@ -324,6 +324,11 @@ export default function VirtualTryOn({ product }: { product: Product }) {
   // Removes the white/grey background AND grey mannequin from product photos.
   // Keeps only colorful/saturated pixels (gold jewelry, colored gems).
   // Works for Indian jewelry which is typically high-saturation gold/colorful.
+  // Pixel data from actual product images (sampled in browser):
+  //   Background:    sat≈0.01, bright≈0.84  → remove (bright>0.70 AND sat<0.06)
+  //   Mannequin:     sat≈0.06, bright≈0.23  → remove (bright<0.32 AND sat<0.13)
+  //   Gold chain:    sat≈0.10, bright≈0.66  → KEEP  (medium bright, in neither zone)
+  //   Gems/pendants: sat≈0.27, bright≈0.40  → KEEP  (higher sat)
   function extractJewelry(img: HTMLImageElement): HTMLCanvasElement | null {
     try {
       const oc = document.createElement("canvas");
@@ -337,25 +342,28 @@ export default function VirtualTryOn({ product }: { product: Product }) {
 
       for (let i = 0; i < d.length; i += 4) {
         const r = d[i], g = d[i + 1], b = d[i + 2];
-        // Compute colour saturation: how far from neutral grey?
         const avg = (r + g + b) / 3;
         const maxDiff = Math.max(Math.abs(r - avg), Math.abs(g - avg), Math.abs(b - avg));
-        const sat = avg > 1 ? maxDiff / avg : 0; // 0=pure grey, ~1=vivid colour
+        const sat = avg > 1 ? maxDiff / avg : 0;
+        const bright = avg / 255;
 
-        if (sat < 0.12) {
-          // Near-grey → fully transparent (removes white BG + grey mannequin)
-          d[i + 3] = 0;
-        } else if (sat < 0.28) {
-          // Soft edge feather — partial transparency for gradients
-          d[i + 3] = Math.round(((sat - 0.12) / 0.16) * 255);
+        // Remove light grey background (bright + nearly neutral)
+        if (bright > 0.70 && sat < 0.06) {
+          const t = Math.min(1, (bright - 0.70) / 0.08 + (0.06 - sat) / 0.06);
+          d[i + 3] = Math.round((1 - t) * 255);
         }
-        // Colourful pixels (sat ≥ 0.28) stay fully opaque
+        // Remove dark mannequin/shadows (dark + nearly neutral)
+        else if (bright < 0.32 && sat < 0.13) {
+          const t = Math.min(1, (0.32 - bright) / 0.12 + (0.13 - sat) / 0.13);
+          d[i + 3] = Math.round((1 - t) * 255);
+        }
+        // Everything else (gold chain, gems, coloured parts) → fully opaque
       }
 
       octx.putImageData(id, 0, 0);
       return oc;
     } catch {
-      // CORS or canvas taint — fall back to raw image
+      // CORS taint — fall back to raw image
       return null;
     }
   }
