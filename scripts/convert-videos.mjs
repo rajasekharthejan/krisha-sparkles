@@ -26,7 +26,7 @@ async function main() {
   if (error) { console.error("DB error:", error); process.exit(1); }
 
   const toConvert = products.filter(p =>
-    p.videos?.some(v => v?.toLowerCase().endsWith(".mov"))
+    p.videos?.some(v => v?.toLowerCase().endsWith(".mov") || v?.toLowerCase().endsWith(".mp4"))
   );
 
   console.log(`Found ${toConvert.length} products with .mov videos\n`);
@@ -47,11 +47,12 @@ async function main() {
       const storagePathMatch = videoUrl.match(/\/product-images\/(.+)$/);
       if (!storagePathMatch) { console.log("  Could not parse storage path, skipping"); continue; }
       const storagePath = storagePathMatch[1];
-      const movFilename = storagePath.split("/").pop();
-      const mp4Filename = movFilename.replace(/\.mov$/i, ".mp4");
-      const newStoragePath = storagePath.replace(movFilename, mp4Filename);
+      const origFilename = storagePath.split("/").pop();
+      // Use _h264 suffix to force a new CDN-uncached URL
+      const mp4Filename = origFilename.replace(/(_h264)?\.mp4$/i, "_h264.mp4").replace(/\.mov$/i, "_h264.mp4");
+      const newStoragePath = storagePath.replace(origFilename, mp4Filename);
 
-      const tmpMov = join(tmpdir(), `ks_${Date.now()}_${movFilename}`);
+      const tmpMov = join(tmpdir(), `ks_${Date.now()}_${origFilename}`);
       const tmpMp4 = join(tmpdir(), `ks_${Date.now()}_${mp4Filename}`);
 
       try {
@@ -69,7 +70,7 @@ async function main() {
         // Convert to H.264 MP4 with ffmpeg
         console.log("  Converting to H.264 MP4...");
         execSync(
-          `ffmpeg -i "${tmpMov}" -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 128k -movflags +faststart -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -y "${tmpMp4}"`,
+          `ffmpeg -i "${tmpMov}" -map 0:v:0 -map "0:a:0?" -c:v libx264 -profile:v high -level:v 4.1 -pix_fmt yuv420p -preset fast -crf 22 -c:a aac -b:a 128k -ar 44100 -ac 2 -movflags +faststart -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -y "${tmpMp4}"`,
           { stdio: "inherit" }
         );
 
@@ -94,8 +95,10 @@ async function main() {
         newVideos[i] = publicUrl;
         console.log(`  Done → ${publicUrl.split("/").pop()}`);
 
-        // Delete old .mov from storage
-        await supabase.storage.from(BUCKET).remove([storagePath]);
+        // Delete old file from storage (skip if same path — upsert already replaced it)
+        if (storagePath !== newStoragePath) {
+          await supabase.storage.from(BUCKET).remove([storagePath]);
+        }
         console.log("  Deleted old .mov");
       } finally {
         if (existsSync(tmpMov)) unlinkSync(tmpMov);
