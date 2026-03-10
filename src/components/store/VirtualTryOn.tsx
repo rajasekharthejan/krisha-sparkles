@@ -40,7 +40,9 @@ declare global {
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const MP_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619";
+// unpkg is the primary (official npm CDN); jsdelivr is fallback
+const MP_CDN = "https://unpkg.com/@mediapipe/face_mesh@0.4.1633559619";
+const MP_CDN_FALLBACK = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619";
 
 const EARRING_KEYS = ["earring", "jhumka", "stud", "chandbali", "ear-ring"];
 const NECKLACE_KEYS = ["necklace", "pendant", "jadau", "haaram", "choker", "chain", "maala"];
@@ -158,19 +160,37 @@ export default function VirtualTryOn({ product }: { product: Product }) {
     }
   }
 
-  // ── Load MediaPipe script from CDN ───────────────────────────────────────
+  // ── Load MediaPipe script from CDN (unpkg primary, jsdelivr fallback) ───
   async function loadMediaPipe(): Promise<void> {
     if (mpLoadedRef.current) return;
-    return new Promise<void>((res, rej) => {
-      const s = document.createElement("script");
-      s.src = `${MP_CDN}/face_mesh.js`;
-      s.onload = () => {
-        mpLoadedRef.current = true;
-        res();
-      };
-      s.onerror = () => rej(new Error("Failed to load MediaPipe. Check your internet connection."));
-      document.head.appendChild(s);
-    });
+
+    const tryLoad = (baseUrl: string) =>
+      new Promise<string>((res, rej) => {
+        // Remove any previously failed script for this src
+        const existing = document.querySelector(`script[src="${baseUrl}/face_mesh.js"]`);
+        if (existing) existing.remove();
+
+        const s = document.createElement("script");
+        s.src = `${baseUrl}/face_mesh.js`;
+        s.onload = () => res(baseUrl);
+        s.onerror = () => rej(new Error(`CDN failed: ${baseUrl}`));
+        document.head.appendChild(s);
+      });
+
+    // Try primary then fallback
+    let activeCdn: string;
+    try {
+      activeCdn = await tryLoad(MP_CDN);
+    } catch {
+      try {
+        activeCdn = await tryLoad(MP_CDN_FALLBACK);
+      } catch {
+        throw new Error("Failed to load AR engine. Please check your connection and try again.");
+      }
+    }
+    mpLoadedRef.current = true;
+    // Store the CDN that worked so WASM files load from the same origin
+    (window as Window & { _ksMpCdn?: string })._ksMpCdn = activeCdn;
   }
 
   // ── Start the AR pipeline ────────────────────────────────────────────────
@@ -233,7 +253,8 @@ export default function VirtualTryOn({ product }: { product: Product }) {
 
     // Step 3 — FaceMesh
     if (mountedRef.current) setLoading(STAGES[2]);
-    const mesh = new window.FaceMesh({ locateFile: (f) => `${MP_CDN}/${f}` });
+    const cdn = (window as Window & { _ksMpCdn?: string })._ksMpCdn ?? MP_CDN;
+    const mesh = new window.FaceMesh({ locateFile: (f) => `${cdn}/${f}` });
     mesh.setOptions({
       maxNumFaces: 1,
       refineLandmarks: true,
