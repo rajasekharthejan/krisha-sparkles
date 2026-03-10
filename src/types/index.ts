@@ -22,8 +22,6 @@ export interface Product {
   category_id?: string;
   category?: Category;
   images: string[];
-  /** Background-removed transparent PNGs (parallel array to images[]) for AR Virtual Try-On */
-  images_no_bg?: string[];
   stock_quantity: number;
   featured: boolean;
   active: boolean;

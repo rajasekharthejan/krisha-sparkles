@@ -59,21 +59,18 @@ const nextConfig: NextConfig = {
             value: "strict-origin-when-cross-origin",
           },
           {
-            // Allow camera for Virtual Try-On AR feature; keep microphone + geolocation blocked
             key: "Permissions-Policy",
-            value: "camera=*, microphone=(), geolocation=()",
+            value: "camera=(), microphone=(), geolocation=()",
           },
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // Added unpkg.com + cdn.jsdelivr.net for MediaPipe FaceMesh (AR Try-On)
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com https://cdn.jsdelivr.net",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.cdninstagram.com https://*.fbcdn.net https://*.stripe.com https://maps.googleapis.com https://maps.gstatic.com",
               "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com",
-              // Added unpkg.com + cdn.jsdelivr.net for MediaPipe WASM fetches
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.in wss://*.supabase.in https://api.stripe.com https://maps.googleapis.com https://www.google-analytics.com https://api.goshippo.com https://wa.me https://unpkg.com https://cdn.jsdelivr.net",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.in wss://*.supabase.in https://api.stripe.com https://maps.googleapis.com https://www.google-analytics.com https://api.goshippo.com https://wa.me",
               "frame-src https://js.stripe.com https://hooks.stripe.com",
               "object-src 'none'",
               "base-uri 'self'",

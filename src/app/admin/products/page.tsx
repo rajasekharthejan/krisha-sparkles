@@ -5,8 +5,6 @@ import { Plus, Edit, Package, Upload } from "lucide-react";
 import { formatPrice, formatDate } from "@/lib/utils";
 import type { Product } from "@/types";
 import DeleteProductButton from "./DeleteProductButton";
-import ProcessARButton from "@/components/admin/ProcessARButton";
-import ProductARButton from "@/components/admin/ProductARButton";
 
 export default async function AdminProductsPage() {
   const supabase = await createAdminClient();
@@ -27,8 +25,7 @@ export default async function AdminProductsPage() {
             {products?.length || 0} products total
           </p>
         </div>
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
-          <ProcessARButton />
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           <Link href="/admin/products/bulk-upload" className="btn-gold-outline" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
             <Upload size={16} />
             Bulk Upload
@@ -164,13 +161,7 @@ export default async function AdminProductsPage() {
                       {formatDate(product.created_at)}
                     </td>
                     <td>
-                      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                        <ProductARButton
-                          productId={product.id}
-                          productName={product.name}
-                          imageCount={product.images?.length || 0}
-                          arReadyCount={(product.images_no_bg || []).filter((u: string) => u && u.length > 0).length}
-                        />
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
                         <Link
                           href={`/admin/products/${product.id}/edit`}
                           style={{
