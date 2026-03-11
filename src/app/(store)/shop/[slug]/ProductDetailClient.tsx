@@ -48,6 +48,8 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [activeVideo, setActiveVideo] = useState<number | null>(null);
+  const [zoomPos, setZoomPos] = useState<{ x: number; y: number } | null>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
   const addToCartBtnRef = useRef<HTMLButtonElement>(null);
   const { addItem, openCart } = useCartStore();
   const { user } = useAuthStore();
@@ -224,6 +226,15 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
     setWishLoading(false);
   }
 
+  function handleZoomMove(e: React.MouseEvent<HTMLDivElement>) {
+    // Only zoom on desktop (pointer won't fire on touch, but guard anyway)
+    if (!imageContainerRef.current || window.innerWidth < 768) return;
+    const rect = imageContainerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    setZoomPos({ x, y });
+  }
+
   function handleReviewImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []).slice(0, 3);
     setReviewImages(files);
@@ -349,7 +360,10 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
           <div>
             {/* Main Image / Video */}
             <div
+              ref={imageContainerRef}
               onClick={() => activeVideo === null && images[activeImage] && setLightboxOpen(true)}
+              onMouseMove={handleZoomMove}
+              onMouseLeave={() => setZoomPos(null)}
               style={{
                 position: "relative",
                 aspectRatio: "1",
@@ -358,7 +372,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 background: "var(--surface)",
                 border: "1px solid var(--gold-border)",
                 marginBottom: "1rem",
-                cursor: activeVideo !== null ? "default" : images[activeImage] ? "zoom-in" : "default",
+                cursor: activeVideo !== null ? "default" : zoomPos ? "crosshair" : images[activeImage] ? "zoom-in" : "default",
               }}
             >
               {activeVideo !== null && videos[activeVideo] ? (
@@ -387,6 +401,20 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}>
                   💎
                 </div>
+              )}
+
+              {/* Zoom overlay — desktop only, images only, pointer-events:none so clicks pass through */}
+              {zoomPos && activeVideo === null && images[activeImage] && (
+                <div
+                  style={{
+                    position: "absolute", inset: 0, zIndex: 4,
+                    backgroundImage: `url(${images[activeImage]})`,
+                    backgroundSize: "280%",
+                    backgroundPosition: `${zoomPos.x}% ${zoomPos.y}%`,
+                    backgroundRepeat: "no-repeat",
+                    pointerEvents: "none",
+                  }}
+                />
               )}
 
               {/* Nav Arrows + counter — navigate all images + videos */}
