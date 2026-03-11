@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import { Plus, Trash2, ToggleLeft, ToggleRight, Instagram } from "lucide-react";
 import Image from "next/image";
 
@@ -16,11 +15,6 @@ interface InstaPost {
   created_at: string;
 }
 
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 const emptyForm = { post_url: "", thumbnail_url: "", caption: "", likes_count: "" };
 
 export default function InstagramAdminPage() {
@@ -33,8 +27,9 @@ export default function InstagramAdminPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from("instagram_posts").select("*").order("display_order", { ascending: true });
-    setPosts((data as InstaPost[]) || []);
+    const res = await fetch("/api/admin/instagram");
+    const json = await res.json();
+    setPosts(json.posts || []);
     setLoading(false);
   }, []);
 
@@ -45,29 +40,37 @@ export default function InstagramAdminPage() {
     if (!form.post_url.trim()) return setError("Post URL is required");
     if (!form.thumbnail_url.trim()) return setError("Thumbnail URL is required");
     setSaving(true);
-    const { error: err } = await supabase.from("instagram_posts").insert({
-      post_url: form.post_url.trim(),
-      thumbnail_url: form.thumbnail_url.trim(),
-      caption: form.caption.trim() || null,
-      likes_count: Number(form.likes_count) || 0,
-      display_order: posts.length,
-      active: true,
+    const res = await fetch("/api/admin/instagram", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        post_url: form.post_url.trim(),
+        thumbnail_url: form.thumbnail_url.trim(),
+        caption: form.caption.trim() || null,
+        likes_count: Number(form.likes_count) || 0,
+        display_order: posts.length,
+      }),
     });
+    const json = await res.json();
     setSaving(false);
-    if (err) return setError(err.message);
+    if (!res.ok) return setError(json.error || "Failed to save post");
     setForm(emptyForm);
     setShowForm(false);
     load();
   }
 
   async function toggleActive(id: string, active: boolean) {
-    await supabase.from("instagram_posts").update({ active: !active }).eq("id", id);
+    await fetch("/api/admin/instagram", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, active: !active }),
+    });
     setPosts((p) => p.map((x) => x.id === id ? { ...x, active: !active } : x));
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remove this Instagram post?")) return;
-    await supabase.from("instagram_posts").delete().eq("id", id);
+    await fetch(`/api/admin/instagram?id=${id}`, { method: "DELETE" });
     setPosts((p) => p.filter((x) => x.id !== id));
   }
 
