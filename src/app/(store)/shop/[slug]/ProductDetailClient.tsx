@@ -422,6 +422,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 <>
                   <button
                     onClick={(e) => { e.stopPropagation(); navigateMedia(-1); }}
+                    onMouseEnter={() => setZoomPos(null)}
                     style={{
                       position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)",
                       width: "36px", height: "36px", borderRadius: "50%",
@@ -434,6 +435,7 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); navigateMedia(1); }}
+                    onMouseEnter={() => setZoomPos(null)}
                     style={{
                       position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
                       width: "36px", height: "36px", borderRadius: "50%",
