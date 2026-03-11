@@ -391,8 +391,13 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                   src={images[activeImage]}
                   alt={product.name}
                   fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
-                  style={{ objectFit: "cover" }}
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 1200px"
+                  style={{
+                    objectFit: "cover",
+                    transform: zoomPos && activeVideo === null ? `scale(2.4)` : "scale(1)",
+                    transformOrigin: zoomPos && activeVideo === null ? `${zoomPos.x}% ${zoomPos.y}%` : "center",
+                    transition: zoomPos ? "none" : "transform 0.2s ease-out",
+                  }}
                   priority
                   placeholder="blur"
                   blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOCIgaGVpZ2h0PSI4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiMxNDE0MEUiLz48L3N2Zz4="
@@ -401,20 +406,6 @@ export default function ProductDetailClient({ slug: initialSlug }: { slug?: stri
                 <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "6rem" }}>
                   💎
                 </div>
-              )}
-
-              {/* Zoom overlay — desktop only, images only, pointer-events:none so clicks pass through */}
-              {zoomPos && activeVideo === null && images[activeImage] && (
-                <div
-                  style={{
-                    position: "absolute", inset: 0, zIndex: 4,
-                    backgroundImage: `url(${images[activeImage]})`,
-                    backgroundSize: "280%",
-                    backgroundPosition: `${zoomPos.x}% ${zoomPos.y}%`,
-                    backgroundRepeat: "no-repeat",
-                    pointerEvents: "none",
-                  }}
-                />
               )}
 
               {/* Nav Arrows + counter — navigate all images + videos */}
